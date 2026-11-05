@@ -1,0 +1,29 @@
+<section class="board-section" id="board-title" tabindex="-1" aria-label="Sprint board">
+    @for (board of boards(); track board.name) {
+        <section class="board-group" [attr.aria-label]="board.name">
+            <h3 class="board-group-title">{{ board.name }}</h3>
+            <div class="board" [class.testing]="board.columns.length === 4">
+                @for (column of board.columns; track column.name) {
+                    <div class="column">
+                        <div class="column-heading"><i></i>{{ column.name }}<b>{{ column.items.length }}</b>
+                        </div>
+                        @for (item of column.items; track item.id) {
+                            <app-card
+                                [item]="item"
+                                [selected]="item.id === selectedId()"
+                                [waitingForBugs]="waitingForBugs().has(item.id)"
+                                [bugCount]="bugCount()"
+                                [multiAgent]="multiAgent()"
+                                [assigned]="agentTargets().includes(item.id)"
+                                [hasFreeAgent]="agentTargets().includes(null)"
+                                (itemSelected)="itemSelected.emit(item)"
+                                (agentAssigned)="agentAssigned.emit($event)" />
+                        } @empty {
+                            <div class="empty">Nothing here yet.</div>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</section>

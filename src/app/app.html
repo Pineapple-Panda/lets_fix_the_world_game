@@ -1,0 +1,53 @@
+<div class="app">
+    @if (showIntro()) {
+        <app-intro (dismissed)="dismissIntro()" />
+    }
+    <main>
+        @let state = view();
+        <header class="app-meta"><span>APPLICATION VERSION</span><strong>v{{ state.appVersion }}</strong></header>
+        <div role="status" aria-live="polite">
+            @if (saveWarning()) {
+                <div class="alert">{{ saveWarning() }}</div>
+            }
+            @if (state.regressions) {
+                <div class="alert">Fully automated code is now the problem: the bots are shipping their own bugs.</div>
+            }
+            @if (state.bugs.length) {
+                <div class="alert">{{ state.bugs.length === 1 ? 'A bug needs' : state.bugs.length + ' bugs need' }} your
+                    attention. Fix all bugs before working on other items or completing stories. Automation continues.
+                </div>
+            }
+            @for (perk of state.availablePerks; track perk.id) {
+                <div class="alert success">{{ perk.name }} is unlocked. Activate it in your toolkit.</div>
+            }
+            @if (state.perks.assistants > 0 && state.multiAgent && state.perks.budget >= state.perks.assistantCost) {
+                <div class="alert success">An additional Code Assistant is available in your toolkit.</div>
+            }
+            @if (state.perks.assistants > 0 && state.multiAgent && state.perks.budget >= state.perks.performanceCost) {
+                <div class="alert success">An assistant performance upgrade is available in your toolkit.</div>
+            }
+            @if (state.won) {
+                <div class="alert success">Five stories complete. Deploy v{{ state.releaseVersion }} to earn {{ state.deploymentBudget }} budget and unlock more work.</div>
+            }
+        </div>
+        <div class="workspace">
+            <aside class="sidebar">
+                <app-stats [stats]="state.stats" />
+                <app-action-base [selected]="state.selected" [canDeploy]="state.won" [storiesDone]="state.storiesDone"
+                                 [releaseVersion]="state.releaseVersion" [deploymentBudget]="state.deploymentBudget"
+                                 (code)="code()" (deploy)="deploy()" />
+                <app-perks [view]="state.perks" (perkActivated)="activate($event)"
+                           (assistantAdded)="addAssistant()" (performanceUpgraded)="upgradeAssistants()"
+                           (coverageImproved)="improveCoverage()" />
+                <div class="sidebar-footer"><span>BUILD. BREAK. FIX. REPEAT.</span><span>✳</span></div>
+            </aside>
+            <app-board [boards]="state.boards" [selectedId]="game().selected"
+                       [waitingForBugs]="state.waitingForBugs" [bugCount]="state.bugs.length"
+                       [multiAgent]="state.multiAgent" [agentTargets]="game().agentTargets"
+                       (itemSelected)="select($event)" (agentAssigned)="assignAgent($event)" />
+        </div>
+        <footer><span>SPRINT / A LITTLE GAME ABOUT MAKING THINGS</span>
+            <button id="reset" class="reset" type="button" (click)="reset()">Reset sprint</button>
+        </footer>
+    </main>
+</div>

@@ -1,0 +1,61 @@
+@let state = view();
+@if (state.active.length) {
+    <section class="panel upgrades" aria-labelledby="active-perks-title">
+        <h2 class="tool-heading" id="active-perks-title">Activated Perks</h2>
+        <div class="active-tools">
+            @for (perk of state.active; track perk.id) {
+                <span class="tool-icon active-tool" role="img" tabindex="0" [attr.data-tool-id]="perk.id"
+                      [attr.title]="tooltip(perk)" [attr.aria-label]="tooltip(perk)">{{ perk.icon }}</span>
+            }
+        </div>
+    </section>
+}
+@if (state.assistants || state.earlActive) {
+    <section class="panel upgrades" aria-labelledby="upgrades-title">
+        <h2 class="tool-heading" id="upgrades-title">Upgrades</h2>
+        @if (state.assistants && state.multiAgent) {
+            <div class="upgrade-row">
+                <span>{{ state.assistants }} / {{ state.agentLimit }} agents active</span>
+                <button class="tool-button" type="button" [disabled]="state.budget < state.assistantCost" (click)="assistantAdded.emit()">Add Assistant</button>
+            </div>
+            <small class="upgrade-hint">Next assistant costs {{ state.assistantCost }} budget.</small>
+            <small class="upgrade-hint">{{ state.assignedAgents }} / {{ state.assistants }} agents assigned</small>
+                <div class="upgrade-row">
+                    <span>Performance +{{ state.performanceUpgrades * 10 }}%</span>
+                    <button class="tool-button" type="button" [disabled]="state.budget < state.performanceCost" (click)="performanceUpgraded.emit()">Upgrade +10%</button>
+                </div>
+            <small class="upgrade-hint">Next upgrade costs {{ state.performanceCost }} budget.</small>
+        }
+        @if (state.earlActive) {
+            <div class="upgrade-row">
+                <span>Test coverage: {{ state.coverage.toFixed(3) }}%</span>
+                <button class="tool-button" type="button" [disabled]="state.coverage >= 100 || state.budget < state.coverageCost" (click)="coverageImproved.emit()">Improve coverage</button>
+            </div>
+            <progress class="coverage-progress" [value]="state.coverageUnits" max="100000" aria-label="Test coverage"
+                      [attr.aria-valuetext]="state.coverage.toFixed(3) + '%'">{{ state.coverage.toFixed(3) }}%</progress>
+            <small class="upgrade-hint">Each click costs {{ state.coverageCost }} budget, adds {{ (state.coverageStep / 1000).toFixed(3) }} percentage points and reduces the chance of new bugs.</small>
+            @if (state.autoTesting) {
+                <small class="upgrade-hint">Earl automatically adds 0.001 percentage points each second.</small>
+            }
+        }
+    </section>
+}
+<section class="panel upgrades" id="open-perks" aria-labelledby="open-perks-title">
+    <h2 class="tool-heading" id="open-perks-title">Perks</h2>
+    @for (entry of state.open; track entry.perk.id) {
+        <div class="tool" [class.available]="entry.available">
+            <span class="tool-icon" aria-hidden="true">{{ entry.perk.icon }}</span>
+            <div class="tool-details">
+                <strong>{{ entry.perk.name }}</strong>
+                <small>{{ entry.perk.description }}</small>
+                @if (entry.perk.rate) { <small>+{{ entry.perk.rate }} actions / sec</small> }
+                <small>Unlock: Reach {{ entry.perk.actionsRequired }} total coding actions</small>
+                @if (entry.available) {
+                    <button class="tool-button" type="button" [attr.aria-label]="'Activate ' + entry.perk.name" (click)="perkActivated.emit(entry.perk.id)">Activate</button>
+                }
+            </div>
+        </div>
+    } @empty {
+        <div class="empty">No open perks.</div>
+    }
+</section>
