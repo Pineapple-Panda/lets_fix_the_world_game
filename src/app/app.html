@@ -5,11 +5,7 @@
     <main>
         @let state = view();
         <header class="app-meta"><span>APPLICATION VERSION</span><strong>v{{ state.appVersion }}</strong></header>
-        <section class="console" aria-labelledby="console-title">
-            <div class="console-bar" aria-hidden="true">
-                <span class="console-dot"></span><span class="console-dot"></span><span class="console-dot"></span>
-                <span class="console-title" id="console-title">notifications — tail -f sprint.log</span>
-            </div>
+        <section class="console" aria-label="Notifications">
             <div class="console-body" role="status" aria-live="polite" tabindex="0">
                 @if (saveWarning()) {
                     <div class="console-line error">{{ saveWarning() }}</div>
@@ -34,7 +30,6 @@
                 @if (state.won) {
                     <div class="console-line success">Five stories complete. Deploy v{{ state.releaseVersion }} to earn {{ state.deploymentBudget }} budget and unlock more work.</div>
                 }
-                <div class="console-prompt" aria-hidden="true">~/lets-fix-the-world $ <span class="console-cursor"></span></div>
             </div>
         </section>
         <div class="workspace">

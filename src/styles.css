@@ -387,9 +387,7 @@ h2 {
 /* Notifications: a terminal window with a fixed height; older lines scroll. */
 .console {
     --console-bg: #121a17;
-    --console-bar: #1c2622;
     --console-text: #c9d6cf;
-    --console-dim: #6f8178;
     --console-error: #ff8b7a;
     --console-success: var(--accent);
     margin-bottom: 12px;
@@ -398,38 +396,6 @@ h2 {
     overflow: hidden;
     background: var(--console-bg);
     font: 12px/1.6 var(--mono);
-}
-
-.console-bar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
-    background: var(--console-bar);
-    color: var(--console-dim);
-    font-size: 10px;
-}
-
-.console-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #ff6f5e;
-}
-
-.console-dot:nth-child(2) {
-    background: #f2c14e;
-}
-
-.console-dot:nth-child(3) {
-    background: #6cc070;
-}
-
-.console-title {
-    margin-left: 8px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 .console-body {
@@ -472,31 +438,6 @@ h2 {
     content: '[  OK ]';
     color: var(--console-success);
     white-space: pre;
-}
-
-.console-prompt {
-    color: var(--console-dim);
-}
-
-.console-cursor {
-    display: inline-block;
-    width: 0.6em;
-    height: 1.1em;
-    vertical-align: text-bottom;
-    background: var(--console-success);
-    animation: console-blink 1s steps(1) infinite;
-}
-
-@keyframes console-blink {
-    50% {
-        opacity: 0;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .console-cursor {
-        animation: none;
-    }
 }
 
 .panel {
