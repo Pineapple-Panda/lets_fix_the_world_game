@@ -34,17 +34,18 @@
         </section>
         <div class="workspace">
             <aside class="sidebar">
-                <app-stats [stats]="state.stats" />
                 <app-action-base [selected]="state.selected" [canDeploy]="state.won" [storiesDone]="state.storiesDone"
                                  [releaseVersion]="state.releaseVersion" [deploymentBudget]="state.deploymentBudget"
                                  (code)="code()" (deploy)="deploy()" />
-                @if (state.earl) {
-                    <app-earl [view]="state.earl" (coverageImproved)="improveCoverage()"
-                              (manualUpgraded)="upgradeManualCoverage()" (autoUpgraded)="upgradeAutoCoverage()" />
-                }
+                <app-stats [stats]="state.stats" />
+                <!-- The Earl panel is projected into the perks component, right below the activated perks. -->
                 <app-perks [view]="state.perks" (perkActivated)="activate($event)"
-                           (assistantAdded)="addAssistant()" (performanceUpgraded)="upgradeAssistants()" />
-                <div class="sidebar-footer"><span>BUILD. BREAK. FIX. REPEAT.</span><span>✳</span></div>
+                           (assistantAdded)="addAssistant()" (performanceUpgraded)="upgradeAssistants()">
+                    @if (state.earl) {
+                        <app-earl [view]="state.earl" (coverageImproved)="improveCoverage()"
+                                  (manualUpgraded)="upgradeManualCoverage()" (autoUpgraded)="upgradeAutoCoverage()" />
+                    }
+                </app-perks>
             </aside>
             <app-board [boards]="state.boards" [selectedId]="game().selected"
                        [waitingForBugs]="state.waitingForBugs" [bugCount]="state.bugs.length"
