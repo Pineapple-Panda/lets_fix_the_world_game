@@ -20,6 +20,9 @@ import type { Item } from './models/item.model';
 import type { PerkId } from './models/perk.model';
 import { formatVersion, nextVersion } from './models/version.model';
 
+/** The user story board is hidden for now; set to true to show it above the task board again. */
+const showStoryBoard = false;
+
 @Component({
   selector: 'app-root',
   imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, PerksComponent, StatsComponent],
@@ -95,7 +98,9 @@ export class AppComponent {
         upgradeStep: coverageUpgradeStep
       } : null,
       boards: [
-        { name: 'User stories', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'story') })) },
+        ...(showStoryBoard
+          ? [{ name: 'User stories', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'story') })) }]
+          : []),
         { name: 'Tasks & bugs', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'task' || item.type === 'bug') })) }
       ]
     };
