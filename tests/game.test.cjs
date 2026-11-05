@@ -242,8 +242,8 @@ test('after the roadmap, releases are topped up with maintenance work', () => {
   const later = game.nextReleaseTasks(content.roadmap.length, () => 0);
   assert.equal(later.tasks.length, 3);
   assert.ok(later.tasks.every(task => maintenanceTitles.has(task.title)));
-  assert.equal(game.nextReleaseTasks(content.roadmap.length, () => 0.999999).tasks.length, content.maintenanceTasks.length,
-    'a maintenance-only release is capped by the size of the pool');
+  assert.ok(content.maintenanceTasks.length >= 2 * content.maxReleaseTasks, 'pool is large enough to vary between releases');
+  assert.equal(game.nextReleaseTasks(content.roadmap.length, () => 0.999999).tasks.length, 25);
 });
 
 test('task ids keep counting up across releases', () => {
