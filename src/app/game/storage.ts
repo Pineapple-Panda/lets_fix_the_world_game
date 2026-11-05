@@ -50,6 +50,8 @@ export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
     (game.budget !== undefined && !isCount(game.budget)) ||
     (game.lastDeploymentActions !== undefined && (!isCount(game.lastDeploymentActions) || game.lastDeploymentActions > game.actions)) ||
     (game.testCoverage !== undefined && (!isCount(game.testCoverage) || game.testCoverage > 100000)) ||
+    (game.manualCoverageUpgrades !== undefined && !isCount(game.manualCoverageUpgrades)) ||
+    (game.autoCoverageUpgrades !== undefined && !isCount(game.autoCoverageUpgrades)) ||
     (envelope.version >= 4 && (!isObject(game.appVersion) || !isCount(game.appVersion.major) || !isCount(game.appVersion.minor) || !isCount(game.appVersion.patch) || game.appVersion.minor > 9 || game.appVersion.patch !== 0)) ||
     !isCount(game.bugCount) ||
     !isCount(game.seconds) ||
@@ -76,6 +78,10 @@ export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
     new Set(game.activatedPerks).size !== game.activatedPerks.length ||
     !game.activatedPerks.every(isPerkId) ||
     (game.testCoverage !== undefined && game.testCoverage > 0 && !game.activatedPerks.includes('earl')) ||
+    (((game.manualCoverageUpgrades ?? 0) as number) > 0 &&
+      (!game.activatedPerks.includes('earl') || !game.activatedPerks.includes('testing-skills'))) ||
+    (((game.autoCoverageUpgrades ?? 0) as number) > 0 &&
+      (!game.activatedPerks.includes('earl') || !game.activatedPerks.includes('auto-testing'))) ||
     (game.assistants > 0) !== game.activatedPerks.includes('code-assistant') ||
     (game.assistantUpgrades > 0 &&
       (!game.activatedPerks.includes('multi-agent') || !game.activatedPerks.includes('code-assistant')))
@@ -151,6 +157,8 @@ export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
     ...game,
     items: validatedItems,
     testCoverage: game.testCoverage ?? 0,
+    manualCoverageUpgrades: game.manualCoverageUpgrades ?? 0,
+    autoCoverageUpgrades: game.autoCoverageUpgrades ?? 0,
     budget: game.budget ?? 0,
     lastDeploymentActions: game.lastDeploymentActions ?? (game.deployments > 0 ? game.actions : 0),
     appVersion: envelope.version >= 4 && isObject(game.appVersion)

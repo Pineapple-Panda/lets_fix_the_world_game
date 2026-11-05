@@ -10,10 +10,9 @@
         </div>
     </section>
 }
-@if (state.assistants || state.earlActive) {
+@if (state.assistants && state.multiAgent) {
     <section class="panel upgrades" aria-labelledby="upgrades-title">
         <h2 class="tool-heading" id="upgrades-title">Upgrades</h2>
-        @if (state.assistants && state.multiAgent) {
             <div class="upgrade-row">
                 <span>{{ state.assistants }} / {{ state.agentLimit }} agents active</span>
                 <button class="tool-button" type="button" [disabled]="state.budget < state.assistantCost" (click)="assistantAdded.emit()">Add Assistant</button>
@@ -25,19 +24,6 @@
                     <button class="tool-button" type="button" [disabled]="state.budget < state.performanceCost" (click)="performanceUpgraded.emit()">Upgrade +10%</button>
                 </div>
             <small class="upgrade-hint">Next upgrade costs {{ state.performanceCost }} budget.</small>
-        }
-        @if (state.earlActive) {
-            <div class="upgrade-row">
-                <span>Test coverage: {{ state.coverage.toFixed(3) }}%</span>
-                <button class="tool-button" type="button" [disabled]="state.coverage >= 100 || state.budget < state.coverageCost" (click)="coverageImproved.emit()">Improve coverage</button>
-            </div>
-            <progress class="coverage-progress" [value]="state.coverageUnits" max="100000" aria-label="Test coverage"
-                      [attr.aria-valuetext]="state.coverage.toFixed(3) + '%'">{{ state.coverage.toFixed(3) }}%</progress>
-            <small class="upgrade-hint">Each click costs {{ state.coverageCost }} budget, adds {{ (state.coverageStep / 1000).toFixed(3) }} percentage points and reduces the chance of new bugs.</small>
-            @if (state.autoTesting) {
-                <small class="upgrade-hint">Earl automatically adds 0.001 percentage points each second.</small>
-            }
-        }
     </section>
 }
 <section class="panel upgrades" id="open-perks" aria-labelledby="open-perks-title">

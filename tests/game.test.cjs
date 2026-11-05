@@ -152,7 +152,7 @@ assert.match(perks[5].description, /double.*assistant/i);
 const goals = [50, 200, 700, 1000, 2000, 4000, 6000, 10000, 17000, 20000, 25000];
 assert.deepEqual(perks.map(perk => perk.actionsRequired), goals);
 assert.match(perks[9].description, /manual.*coverage.*0\.005 percentage points/i);
-assert.match(perks[10].description, /automatic.*coverage.*0\.001 percentage points\/sec.*Earl/i);
+assert.match(perks[10].description, /Earl.*coverage.*0\.001 percentage points\/sec.*automatic coverage upgrades/i);
 assert.ok(perks.every(perk => !('storyId' in perk) && !('prerequisite' in perk)));
 for (const [index, perk] of perks.entries()) {
   const boundary = newGame();
@@ -2104,5 +2104,133 @@ assert.deepEqual(loadGame(storage), maxBudgetSave);
 saveGame(storage, newGame());
 assert.equal(loadGame(storage).budget, 0);
 assert.equal(loadGame(storage).lastDeploymentActions, 0);
+
+{
+  const { storiesPerRelease, releaseStoriesDone, selectedWorkItem, storiesWaitingForBugs, boardColumns } = require('../src/app/game/game.ts');
+  assert.equal(storiesPerRelease, 5);
+
+  const view = newGame();
+  const columnNames = value => boardColumns(value).map(column => column.name);
+  const columnIds = (value, name) => boardColumns(value).find(column => column.name === name).items.map(entry => entry.id);
+  assert.deepEqual(columnNames(view), ['TO DO', 'IN PROGRESS', 'DONE']);
+  assert.equal(selectedWorkItem(view), undefined);
+  assert.equal(releaseStoriesDone(view), 0);
+  assert.equal(storiesWaitingForBugs(view).size, 0);
+
+  const firstTask = view.items.find(entry => entry.type === 'task' && entry.parent === 'S-01');
+  assert.ok(columnIds(view, 'TO DO').includes(firstTask.id));
+  assert.equal(selectItem(view, firstTask.id), true);
+  assert.equal(selectedWorkItem(view), firstTask);
+  assert.ok(columnIds(view, 'IN PROGRESS').includes(firstTask.id));
+  assert.ok(!columnIds(view, 'TO DO').includes(firstTask.id));
+
+  for (const task of view.items.filter(entry => entry.type === 'task' && entry.parent === 'S-01')) work(view, task.id, task.required);
+  assert.equal(selectedWorkItem(view), undefined);
+  assert.ok(columnIds(view, 'DONE').includes('S-01'));
+  assert.equal(releaseStoriesDone(view), 1);
+
+  const columnsTotal = boardColumns(view).reduce((sum, column) => sum + column.items.length, 0);
+  assert.equal(columnsTotal, boardItems(view).length);
+
+  const blocked = newGame();
+  const storyTasks = story => blocked.items.filter(entry => entry.type === 'task' && entry.parent === story);
+  for (const story of ['S-01', 'S-02']) for (const task of storyTasks(story)) work(blocked, task.id, task.required);
+  const [lastTask, ...otherTasks] = storyTasks('S-03').reverse();
+  for (const task of otherTasks) work(blocked, task.id, task.required);
+  assert.equal(storiesWaitingForBugs(blocked).size, 0);
+  assert.ok(makeBug(blocked));
+  assert.equal(storiesWaitingForBugs(blocked).size, 0);
+  assert.equal(work(blocked, lastTask.id, lastTask.required, true), true);
+  assert.equal(blocked.items.find(entry => entry.id === 'S-03').done, false);
+  assert.deepEqual([...storiesWaitingForBugs(blocked)], ['S-03']);
+  assert.equal(releaseStoriesDone(blocked), 2);
+
+  const testing = structuredClone(view);
+  testing.activatedPerks.push('earl');
+  assert.deepEqual(columnNames(testing), ['TO DO', 'IN PROGRESS', 'IN TEST', 'DONE']);
+}
+
+{
+  const {
+    coverageUpgradeStep, manualCoverageUpgradeCost, autoCoverageUpgradeCost, autoCoverageRate,
+    upgradeManualCoverage, upgradeAutoCoverage
+  } = require('../src/app/game/game.ts');
+  assert.equal(coverageUpgradeStep, 5);
+  assert.equal(manualCoverageUpgradeCost, 2000);
+  assert.equal(autoCoverageUpgradeCost, 5000);
+
+  const fresh = newGame();
+  assert.equal(fresh.manualCoverageUpgrades, 0);
+  assert.equal(fresh.autoCoverageUpgrades, 0);
+  assert.equal(autoCoverageRate(fresh), 0);
+
+  const upgrades = newGame();
+  upgrades.budget = 100000;
+  upgrades.activatedPerks.push('earl');
+  assert.equal(coverageStep(upgrades), 1);
+  assert.equal(upgradeManualCoverage(upgrades), false, 'manual upgrade needs Improve Testing Skills');
+  assert.equal(upgradeAutoCoverage(upgrades), false, 'automatic upgrade needs Automate Testing');
+  assert.equal(upgrades.budget, 100000);
+
+  upgrades.activatedPerks.push('testing-skills');
+  assert.equal(coverageStep(upgrades), 5);
+  assert.equal(upgradeManualCoverage(upgrades), true);
+  assert.equal(upgrades.budget, 98000);
+  assert.equal(upgrades.manualCoverageUpgrades, 1);
+  assert.equal(coverageStep(upgrades), 10);
+  assert.equal(improveCoverage(upgrades), true);
+  assert.equal(upgrades.testCoverage, 10);
+  assert.equal(upgradeManualCoverage(upgrades), true);
+  assert.equal(coverageStep(upgrades), 15);
+
+  upgrades.activatedPerks.push('auto-testing');
+  assert.equal(autoCoverageRate(upgrades), 1);
+  assert.equal(upgradeAutoCoverage(upgrades), true);
+  assert.equal(upgrades.budget, 96000 - 1 - 5000);
+  assert.equal(upgrades.autoCoverageUpgrades, 1);
+  assert.equal(autoCoverageRate(upgrades), 6);
+  const beforeTick = upgrades.testCoverage;
+  automate(upgrades);
+  assert.equal(upgrades.testCoverage, beforeTick + 6);
+  upgrades.testCoverage = 99998;
+  automate(upgrades);
+  assert.equal(upgrades.testCoverage, 100000);
+
+  const poor = newGame();
+  poor.activatedPerks.push('earl', 'testing-skills', 'auto-testing');
+  poor.budget = 1999;
+  assert.equal(upgradeManualCoverage(poor), false);
+  poor.budget = 4999;
+  assert.equal(upgradeAutoCoverage(poor), false);
+  assert.equal(upgradeManualCoverage(poor), true);
+  assert.equal(poor.budget, 2999);
+
+  const coverageStorage = new Map();
+  const memory = { getItem: key => coverageStorage.get(key) ?? null, setItem: (key, value) => coverageStorage.set(key, value) };
+  const fullEarl = structuredClone(upgrades);
+  fullEarl.budget = 0;
+  saveGame(memory, fullEarl);
+  assert.equal(loadGame(memory).manualCoverageUpgrades, 2);
+  assert.equal(loadGame(memory).autoCoverageUpgrades, 1);
+
+  const legacy = JSON.parse(coverageStorage.get('sprint-game'));
+  delete legacy.game.manualCoverageUpgrades;
+  delete legacy.game.autoCoverageUpgrades;
+  coverageStorage.set('sprint-game', JSON.stringify(legacy));
+  assert.equal(loadGame(memory).manualCoverageUpgrades, 0);
+  assert.equal(loadGame(memory).autoCoverageUpgrades, 0);
+
+  for (const [field, perk] of [['manualCoverageUpgrades', 'testing-skills'], ['autoCoverageUpgrades', 'auto-testing']]) {
+    const invalidSave = structuredClone(fullEarl);
+    invalidSave.activatedPerks = invalidSave.activatedPerks.filter(id => id !== perk);
+    invalidSave[field] = 1;
+    saveGame(memory, invalidSave);
+    assert.throws(() => loadGame(memory), field);
+    const negative = structuredClone(fullEarl);
+    negative[field] = -1;
+    saveGame(memory, negative);
+    assert.throws(() => loadGame(memory), field);
+  }
+}
 
 console.log('Gameplay checks passed.');

@@ -11,6 +11,10 @@ export interface Game {
   lastDeploymentActions: number;
   appVersion: AppVersion;
   testCoverage: number;
+  /** Purchased manual coverage upgrades, each adding 0.005 pp per click. */
+  manualCoverageUpgrades: number;
+  /** Purchased automatic coverage upgrades, each adding 0.005 pp per second. */
+  autoCoverageUpgrades: number;
   bugCount: number;
   seconds: number;
   activatedPerks: PerkId[];

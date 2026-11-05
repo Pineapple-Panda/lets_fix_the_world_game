@@ -1,4 +1,5 @@
 import type { Board } from './board.model';
+import type { EarlView } from './earl-view.model';
 import type { Item } from './item.model';
 import type { Perk } from './perk.model';
 import type { PerksView } from './perks-view.model';
@@ -18,5 +19,7 @@ export interface AppView {
   waitingForBugs: ReadonlySet<string>;
   stats: GameStats;
   perks: PerksView;
+  /** Earl panel state; null until Earl is installed. */
+  earl: EarlView | null;
   boards: Board[];
 }

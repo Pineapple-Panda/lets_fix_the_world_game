@@ -1,14 +1,17 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
 import { ActionBaseComponent } from './components/action-base/action-base';
 import { BoardComponent } from './components/board/board';
+import { EarlComponent } from './components/earl/earl';
 import { IntroComponent } from './components/intro/intro';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
-  assistantOutput, automate, automationRegressions, boardItems, bugChance, canDeploy, deploymentBudgetReward,
-  canGenerateBugs, coverageCost, coveragePercent, coverageStep, currentAutomationRate, deploy, improveCoverage, newGame, nextAssistantCount,
-  nextAssistantUpgrade, openBugs, openPerks, perkUnlocked, selectItem, upgradeAssistants, work
+  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, automate, automationRegressions, boardColumns, bugChance, canDeploy,
+  canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
+  deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
+  openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs, upgradeAssistants,
+  upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
 import { loadGame, saveGame, saveKey } from './game/storage';
 import type { AppView } from './models/app-view.model';
@@ -19,7 +22,7 @@ import { formatVersion, nextVersion } from './models/version.model';
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, IntroComponent, PerksComponent, StatsComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, PerksComponent, StatsComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -37,37 +40,23 @@ export class AppComponent {
   readonly view = computed((): AppView => {
     const game = this.game();
     const bugs = openBugs(game);
-    const selected = game.items.find(item =>
-      item.id === game.selected && !item.done && (item.type === 'task' || item.type === 'bug')
-    );
     const assistants = assistantCount(game);
     const multiAgent = game.activatedPerks.includes('multi-agent');
     const available = openPerks(game).map(perk => ({ perk, available: perkUnlocked(game, perk) }));
-    const visibleItems = boardItems(game);
-    const testingEnabled = game.activatedPerks.includes('earl');
-    const columns = [
-      { name: 'TO DO', items: visibleItems.filter(item => !item.done && !item.inTest && item.progress === 0 && item.id !== game.selected) },
-      { name: 'IN PROGRESS', items: visibleItems.filter(item => !item.done && !item.inTest && (item.progress > 0 || item.id === game.selected)) },
-      ...(testingEnabled ? [{ name: 'IN TEST', items: visibleItems.filter(item => item.inTest) }] : []),
-      { name: 'DONE', items: visibleItems.filter(item => item.done) }
-    ];
+    const columns = boardColumns(game);
 
     return {
       bugs,
       regressions: automationRegressions(game),
-      selected,
+      selected: selectedWorkItem(game),
       won: canDeploy(game),
       multiAgent,
-      storiesDone: game.items.filter(item => item.type === 'story' && item.done).length - game.deployments * 5,
+      storiesDone: releaseStoriesDone(game),
       appVersion: formatVersion(game.appVersion),
       releaseVersion: formatVersion(nextVersion(game.appVersion)),
       deploymentBudget: deploymentBudgetReward(game),
       availablePerks: available.filter(entry => entry.available).map(entry => entry.perk),
-      waitingForBugs: new Set(game.items.filter(item =>
-        item.type === 'story' && !item.done && bugs.length > 0 && item.progress >= item.required &&
-        game.items.some(child => child.parent === item.id) &&
-        game.items.every(child => child.parent !== item.id || child.done)
-      ).map(item => item.id)),
+      waitingForBugs: storiesWaitingForBugs(game),
       stats: {
         actions: game.actions,
         budget: game.budget,
@@ -86,15 +75,25 @@ export class AppComponent {
         budget: game.budget,
         assistantCost: nextAssistantCount(game),
         performanceCost: nextAssistantUpgrade(game),
-        coverageCost,
         performanceUpgrades: game.assistantUpgrades,
         assistantOutput: assistantOutput(game),
-        earlActive: testingEnabled,
+        coverage: coveragePercent(game)
+      },
+      earl: game.activatedPerks.includes('earl') ? {
+        budget: game.budget,
         coverage: coveragePercent(game),
         coverageUnits: game.testCoverage,
+        coverageCost,
         coverageStep: coverageStep(game),
-        autoTesting: game.activatedPerks.includes('auto-testing')
-      },
+        testingSkills: game.activatedPerks.includes('testing-skills'),
+        manualUpgrades: game.manualCoverageUpgrades,
+        manualUpgradeCost: manualCoverageUpgradeCost,
+        autoTesting: game.activatedPerks.includes('auto-testing'),
+        autoUpgrades: game.autoCoverageUpgrades,
+        autoUpgradeCost: autoCoverageUpgradeCost,
+        autoRate: autoCoverageRate(game),
+        upgradeStep: coverageUpgradeStep
+      } : null,
       boards: [
         { name: 'User stories', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'story') })) },
         { name: 'Tasks & bugs', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'task' || item.type === 'bug') })) }
@@ -178,6 +177,14 @@ export class AppComponent {
     this.update(game => { improveCoverage(game); });
   }
 
+  upgradeManualCoverage(): void {
+    this.update(game => { upgradeManualCoverage(game); });
+  }
+
+  upgradeAutoCoverage(): void {
+    this.update(game => { upgradeAutoCoverage(game); });
+  }
+
   dismissIntro(): void {
     this.showIntro.set(false);
     this.update(() => {});
@@ -251,7 +258,7 @@ export class AppComponent {
     const currentGame = structuredClone(this.game());
     const game = change(currentGame) || currentGame;
     const bugs = openBugs(game);
-    let selected = game.items.find(item => item.id === game.selected && !item.done && (item.type === 'task' || item.type === 'bug'));
+    let selected = selectedWorkItem(game);
     if (bugs.length && (!selected || selected.type !== 'bug')) selected = bugs[0];
     game.selected = selected?.id ?? null;
     this.game.set(game);
