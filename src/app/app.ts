@@ -107,6 +107,17 @@ export class AppComponent {
   });
 
   constructor() {
+    // Keep the notification console scrolled to its newest (bottom) line whenever its content changes.
+    afterNextRender(() => {
+      const consoleBody = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>('.console-body');
+      if (!consoleBody) return;
+      const scrollToBottom = () => { consoleBody.scrollTop = consoleBody.scrollHeight; };
+      scrollToBottom();
+      const observer = new MutationObserver(scrollToBottom);
+      observer.observe(consoleBody, { childList: true, subtree: true, characterData: true });
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    }, { injector: this.injector });
+
     const onStorage = (event: StorageEvent) => {
       if (event.storageArea !== window.localStorage || (event.key !== saveKey && event.key !== null) || (event.key !== null && event.newValue === event.oldValue)) return;
       if (window.localStorage.getItem(saveKey) === this.savedSnapshot) return;
