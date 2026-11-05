@@ -184,19 +184,52 @@ main {
 
 /* ---------- Workspace ---------- */
 
-.workspace {
-    display: grid;
-    grid-template-columns: 270px minmax(0, 1fr);
-    gap: 12px;
-    align-items: start;
+/*
+ * Desktop: the app fills the viewport and the page itself never scrolls.
+ * Only the board scrolls (the sidebar scrolls on its own if it overflows).
+ */
+html, body {
+    height: 100%;
 }
 
-.sidebar {
-    position: sticky;
-    top: 10px;
-    max-height: calc(100vh - 20px);
+body {
+    overflow: hidden;
+}
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+}
+
+main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.app-meta, .console, footer {
+    flex: none;
+}
+
+.workspace {
+    display: grid;
+    flex: 1;
+    grid-template-columns: 270px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 0;
+}
+
+.sidebar, app-board {
+    min-height: 0;
     overflow-y: auto;
     scrollbar-color: var(--line-strong) transparent;
+}
+
+app-board {
+    padding-right: 4px;
 }
 
 .panel {
@@ -634,8 +667,8 @@ main {
 footer {
     display: flex;
     justify-content: space-between;
-    margin-top: 16px;
-    padding-top: 8px;
+    margin-top: 8px;
+    padding-top: 6px;
     border-top: 1px solid var(--line);
     color: var(--faint);
     font: 10px var(--mono);
@@ -657,15 +690,26 @@ footer {
 
 /* ---------- Responsive ---------- */
 
+/* Narrow screens stack sidebar and board, so the page scrolls normally again. */
 @media (max-width: 950px) {
+    body {
+        overflow: auto;
+    }
+
+    .app {
+        height: auto;
+    }
+
     .workspace {
         grid-template-columns: 1fr;
     }
 
-    .sidebar {
-        position: static;
-        max-height: none;
+    .sidebar, app-board {
         overflow: visible;
+    }
+
+    app-board {
+        padding-right: 0;
     }
 }
 
