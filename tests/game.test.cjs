@@ -198,7 +198,10 @@ test('deploying pays the reward, clears finished work and starts the next releas
   assert.equal(state.items.length, 9, 'random 0.3 draws 3 + floor(0.3 * 23) = 9 tasks');
   assert.deepEqual(state.items.map(entry => entry.id), Array.from({ length: 9 }, (_, index) => content.taskId(16 + index)));
   assert.equal(state.taskCount, 24);
-  assert.ok(state.items.every(entry => entry.type === 'task' && entry.required === 30 && entry.unlockAt === undefined && !entry.done));
+  assert.equal(state.roadmapIndex, 9);
+  assert.deepEqual(state.items.map(entry => [entry.title, entry.required]),
+    content.roadmap.slice(0, 9).map(task => [task.title, task.required]), 'the roadmap is worked through in order');
+  assert.ok(state.items.every(entry => entry.type === 'task' && entry.unlockAt === undefined && !entry.done));
   assert.ok(state.items.every(entry => isAvailable(state, entry)), 'later releases are fully available');
   assert.equal(state.selected, null);
   assert.equal(state.automationTarget, null);
@@ -208,19 +211,39 @@ test('deploying pays the reward, clears finished work and starts the next releas
   assert.equal(deploy(state), false);
 });
 
-test('each later release draws 3 to 25 distinct tasks from the pool', () => {
-  assert.ok(content.releaseTasks.length >= content.maxReleaseTasks, 'pool is large enough for 25 distinct tasks');
-  assert.equal(new Set(content.releaseTasks.map(task => task.title)).size, content.releaseTasks.length);
-  assert.equal(game.drawReleaseTasks(() => 0).length, 3);
-  assert.equal(game.drawReleaseTasks(() => 0.999999).length, 25);
+test('each later release takes the next 3 to 25 roadmap tasks in order', () => {
+  const titles = [...content.blueprint, ...content.roadmap, ...content.maintenanceTasks].map(task => task.title);
+  assert.equal(new Set(titles).size, titles.length, 'task titles are unique');
+  assert.ok([...content.roadmap, ...content.maintenanceTasks].every(task => Number.isInteger(task.required) && task.required > 0));
+  assert.deepEqual(game.nextReleaseTasks(0, () => 0).tasks, content.roadmap.slice(0, 3));
+  assert.equal(game.nextReleaseTasks(0, () => 0).roadmapIndex, 3);
+  assert.equal(game.nextReleaseTasks(0, () => 0.999999).tasks.length, 25);
   const sizes = new Set();
-  for (let index = 0; index < 500; index++) {
-    const drawn = game.drawReleaseTasks();
-    assert.ok(drawn.length >= 3 && drawn.length <= 25, String(drawn.length));
-    assert.equal(new Set(drawn.map(task => task.title)).size, drawn.length, 'no duplicates in a release');
-    sizes.add(drawn.length);
+  let index = 0;
+  for (let release = 0; release < 100; release++) {
+    const next = game.nextReleaseTasks(index);
+    assert.ok(next.tasks.length >= 3 && next.tasks.length <= 25, String(next.tasks.length));
+    assert.equal(new Set(next.tasks.map(task => task.title)).size, next.tasks.length, 'no duplicates in a release');
+    assert.deepEqual(next.tasks.slice(0, next.roadmapIndex - index), content.roadmap.slice(index, next.roadmapIndex));
+    sizes.add(next.tasks.length);
+    index = next.roadmapIndex;
   }
-  assert.ok(sizes.size > 15, 'release sizes vary');
+  assert.equal(index, content.roadmap.length, 'the whole roadmap gets shipped');
+  assert.ok(sizes.size > 10, 'release sizes vary');
+});
+
+test('after the roadmap, releases are topped up with maintenance work', () => {
+  const end = content.roadmap.length - 2;
+  const next = game.nextReleaseTasks(end, () => 0.5);
+  assert.equal(next.roadmapIndex, content.roadmap.length);
+  assert.deepEqual(next.tasks.slice(0, 2), content.roadmap.slice(end));
+  const maintenanceTitles = new Set(content.maintenanceTasks.map(task => task.title));
+  assert.ok(next.tasks.slice(2).length > 0 && next.tasks.slice(2).every(task => maintenanceTitles.has(task.title)));
+  const later = game.nextReleaseTasks(content.roadmap.length, () => 0);
+  assert.equal(later.tasks.length, 3);
+  assert.ok(later.tasks.every(task => maintenanceTitles.has(task.title)));
+  assert.equal(game.nextReleaseTasks(content.roadmap.length, () => 0.999999).tasks.length, content.maintenanceTasks.length,
+    'a maintenance-only release is capped by the size of the pool');
 });
 
 test('task ids keep counting up across releases', () => {
@@ -263,6 +286,9 @@ test('Continuous Deployment deploys automatically once a release is ready', () =
 test('bugs start at 100 total coding actions and only for finished tasks', () => {
   const early = newGame();
   work(early, 'T-01', 10);
+  early.actions = bugActionsThreshold;
+  assert.equal(canGenerateBugs(early), false, 'T-01 has no bug template');
+  work(early, 'T-03', 10);
   early.actions = bugActionsThreshold - 1;
   assert.equal(canGenerateBugs(early), false);
   assert.equal(addBug(early), null);
@@ -280,7 +306,7 @@ test('bugs start at 100 total coding actions and only for finished tasks', () =>
     const bug = withRandom(index / 50, () => addBug(copy));
     seen.add(bug.title);
   }
-  assert.deepEqual([...seen].sort(), ['Evidence records lose required fields', 'Review states contradict each other']);
+  assert.deepEqual([...seen].sort(), ['Reports lose their source', 'Reports stuck in “needs more info”']);
 });
 
 test('a new bug gets an id, an effort and is selected', () => {

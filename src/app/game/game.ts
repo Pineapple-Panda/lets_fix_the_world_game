@@ -4,8 +4,9 @@ import type { Item } from '../models/item.model.ts';
 import { perks } from '../models/perk.model.ts';
 import type { Perk } from '../models/perk.model.ts';
 import {
-  blueprint, bugTemplates, maxReleaseTasks, minReleaseTasks, releaseTaskRequired, releaseTasks, taskId
+  blueprint, bugTemplates, maintenanceTasks, maxReleaseTasks, minReleaseTasks, roadmap, taskId
 } from './content.ts';
+import type { RoadmapTask } from './content.ts';
 import { nextVersion, versionForDeployments } from '../models/version.model.ts';
 
 export { perks } from '../models/perk.model.ts';
@@ -50,6 +51,7 @@ export function newGame(): Game {
     autoCoverageUpgrades: 0,
     bugCount: 0,
     taskCount: blueprint.length,
+    roadmapIndex: 0,
     seconds: 0,
     activatedPerks: [],
     deployments: 0,
@@ -154,12 +156,14 @@ export function deploy(game: Game, random: () => number = Math.random): boolean 
   game.budget += reward;
   game.lastDeploymentActions = game.actions;
   game.deployments++;
-  game.items = drawReleaseTasks(random).map(task => ({
+  const next = nextReleaseTasks(game.roadmapIndex, random);
+  game.roadmapIndex = next.roadmapIndex;
+  game.items = next.tasks.map(task => ({
     id: taskId(++game.taskCount),
     type: 'task' as const,
     title: task.title,
     detail: task.detail,
-    required: releaseTaskRequired,
+    required: task.required,
     progress: 0,
     done: false,
     inTest: false
@@ -170,15 +174,23 @@ export function deploy(game: Game, random: () => number = Math.random): boolean 
   return true;
 }
 
-/** Picks a random number (3–25) of distinct tasks from the release pool, in random order. */
-export function drawReleaseTasks(random: () => number = Math.random): typeof releaseTasks {
+/**
+ * The tasks of the next release: a random number (3–25) of the next roadmap entries, in roadmap order.
+ * Once the roadmap runs out, the release is topped up with random, distinct maintenance tasks.
+ */
+export function nextReleaseTasks(
+  roadmapIndex: number,
+  random: () => number = Math.random
+): { tasks: RoadmapTask[]; roadmapIndex: number } {
   const count = minReleaseTasks + Math.floor(random() * (maxReleaseTasks - minReleaseTasks + 1));
-  const pool = [...releaseTasks];
+  const planned = roadmap.slice(roadmapIndex, roadmapIndex + count);
+  const pool = [...maintenanceTasks];
   for (let index = pool.length - 1; index > 0; index--) {
     const swap = Math.floor(random() * (index + 1));
     [pool[index], pool[swap]] = [pool[swap]!, pool[index]!];
   }
-  return pool.slice(0, Math.min(count, pool.length));
+  const filler = pool.slice(0, Math.max(0, count - planned.length));
+  return { tasks: [...planned, ...filler], roadmapIndex: roadmapIndex + planned.length };
 }
 
 /** Deploys automatically when Continuous Deployment is active and a release is ready. */

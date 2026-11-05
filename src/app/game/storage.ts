@@ -48,7 +48,7 @@ function isGame(game: Snapshot): boolean {
     (game.selected === null || typeof game.selected === 'string') &&
     (game.automationTarget === null || typeof game.automationTarget === 'string') &&
     ['actions', 'budget', 'lastDeploymentActions', 'testCoverage', 'manualCoverageUpgrades', 'autoCoverageUpgrades',
-      'bugCount', 'taskCount', 'seconds', 'deployments', 'assistants', 'assistantUpgrades'].every(key => isCount(game[key])) &&
+      'bugCount', 'taskCount', 'roadmapIndex', 'seconds', 'deployments', 'assistants', 'assistantUpgrades'].every(key => isCount(game[key])) &&
     isObject(version) && isCount(version.major) && isCount(version.minor) && isCount(version.patch) &&
     Array.isArray(game.activatedPerks) &&
     game.activatedPerks.every(id => perks.some(perk => perk.id === id)) &&

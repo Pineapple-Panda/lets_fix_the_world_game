@@ -18,6 +18,8 @@ export interface Game {
   bugCount: number;
   /** Number of the last task id handed out (T-01 ... T-nn). */
   taskCount: number;
+  /** Position of the next roadmap task to schedule. */
+  roadmapIndex: number;
   seconds: number;
   activatedPerks: PerkId[];
   deployments: number;
