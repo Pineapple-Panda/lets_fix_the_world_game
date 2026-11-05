@@ -10,6 +10,7 @@
         </div>
     </section>
 }
+<ng-content />
 @if (state.assistants && state.multiAgent) {
     <section class="panel upgrades" aria-labelledby="upgrades-title">
         <h2 class="tool-heading" id="upgrades-title">Upgrades</h2>
@@ -34,7 +35,7 @@
             <div class="tool-details">
                 <strong>{{ entry.perk.name }}</strong>
                 <small>{{ entry.perk.description }}</small>
-                @if (entry.perk.rate) { <small>+{{ entry.perk.rate }} actions / sec</small> }
+                @if (entry.perk.rate) { <small>+{{ entry.perk.rate }} {{ entry.perk.rate === 1 ? 'action' : 'actions' }}/sec</small> }
                 <small>Unlock: Reach {{ entry.perk.actionsRequired }} total coding actions</small>
                 @if (entry.available) {
                     <button class="tool-button" type="button" [attr.aria-label]="'Activate ' + entry.perk.name" (click)="perkActivated.emit(entry.perk.id)">Activate</button>

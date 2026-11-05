@@ -3,26 +3,29 @@ import { ActionBaseComponent } from './components/action-base/action-base';
 import { BoardComponent } from './components/board/board';
 import { EarlComponent } from './components/earl/earl';
 import { IntroComponent } from './components/intro/intro';
+import { LaunchComponent } from './components/launch/launch';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
-  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, automate, automationRegressions, boardColumns, bugChance, canDeploy,
+  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
-  openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs, upgradeAssistants,
+  openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { loadGame, saveGame, saveKey } from './game/storage';
+import { canLaunch, launch, tickLaunched } from './game/launched';
+import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
 import type { Item } from './models/item.model';
+import type { LaunchedGame } from './models/launched.model';
 import type { PerkId } from './models/perk.model';
 import { formatVersion, nextVersion } from './models/version.model';
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, PerksComponent, StatsComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, PerksComponent, StatsComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -35,6 +38,8 @@ export class AppComponent {
 
   readonly saveWarning = signal('');
   readonly showIntro = signal(false);
+  /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
+  readonly launched = signal<LaunchedGame | null>(null);
   readonly game = signal(this.restoreGame());
 
   readonly view = computed((): AppView => {
@@ -50,13 +55,14 @@ export class AppComponent {
       regressions: automationRegressions(game),
       selected: selectedWorkItem(game),
       won: canDeploy(game),
+      canLaunch: canLaunch(game),
       multiAgent,
-      storiesDone: releaseStoriesDone(game),
+      releaseDone: releaseTasksDone(game),
+      releaseTotal: releaseTasksOf(game).length,
       appVersion: formatVersion(game.appVersion),
       releaseVersion: formatVersion(nextVersion(game.appVersion)),
       deploymentBudget: deploymentBudgetReward(game),
       availablePerks: available.filter(entry => entry.available).map(entry => entry.perk),
-      waitingForBugs: storiesWaitingForBugs(game),
       stats: {
         actions: game.actions,
         budget: game.budget,
@@ -94,14 +100,29 @@ export class AppComponent {
         autoRate: autoCoverageRate(game),
         upgradeStep: coverageUpgradeStep
       } : null,
-      boards: [
-        { name: 'User stories', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'story') })) },
-        { name: 'Tasks & bugs', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'task' || item.type === 'bug') })) }
-      ]
+      boards: [{ name: 'Tasks & bugs', columns }]
     };
   });
 
   constructor() {
+    // Keep the notification console scrolled to its newest (bottom) line whenever its content changes.
+    // Observes the whole host because the console is re-created when switching between levels.
+    afterNextRender(() => {
+      const host = this.host.nativeElement as HTMLElement;
+      const scrollToBottom = (consoleBody: HTMLElement | null) => {
+        if (consoleBody) consoleBody.scrollTop = consoleBody.scrollHeight;
+      };
+      scrollToBottom(host.querySelector<HTMLElement>('.console-body'));
+      const observer = new MutationObserver(mutations => {
+        const consoleBody = host.querySelector<HTMLElement>('.console-body');
+        if (consoleBody && mutations.some(mutation => mutation.target === consoleBody.parentNode || consoleBody.contains(mutation.target))) {
+          scrollToBottom(consoleBody);
+        }
+      });
+      observer.observe(host, { childList: true, subtree: true, characterData: true });
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    }, { injector: this.injector });
+
     const onStorage = (event: StorageEvent) => {
       if (event.storageArea !== window.localStorage || (event.key !== saveKey && event.key !== null) || (event.key !== null && event.newValue === event.oldValue)) return;
       if (window.localStorage.getItem(saveKey) === this.savedSnapshot) return;
@@ -112,15 +133,26 @@ export class AppComponent {
     this.destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
 
     const timer = setInterval(() => {
-      if (this.showIntro()) return;
+      const launched = this.launched();
+      if (launched) {
+        const next = tickLaunched(launched);
+        this.launched.set(next);
+        this.persistLaunched(next);
+        return;
+      }
+      if (this.showIntro() || this.view().canLaunch) return;
       if (this.view().won) {
+        if (this.game().activatedPerks.includes('auto-deploy')) {
+          this.update(game => { autoDeploy(game); });
+          return;
+        }
         if (this.saveWarning()) this.persistGame(this.game());
         return;
       }
       this.update(game => {
         game.seconds++;
         const chance = bugChance(game);
-        if (game.seconds >= 15 && canGenerateBugs(game) && openBugs(game).length < 2 && chance > 0 && Math.random() < chance) addBug(game);
+        if (game.seconds >= 15 && canGenerateBugs(game) && chance > 0 && Math.random() < chance) addBug(game);
         automate(game);
       });
     }, 1000);
@@ -201,8 +233,17 @@ export class AppComponent {
         this.storageBlocked = true;
         this.saveWarning.set('Unable to access browser storage. Progress is not being saved.');
       }
+      this.launched.set(null);
       this.update(() => newGame());
     }
+  }
+
+  /** Leaves level 1 for good: the save is reduced to actions and budget. */
+  launchApplication(): void {
+    const state = launch(this.game());
+    if (!state) return;
+    this.launched.set(state);
+    this.persistLaunched(state);
   }
 
   private restoreGame(): Game {
@@ -217,21 +258,28 @@ export class AppComponent {
       this.showIntro.set(true);
       return newGame();
     }
-    try {
-      const savedGame = loadGame(storage);
-      if (storage.getItem(saveKey) !== snapshot) throw new Error('Saved game changed while loading');
-      this.savedSnapshot = snapshot;
-      this.showIntro.set(savedGame === null);
-      return savedGame ?? newGame();
-    } catch {
-      this.storageBlocked = true;
-      this.showIntro.set(snapshot === null);
-      this.saveWarning.set('The saved game could not be loaded or storage is unavailable. Saving is paused to protect existing data.');
+    // An incompatible or corrupt save is ignored: the player starts over and the next save replaces it.
+    this.savedSnapshot = snapshot;
+    const launched = loadLaunched(storage);
+    if (launched) {
+      this.launched.set(launched);
       return newGame();
     }
+    const savedGame = loadGame(storage);
+    this.showIntro.set(savedGame === null);
+    return savedGame ?? newGame();
   }
 
   private persistGame(game: Game): void {
+    this.persist(storage => saveGame(storage, game));
+  }
+
+  private persistLaunched(state: LaunchedGame): void {
+    this.persist(storage => saveLaunched(storage, state));
+  }
+
+  /** Writes a save unless another tab changed it since our last write. */
+  private persist(write: (storage: Storage) => string): void {
     if (this.storageBlocked) return;
     try {
       const storage = window.localStorage;
@@ -240,7 +288,7 @@ export class AppComponent {
         this.saveWarning.set('Another tab changed the saved game. Saving is paused; reload to use the latest save.');
         return;
       }
-      this.savedSnapshot = saveGame(storage, game);
+      this.savedSnapshot = write(storage);
       this.saveWarning.set('');
     } catch {
       this.saveWarning.set('Unable to save progress. Check your browser storage settings.');

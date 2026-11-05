@@ -1,29 +1,21 @@
 @let entry = item();
-@let group = entry.type === 'story';
 <div class="card-entry">
     <button class="card" type="button"
             [class.selected]="selected()"
             [attr.data-id]="entry.id"
-            [disabled]="group || entry.done || entry.inTest || (bugCount() > 0 && entry.type !== 'bug')"
-            [attr.aria-pressed]="group ? null : selected()"
+            [disabled]="entry.done || entry.inTest || (bugCount() > 0 && entry.type !== 'bug')"
+            [attr.aria-pressed]="selected()"
             (click)="itemSelected.emit(entry)">
-        <div class="card-top">@if (!group) {
-            <span class="tag"
-                  [class]="entry.type">{{ entry.type.toUpperCase() }}</span>
-        }<span class="item-id">{{ entry.id }}</span></div>
+        <div class="card-top"><span class="tag"
+                  [class]="entry.type">{{ entry.type.toUpperCase() }}</span><span class="item-id">{{ entry.id }}</span></div>
         <h3>{{ entry.title }}</h3>
-        @if (!group) {
-            <p>{{ entry.detail }}</p>
-        }
-        @if (entry.parent) {
-            <div class="item-meta">PARENT {{ entry.parent }}</div>
-        }
+        <p>{{ entry.detail }}</p>
         <div class="progress-track">
             <div class="progress-fill"
                  [style.width.%]="entry.required ? entry.progress / entry.required * 100 : 0"></div>
         </div>
         <div class="item-meta">
-            <span>{{ group ? 'GROUP · CHILD PROGRESS' : entry.done ? 'SHIPPED' : entry.inTest ? 'IN TEST' : 'CODING' }}{{ group && entry.done ? ' · SHIPPED' : waitingForBugs() ? ' · BLOCKED' : '' }}</span><span>{{ entry.progress }}
+            <span>{{ entry.done ? 'SHIPPED' : entry.inTest ? 'IN TEST' : 'CODING' }}</span><span>{{ entry.progress }}
             / {{ entry.required }}</span></div>
     </button>
     @if (multiAgent() && entry.type === 'task' && !entry.done && !entry.inTest) {

@@ -5,15 +5,12 @@ import type { GameStats } from '../../models/stats.model';
   selector: 'app-stats',
   template: `
     <section class="stats" aria-label="Sprint statistics">
-      <div><span>CODING ACTIONS</span><strong id="actions">{{ stats().actions }}</strong><small>Total
-        output</small></div>
-      <div><span>COMPLETED</span><strong id="completed">{{ stats().completed }} <em>/ {{ stats().total }}</em></strong><small>Work
-        items shipped</small></div>
-      <div><span>AUTOMATION</span><strong id="automation">{{ stats().automationRate }} <em>/ sec</em></strong><small>Current
-        output</small></div>
-      <div><span>OPEN BUGS</span><strong id="bugs">{{ stats().openBugs }}</strong><small
-        id="bug-status">{{ stats().openBugs ? 'Needs your attention' : 'All clear' }}</small></div>
-      <div class="budget"><span>BUDGET</span><strong id="budget">{{ stats().budget }}</strong><small>Earned by deploying</small></div>
+      <div title="Total coding actions"><span>Actions</span><strong id="actions">{{ stats().actions }}</strong></div>
+      <div title="Work items shipped"><span>Done</span><strong id="completed">{{ stats().completed }}<em>/{{ stats().total }}</em></strong></div>
+      <div title="Current automated output"><span>Auto</span><strong id="automation">{{ stats().automationRate }}<em>/s</em></strong></div>
+      <div [class.alarm]="stats().openBugs > 0" [attr.title]="stats().openBugs ? 'Needs your attention' : 'All clear'">
+        <span>Bugs</span><strong id="bugs">{{ stats().openBugs }}</strong></div>
+      <div class="budget" title="Earned by deploying"><span>Budget</span><strong id="budget">{{ stats().budget }}</strong></div>
     </section>
   `
 })

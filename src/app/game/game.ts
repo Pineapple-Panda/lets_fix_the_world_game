@@ -3,7 +3,10 @@ import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
 import { perks } from '../models/perk.model.ts';
 import type { Perk } from '../models/perk.model.ts';
-import { blueprint, bugTemplates, dependencies, improvements } from './content.ts';
+import {
+  blueprint, bugTemplates, maintenanceTasks, maxReleaseTasks, minReleaseTasks, roadmap, taskId
+} from './content.ts';
+import type { RoadmapTask } from './content.ts';
 import { nextVersion, versionForDeployments } from '../models/version.model.ts';
 
 export { perks } from '../models/perk.model.ts';
@@ -11,8 +14,8 @@ export type { Game } from '../models/game.model.ts';
 export type { Item } from '../models/item.model.ts';
 export type { Perk, PerkId } from '../models/perk.model.ts';
 
-/** Number of stories that have to be completed for each release (and that each deployment adds). */
-export const storiesPerRelease = 5;
+/** Bugs can start to appear once this many total coding actions have been made. */
+export const bugActionsThreshold = 100;
 
 /** True for a non-negative safe integer (counts, budgets, action totals). */
 function isCount(value: number): boolean {
@@ -35,7 +38,7 @@ function canAfford(game: Game, cost: number): boolean {
 }
 
 export function newGame(): Game {
-  const game: Game = {
+  return {
     items: blueprint.map(item => ({ ...item, progress: 0, done: false, inTest: false })),
     selected: null,
     automationTarget: null,
@@ -47,70 +50,49 @@ export function newGame(): Game {
     manualCoverageUpgrades: 0,
     autoCoverageUpgrades: 0,
     bugCount: 0,
+    taskCount: blueprint.length,
+    roadmapIndex: 0,
     seconds: 0,
     activatedPerks: [],
-    archivedIds: [],
     deployments: 0,
     assistants: 0,
     assistantUpgrades: 0,
     agentTargets: [],
     agentCarry: []
   };
-  settle(game);
-  return game;
 }
 
 export function openBugs(game: Game): Item[] {
   return game.items.filter(item => item.type === 'bug' && !item.done);
 }
 
+/** Bugs are always available; tasks once total coding actions reach their unlock threshold. */
 export function isAvailable(game: Game, item: Item): boolean {
-  if (item.type === 'bug') return true;
-  if (item.type === 'task') {
-    const parent = game.items.find(entry => entry.type === 'story' && entry.id === item.parent);
-    return !!parent && isAvailable(game, parent);
-  }
-  if (item.id === 'S-01') return true;
-  const dependencyId = dependencies[item.id];
-  if (dependencyId) {
-    return game.items.some(entry => entry.type === 'story' && entry.id === dependencyId && entry.done);
-  }
-  const storyNumber = /^S-(\d+)$/.exec(item.id);
-  return !!storyNumber &&
-    Number(storyNumber[1]) > storiesPerRelease &&
-    Number(storyNumber[1]) <= storiesPerRelease * (game.deployments + 1) &&
-    game.items.some(entry => entry.type === 'story' && entry.id === item.id);
+  return item.type === 'bug' || game.actions >= (item.unlockAt ?? 0);
 }
 
 export function boardItems(game: Game): Item[] {
-  return game.items.filter(item => isAvailable(game, item) && !game.archivedIds.includes(item.id));
+  return game.items.filter(item => isAvailable(game, item));
 }
 
+/** Tasks of the current release (the item list only ever holds the current release plus its bugs). */
+export function releaseTasksOf(game: Game): Item[] {
+  return game.items.filter(item => item.type === 'task');
+}
+
+/** A release can ship once every task and bug is done; nothing may be open or still in test. */
 export function canDeploy(game: Game): boolean {
-  return game.items.filter(item => item.type === 'story' && item.done).length >= storiesPerRelease * (game.deployments + 1) &&
-    openBugs(game).length === 0;
+  return releaseTasksOf(game).length > 0 && game.items.every(item => item.done);
 }
 
-/** Stories completed towards the upcoming release. */
-export function releaseStoriesDone(game: Game): number {
-  return game.items.filter(item => item.type === 'story' && item.done).length - game.deployments * storiesPerRelease;
+/** Tasks of the current release that are done. */
+export function releaseTasksDone(game: Game): number {
+  return releaseTasksOf(game).filter(item => item.done).length;
 }
 
 /** The selected task or bug, if it can still be worked on. */
 export function selectedWorkItem(game: Game): Item | undefined {
-  return game.items.find(item =>
-    item.id === game.selected && !item.done && (item.type === 'task' || item.type === 'bug')
-  );
-}
-
-/** Ids of stories whose tasks are all done but which cannot complete while bugs are open. */
-export function storiesWaitingForBugs(game: Game): Set<string> {
-  if (!openBugs(game).length) return new Set();
-  return new Set(game.items.filter(item =>
-    item.type === 'story' && !item.done && item.progress >= item.required &&
-    game.items.some(child => child.parent === item.id) &&
-    game.items.every(child => child.parent !== item.id || child.done)
-  ).map(item => item.id));
+  return game.items.find(item => item.id === game.selected && !item.done);
 }
 
 /** Board columns for the visible items; the IN TEST column only exists while Earl is active. */
@@ -133,10 +115,6 @@ export function boardColumns(game: Game): BoardColumn[] {
   ];
 }
 
-export function sprintComplete(game: Game): boolean {
-  return canDeploy(game);
-}
-
 export function deploymentBudgetReward(game: Game): number {
   if (
     !isCount(game.deployments) ||
@@ -154,7 +132,11 @@ export function deploymentBudgetReward(game: Game): number {
   return isCount(reward) ? reward : 0;
 }
 
-export function deploy(game: Game): boolean {
+/**
+ * Ships the release: pays the reward, drops every finished item and starts the next release.
+ * Nothing of past releases is kept, so the game state stays small no matter how often you deploy.
+ */
+export function deploy(game: Game, random: () => number = Math.random): boolean {
   if (
     !canDeploy(game) ||
     !hasValidActionHistory(game) ||
@@ -173,67 +155,58 @@ export function deploy(game: Game): boolean {
   game.appVersion = releaseVersion;
   game.budget += reward;
   game.lastDeploymentActions = game.actions;
-  game.archivedIds = game.items.filter(item => item.done).map(item => item.id);
   game.deployments++;
-  for (const [index, story] of improvements.entries()) {
-    const id = `S-${String(storiesPerRelease * game.deployments + index + 1).padStart(2, '0')}`;
-    const suffix = game.deployments > 1 ? ` (iteration ${game.deployments})` : '';
-    for (const [taskIndex, task] of story.tasks.entries()) {
-      game.items.push({
-        ...task,
-        id: `T-${String(15 + (game.deployments - 1) * 10 + index * 2 + taskIndex + 1).padStart(2, '0')}`,
-        type: 'task',
-        parent: id,
-        required: 30,
-        progress: 0,
-        done: false,
-        inTest: false
-      });
-    }
-    game.items.push({
-      id,
-      type: 'story',
-      title: story.title + suffix,
-      detail: story.detail,
-      required: 0,
-      progress: 0,
-      done: false,
-      inTest: false
-    });
-  }
-  settle(game);
+  const next = nextReleaseTasks(game.roadmapIndex, random);
+  game.roadmapIndex = next.roadmapIndex;
+  game.items = next.tasks.map(task => ({
+    id: taskId(++game.taskCount),
+    type: 'task' as const,
+    title: task.title,
+    detail: task.detail,
+    required: task.required,
+    progress: 0,
+    done: false,
+    inTest: false
+  }));
+  game.selected = null;
+  game.automationTarget = null;
+  game.agentTargets = game.agentTargets.map(() => null);
   return true;
 }
 
+/**
+ * The tasks of the next release: a random number (3–25) of the next roadmap entries, in roadmap order.
+ * Once the roadmap runs out, the release is topped up with random, distinct maintenance tasks.
+ */
+export function nextReleaseTasks(
+  roadmapIndex: number,
+  random: () => number = Math.random
+): { tasks: RoadmapTask[]; roadmapIndex: number } {
+  const count = minReleaseTasks + Math.floor(random() * (maxReleaseTasks - minReleaseTasks + 1));
+  const planned = roadmap.slice(roadmapIndex, roadmapIndex + count);
+  const pool = [...maintenanceTasks];
+  for (let index = pool.length - 1; index > 0; index--) {
+    const swap = Math.floor(random() * (index + 1));
+    [pool[index], pool[swap]] = [pool[swap]!, pool[index]!];
+  }
+  const filler = pool.slice(0, Math.max(0, count - planned.length));
+  return { tasks: [...planned, ...filler], roadmapIndex: roadmapIndex + planned.length };
+}
+
+/** Deploys automatically when Continuous Deployment is active and a release is ready. */
+export function autoDeploy(game: Game): boolean {
+  return game.activatedPerks.includes('auto-deploy') && deploy(game);
+}
+
+/** Moves finished work forward: to IN TEST while Earl is active, otherwise straight to DONE. */
 export function settle(game: Game): void {
-  let changed;
-  do {
-    changed = false;
-    for (const item of game.items) {
-      if (item.type === 'story') {
-        const children = game.items.filter(child => child.parent === item.id);
-        const progress = children.reduce((sum, child) => sum + child.progress, 0);
-        const required = children.reduce((sum, child) => sum + child.required, 0);
-        if (item.progress !== progress || item.required !== required) changed = true;
-        item.progress = progress;
-        item.required = required;
-        if (
-          item.done ||
-          !isAvailable(game, item) ||
-          !children.length ||
-          children.some(child => !child.done) ||
-          openBugs(game).length
-        ) continue;
-      } else if (item.done || item.inTest || item.progress < item.required) continue;
-      if (item.type !== 'story' && game.activatedPerks.includes('earl')) item.inTest = true;
-      else item.done = true;
-      if (item.type === 'task') {
-        const agent = game.agentTargets.indexOf(item.id);
-        if (agent !== -1) game.agentTargets[agent] = null;
-      }
-      changed = true;
-    }
-  } while (changed);
+  for (const item of game.items) {
+    if (item.done || item.inTest || item.progress < item.required) continue;
+    if (game.activatedPerks.includes('earl')) item.inTest = true;
+    else item.done = true;
+    const agent = game.agentTargets.indexOf(item.id);
+    if (agent !== -1) game.agentTargets[agent] = null;
+  }
 }
 
 export function selectItem(game: Game, id: string): boolean {
@@ -281,7 +254,11 @@ export function openPerks(game: Game): Perk[] {
   const available = perks.filter(perk => !game.activatedPerks.includes(perk.id) &&
     (perk.id !== 'earl' || perkUnlocked(game, perk)));
   const promoted = available.filter(perk => priorityIds.includes(perk.id) && perkUnlocked(game, perk));
-  const result = available.filter(perk => !priorityIds.includes(perk.id)).slice(0, 3 - promoted.length);
+  // Locked testing perks are previewed in unlock order once Earl is reachable; before that they stay hidden.
+  const earlUnlocked = perks.some(perk => perk.id === 'earl' && perkUnlocked(game, perk));
+  const result = available
+    .filter(perk => !promoted.includes(perk) && (!priorityIds.includes(perk.id) || earlUnlocked))
+    .slice(0, 3 - promoted.length);
   return [...result, ...promoted];
 }
 
@@ -293,7 +270,7 @@ export const coverageCost = 1;
 
 /** Coverage units (1/1000 percentage point) added by each manual or automatic coverage upgrade: 0.005 pp. */
 export const coverageUpgradeStep = 5;
-/** Budget cost of one manual coverage upgrade (requires Improve Testing Skills). */
+/** Budget cost of one manual coverage upgrade (requires Level Up Testing Skills). */
 export const manualCoverageUpgradeCost = 2000;
 /** Budget cost of one automatic coverage upgrade (requires Automate Testing). */
 export const autoCoverageUpgradeCost = 5000;
@@ -543,16 +520,27 @@ export function automate(game: Game): void {
   }
   const bug = game.activatedPerks.includes('bug-fix-agent') ? oldestOpenBug(game) : undefined;
   if (bug) applyWork(game, bug, 1);
+  const passChance = testPassChance(game);
   for (const item of tests) {
     item.inTest = false;
-    if (Math.random() < 0.5) item.done = true;
-    else item.progress = item.required - 1;
+    if (Math.random() < passChance) item.done = true;
+    else item.progress = Math.floor(item.progress / 2);
     settle(game);
   }
 }
 
+/** Chance that an item in IN TEST passes: 50% without coverage, rising linearly to 100% at full coverage. */
+export function testPassChance(game: Game): number {
+  return 0.5 + 0.5 * Math.min(100000, game.testCoverage) / 100000;
+}
+
 export function canGenerateBugs(game: Game): boolean {
-  return game.items.some(item => item.type === 'story' && item.id === 'S-02' && item.done);
+  return game.actions >= bugActionsThreshold && bugTemplates.some(template => bugTemplateEligible(game, template.task));
+}
+
+/** A bug template applies once its task is done; after the first release every first-release task has shipped. */
+function bugTemplateEligible(game: Game, task: string): boolean {
+  return game.deployments > 0 || game.items.some(item => item.id === task && item.done);
 }
 
 export function bugChance(game: Game): number {
@@ -561,7 +549,9 @@ export function bugChance(game: Game): number {
     game.actions >= 8500 ? 0.16 :
     game.actions >= 7500 ? 0.12 :
     game.actions >= 4000 ? 0.08 : 0.04;
-  return game.activatedPerks.includes('earl') ? chance * (1 - game.testCoverage / 100000) : chance;
+  const covered = game.activatedPerks.includes('earl') ? chance * (1 - game.testCoverage / 100000) : chance;
+  // There is no hard cap on simultaneous bugs; instead every open bug makes the next one less likely.
+  return covered / (1 + openBugs(game).length) ** 2;
 }
 
 export function automationRegressions(game: Game): boolean {
@@ -570,9 +560,7 @@ export function automationRegressions(game: Game): boolean {
 
 export function addBug(game: Game): Item | null {
   if (!canGenerateBugs(game)) return null;
-  const eligibleTemplates = bugTemplates.filter(template =>
-    game.items.some(item => item.type === 'story' && item.id === template.story && item.done)
-  );
+  const eligibleTemplates = bugTemplates.filter(template => bugTemplateEligible(game, template.task));
   const availableTemplates = eligibleTemplates.filter(template =>
     !openBugs(game).some(bug =>
       bug.title === template.title || bug.title === `Automation regression: ${template.title}`

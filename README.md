@@ -9,10 +9,10 @@ tools that automate the grind.
 
 ## How to play
 
-- **Code:** select a task and press *Code* — every click adds one point of progress. A story is done once all of its tasks are done.
-- **Bugs:** after the platform foundations are in place, bugs start to appear. Open bugs block all other manual work and story completion.
-- **Deploy:** once five stories are done and no bugs are open, deploy the next version. Deploying earns budget and adds new stories.
-- **Perks:** your total number of actions unlocks perks such as Stack Overflow, Code Assistants, Multi Agent, the Bug-fix Agent and the Earl testing suite.
+- **Code:** select a task and press *Write code* — every click adds one point of progress. New tasks of the first release unlock as your total coding actions grow.
+- **Bugs:** from 100 total coding actions on, bugs start to appear. Each bug belongs to a finished task. Open bugs block all other manual work.
+- **Deploy:** once every task and bug of the release is done, deploy the next version. Deploying earns budget, clears the board and starts the next release.
+- **Perks:** your total number of actions unlocks perks such as Stack Overflow, Code Assistants, Multi-Agent Mode, the Bug-Fix Agent, the Earl test suite and Continuous Deployment.
 - **Budget:** spend it on additional assistants, assistant performance upgrades and test coverage (which lowers the bug rate).
 
 Progress is saved in the browser's `localStorage`.
@@ -33,8 +33,8 @@ npm run build  # production build in dist/lets-fix-the-world-game
 | Path | Purpose |
 |---|---|
 | `src/app/game/game.ts` | Framework-independent game rules (pure functions on a `Game` state object) |
-| `src/app/game/content.ts`, `initial-backlog.ts` | Stories, tasks, story dependencies and bug templates |
-| `src/app/game/storage.ts` | Versioned save format with validation and migration |
+| `src/app/game/content.ts`, `initial-backlog.ts` | Release tasks, unlock thresholds and bug templates |
+| `src/app/game/storage.ts` | Save/load; incompatible saves are ignored and the game starts over |
 | `src/app/models/` | Types for game state, items, perks and view models |
 | `src/app/app.ts` | Root component: game loop, persistence and view model |
 | `src/app/components/` | Board, cards, stats, actions, perks toolkit and intro dialog |

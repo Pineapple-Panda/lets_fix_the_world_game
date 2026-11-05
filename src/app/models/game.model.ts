@@ -16,9 +16,12 @@ export interface Game {
   /** Purchased automatic coverage upgrades, each adding 0.005 pp per second. */
   autoCoverageUpgrades: number;
   bugCount: number;
+  /** Number of the last task id handed out (T-01 ... T-nn). */
+  taskCount: number;
+  /** Position of the next roadmap task to schedule. */
+  roadmapIndex: number;
   seconds: number;
   activatedPerks: PerkId[];
-  archivedIds: string[];
   deployments: number;
   assistants: number;
   assistantUpgrades: number;

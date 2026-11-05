@@ -8,7 +8,6 @@ import type { Item } from '../../models/item.model.ts';
 export class CardComponent {
   readonly item = input.required<Item>();
   readonly selected = input.required<boolean>();
-  readonly waitingForBugs = input.required<boolean>();
   readonly bugCount = input.required<number>();
   readonly multiAgent = input.required<boolean>();
   readonly assigned = input.required<boolean>();

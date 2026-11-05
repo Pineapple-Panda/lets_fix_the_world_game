@@ -11,7 +11,6 @@ import { CardComponent } from '../card/card';
 export class BoardComponent {
   readonly boards = input.required<Board[]>();
   readonly selectedId = input.required<string | null>();
-  readonly waitingForBugs = input.required<ReadonlySet<string>>();
   readonly bugCount = input.required<number>();
   readonly multiAgent = input.required<boolean>();
   readonly agentTargets = input.required<(string | null)[]>();
