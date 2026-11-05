@@ -15,7 +15,7 @@ export class PerksComponent {
   tooltip(perk: Perk): string {
     if (perk.id === 'earl') return `${perk.name}: ${perk.description} Test coverage: ${this.view().coverage.toFixed(3)}%.`;
     const rate = perk.kind === 'upgradeable' ? this.view().assistantOutput : perk.rate;
-    const output = rate ? ` +${rate} action / sec` : '';
+    const output = rate ? ` +${rate} ${rate === 1 ? 'action' : 'actions'}/sec` : '';
     const assistants = perk.kind === 'upgradeable' ? ` per assistant (${this.view().assistants} active)` : '';
     return `${perk.name}: ${perk.description}${output}${assistants}`;
   }

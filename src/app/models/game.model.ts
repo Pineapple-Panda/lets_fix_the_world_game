@@ -16,6 +16,8 @@ export interface Game {
   /** Purchased automatic coverage upgrades, each adding 0.005 pp per second. */
   autoCoverageUpgrades: number;
   bugCount: number;
+  /** Number of the last task id handed out (T-01 ... T-nn). */
+  taskCount: number;
   seconds: number;
   activatedPerks: PerkId[];
   deployments: number;

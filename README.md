@@ -12,7 +12,7 @@ tools that automate the grind.
 - **Code:** select a task and press *Write code* — every click adds one point of progress. New tasks of the first release unlock as your total coding actions grow.
 - **Bugs:** from 100 total coding actions on, bugs start to appear. Each bug belongs to a finished task. Open bugs block all other manual work.
 - **Deploy:** once every task and bug of the release is done, deploy the next version. Deploying earns budget, clears the board and starts the next release.
-- **Perks:** your total number of actions unlocks perks such as Stack Overflow, Code Assistants, Multi Agent, the Bug-fix Agent and the Earl testing suite.
+- **Perks:** your total number of actions unlocks perks such as Stack Overflow, Code Assistants, Multi-Agent Mode, the Bug-Fix Agent, the Earl test suite and Continuous Deployment.
 - **Budget:** spend it on additional assistants, assistant performance upgrades and test coverage (which lowers the bug rate).
 
 Progress is saved in the browser's `localStorage`.

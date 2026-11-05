@@ -27,7 +27,7 @@ export const perks: Perk[] = [
   {
     id: 'stack-overflow',
     name: 'Stack Overflow',
-    description: 'Copy and paste unsafe code snippets straight from the internet.',
+    description: 'Copy-paste code snippets straight from the internet. What could possibly go wrong?',
     icon: '{}',
     kind: 'simple',
     rate: 1,
@@ -35,8 +35,8 @@ export const perks: Perk[] = [
   },
   {
     id: 'build-pipeline',
-    name: 'Build Pipeline',
-    description: 'Make git handle all the boring stuff you are barely able to care about.',
+    name: 'CI Pipeline',
+    description: 'Let the pipeline build, lint and package everything you can barely be bothered with.',
     icon: '↗',
     kind: 'simple',
     rate: 1,
@@ -45,23 +45,23 @@ export const perks: Perk[] = [
   {
     id: 'code-assistant',
     name: 'Code Assistant',
-    description: 'Ask vague questions to a chatbot that generates crappy or completely overengineered code.',
+    description: 'Ask a chatbot vague questions and get code that is either sloppy or wildly over-engineered.',
     icon: '✳',
     kind: 'upgradeable',
     actionsRequired: 700
   },
   {
     id: 'multi-agent',
-    name: 'Multi Agent',
-    description: 'Assign assistants to different tasks.',
+    name: 'Multi-Agent Mode',
+    description: 'Assign each assistant to its own task.',
     icon: '+',
     kind: 'simple',
     actionsRequired: 1000
   },
   {
     id: 'ram-upgrade',
-    name: 'Sell some of your organs to buy more RAM',
-    description: 'Get enough memory to keep your development tools running.',
+    name: 'Sell an Organ for More RAM',
+    description: 'Get enough memory to keep your IDE, Docker and 40 browser tabs running at once.',
     icon: '▣',
     kind: 'simple',
     rate: 2,
@@ -69,24 +69,24 @@ export const perks: Perk[] = [
   },
   {
     id: 'ai-subscription',
-    name: 'Upgrade AI Subscription',
-    description: 'Double every assistant’s output, including upgrades.',
+    name: 'AI Pro Plan',
+    description: 'Double the output of every assistant, upgrades included.',
     icon: 'AI',
     kind: 'simple',
     actionsRequired: 4000
   },
   {
     id: 'auto-assigner',
-    name: 'Auto Assigner',
-    description: 'Automatically assign idle assistants to available tasks when Multi Agent is active.',
+    name: 'Auto-Assigner',
+    description: 'Automatically assign idle assistants to open tasks (requires Multi-Agent Mode).',
     icon: 'A+',
     kind: 'simple',
     actionsRequired: 6000
   },
   {
     id: 'bug-fix-agent',
-    name: 'Bug-fix Agent',
-    description: 'Automatically fix the oldest open bug at 1 bug-fixing action / sec.',
+    name: 'Bug-Fix Agent',
+    description: 'Automatically fix the oldest open bug at 1 action/sec.',
     icon: 'B+',
     kind: 'simple',
     actionsRequired: 10000
@@ -94,15 +94,15 @@ export const perks: Perk[] = [
   {
     id: 'earl',
     name: 'Install Earl',
-    description: 'An automated testing suite for your project.',
+    description: 'Set up Earl, an automated test suite: finished work runs through IN TEST before it ships.',
     icon: 'E',
     kind: 'upgradeable',
     actionsRequired: 17000
   },
   {
     id: 'testing-skills',
-    name: 'Improve Testing Skills',
-    description: 'Manual coverage clicks add 0.005 percentage points. Unlocks manual coverage upgrades in the Earl panel.',
+    name: 'Level Up Testing Skills',
+    description: 'Each manual coverage click adds 0.005 percentage points. Unlocks manual coverage upgrades in the Earl panel.',
     icon: 'TS',
     kind: 'simple',
     actionsRequired: 20000
@@ -110,15 +110,15 @@ export const perks: Perk[] = [
   {
     id: 'auto-testing',
     name: 'Automate Testing',
-    description: 'Earl raises coverage by 0.001 percentage points/sec. Unlocks automatic coverage upgrades in the Earl panel.',
+    description: 'Earl raises coverage by 0.001 percentage points/sec on its own. Unlocks automatic coverage upgrades in the Earl panel.',
     icon: 'AT',
     kind: 'simple',
     actionsRequired: 25000
   },
   {
     id: 'ai-testing-subscription',
-    name: 'Upgrade AI Subscription for testing',
-    description: 'All assistants also fix open bugs automatically, oldest bug first.',
+    name: 'AI QA Add-on',
+    description: 'Every assistant fixes open bugs automatically, oldest first, before returning to its task.',
     icon: 'AB',
     kind: 'simple',
     actionsRequired: 28000
@@ -126,7 +126,7 @@ export const perks: Perk[] = [
   {
     id: 'auto-deploy',
     name: 'Continuous Deployment',
-    description: 'Ship it! Automatically deploys the next version as soon as a release is ready.',
+    description: 'Ship it! Deploy the next version automatically as soon as a release is ready.',
     icon: 'CD',
     kind: 'simple',
     actionsRequired: 32000

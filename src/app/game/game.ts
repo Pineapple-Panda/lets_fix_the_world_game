@@ -3,7 +3,9 @@ import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
 import { perks } from '../models/perk.model.ts';
 import type { Perk } from '../models/perk.model.ts';
-import { blueprint, bugTemplates, releaseTaskRequired, releaseTasks, taskId } from './content.ts';
+import {
+  blueprint, bugTemplates, maxReleaseTasks, minReleaseTasks, releaseTaskRequired, releaseTasks, taskId
+} from './content.ts';
 import { nextVersion, versionForDeployments } from '../models/version.model.ts';
 
 export { perks } from '../models/perk.model.ts';
@@ -47,6 +49,7 @@ export function newGame(): Game {
     manualCoverageUpgrades: 0,
     autoCoverageUpgrades: 0,
     bugCount: 0,
+    taskCount: blueprint.length,
     seconds: 0,
     activatedPerks: [],
     deployments: 0,
@@ -131,7 +134,7 @@ export function deploymentBudgetReward(game: Game): number {
  * Ships the release: pays the reward, drops every finished item and starts the next release.
  * Nothing of past releases is kept, so the game state stays small no matter how often you deploy.
  */
-export function deploy(game: Game): boolean {
+export function deploy(game: Game, random: () => number = Math.random): boolean {
   if (
     !canDeploy(game) ||
     !hasValidActionHistory(game) ||
@@ -151,12 +154,10 @@ export function deploy(game: Game): boolean {
   game.budget += reward;
   game.lastDeploymentActions = game.actions;
   game.deployments++;
-  const suffix = game.deployments > 1 ? ` (iteration ${game.deployments})` : '';
-  const firstNumber = blueprint.length + (game.deployments - 1) * releaseTasks.length + 1;
-  game.items = releaseTasks.map((task, index) => ({
-    id: taskId(firstNumber + index),
+  game.items = drawReleaseTasks(random).map(task => ({
+    id: taskId(++game.taskCount),
     type: 'task' as const,
-    title: task.title + suffix,
+    title: task.title,
     detail: task.detail,
     required: releaseTaskRequired,
     progress: 0,
@@ -167,6 +168,17 @@ export function deploy(game: Game): boolean {
   game.automationTarget = null;
   game.agentTargets = game.agentTargets.map(() => null);
   return true;
+}
+
+/** Picks a random number (3–25) of distinct tasks from the release pool, in random order. */
+export function drawReleaseTasks(random: () => number = Math.random): typeof releaseTasks {
+  const count = minReleaseTasks + Math.floor(random() * (maxReleaseTasks - minReleaseTasks + 1));
+  const pool = [...releaseTasks];
+  for (let index = pool.length - 1; index > 0; index--) {
+    const swap = Math.floor(random() * (index + 1));
+    [pool[index], pool[swap]] = [pool[swap]!, pool[index]!];
+  }
+  return pool.slice(0, Math.min(count, pool.length));
 }
 
 /** Deploys automatically when Continuous Deployment is active and a release is ready. */
@@ -246,7 +258,7 @@ export const coverageCost = 1;
 
 /** Coverage units (1/1000 percentage point) added by each manual or automatic coverage upgrade: 0.005 pp. */
 export const coverageUpgradeStep = 5;
-/** Budget cost of one manual coverage upgrade (requires Improve Testing Skills). */
+/** Budget cost of one manual coverage upgrade (requires Level Up Testing Skills). */
 export const manualCoverageUpgradeCost = 2000;
 /** Budget cost of one automatic coverage upgrade (requires Automate Testing). */
 export const autoCoverageUpgradeCost = 5000;

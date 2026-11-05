@@ -190,33 +190,49 @@ test('deploying pays the reward, clears finished work and starts the next releas
   state.agentTargets = ['T-15'];
   const reward = deploymentBudgetReward(state);
   assert.equal(reward, 260, 'v1.0 multiplies the actions since the last deploy by 1');
-  assert.equal(deploy(state), true);
+  assert.equal(deploy(state, () => 0.3), true);
   assert.equal(state.deployments, 1);
   assert.equal(state.budget, 260);
   assert.equal(state.lastDeploymentActions, 260);
   assert.deepEqual(state.appVersion, { major: 1, minor: 0, patch: 0 });
-  assert.deepEqual(state.items.map(entry => entry.id), Array.from({ length: 10 }, (_, index) => content.taskId(16 + index)));
+  assert.equal(state.items.length, 9, 'random 0.3 draws 3 + floor(0.3 * 23) = 9 tasks');
+  assert.deepEqual(state.items.map(entry => entry.id), Array.from({ length: 9 }, (_, index) => content.taskId(16 + index)));
+  assert.equal(state.taskCount, 24);
   assert.ok(state.items.every(entry => entry.type === 'task' && entry.required === 30 && entry.unlockAt === undefined && !entry.done));
   assert.ok(state.items.every(entry => isAvailable(state, entry)), 'later releases are fully available');
   assert.equal(state.selected, null);
   assert.equal(state.automationTarget, null);
   assert.deepEqual(state.agentTargets, [null]);
-  assert.equal(releaseTasksOf(state).length, 10);
+  assert.equal(releaseTasksOf(state).length, 9);
   assert.equal(releaseTasksDone(state), 0);
   assert.equal(deploy(state), false);
 });
 
-test('later releases are numbered on and marked as iterations', () => {
+test('each later release draws 3 to 25 distinct tasks from the pool', () => {
+  assert.ok(content.releaseTasks.length >= content.maxReleaseTasks, 'pool is large enough for 25 distinct tasks');
+  assert.equal(new Set(content.releaseTasks.map(task => task.title)).size, content.releaseTasks.length);
+  assert.equal(game.drawReleaseTasks(() => 0).length, 3);
+  assert.equal(game.drawReleaseTasks(() => 0.999999).length, 25);
+  const sizes = new Set();
+  for (let index = 0; index < 500; index++) {
+    const drawn = game.drawReleaseTasks();
+    assert.ok(drawn.length >= 3 && drawn.length <= 25, String(drawn.length));
+    assert.equal(new Set(drawn.map(task => task.title)).size, drawn.length, 'no duplicates in a release');
+    sizes.add(drawn.length);
+  }
+  assert.ok(sizes.size > 15, 'release sizes vary');
+});
+
+test('task ids keep counting up across releases', () => {
   const state = newGame();
   finishRelease(state);
-  deploy(state);
-  assert.equal(state.items[0].title, 'Make evidence searchable');
+  deploy(state, () => 0);
+  assert.deepEqual(state.items.map(entry => entry.id), ['T-16', 'T-17', 'T-18']);
   finishRelease(state);
   state.actions += 100;
   assert.equal(deploymentBudgetReward(state), Math.round((state.actions - state.lastDeploymentActions) * 1.1));
-  deploy(state);
-  assert.equal(state.items[0].id, 'T-26');
-  assert.equal(state.items[0].title, 'Make evidence searchable (iteration 2)');
+  deploy(state, () => 0);
+  assert.deepEqual(state.items.map(entry => entry.id), ['T-19', 'T-20', 'T-21']);
   assert.deepEqual(state.appVersion, { major: 1, minor: 1, patch: 0 });
 });
 
@@ -227,8 +243,8 @@ test('the game state stays small no matter how often you deploy', () => {
     assert.equal(deploy(state), true);
   }
   assert.equal(state.deployments, 60);
-  assert.equal(state.items.length, 10);
-  assert.ok(JSON.stringify(state).length < 5000);
+  assert.ok(state.items.length >= 3 && state.items.length <= 25);
+  assert.ok(JSON.stringify(state).length < 10000);
 });
 
 test('Continuous Deployment deploys automatically once a release is ready', () => {
