@@ -9,7 +9,8 @@ export type PerkId =
   | 'bug-fix-agent'
   | 'earl'
   | 'testing-skills'
-  | 'auto-testing';
+  | 'auto-testing'
+  | 'ai-testing-subscription';
 
 export interface Perk {
   id: PerkId;
@@ -112,5 +113,13 @@ export const perks: Perk[] = [
     icon: 'AT',
     kind: 'simple',
     actionsRequired: 25000
+  },
+  {
+    id: 'ai-testing-subscription',
+    name: 'Upgrade AI Subscription for testing',
+    description: 'All assistants also fix open bugs automatically, oldest bug first.',
+    icon: 'AB',
+    kind: 'simple',
+    actionsRequired: 28000
   }
 ];

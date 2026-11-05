@@ -488,14 +488,24 @@ export function currentAutomationRate(game: Game): number {
     if (item) rates.set(item, (rates.get(item) ?? 0) + rate);
   };
   addTargetRate(game.automationTarget, baseAutomationRate(game));
-  for (let i = 0; i < assistantCount(game); i++) {
-    const target = game.activatedPerks.includes('multi-agent') ? game.agentTargets[i] : game.automationTarget;
-    addTargetRate(target, assistantOutput(game));
+  const assistantsOnBugs = assistantsFixBugs(game) && oldestOpenBug(game) !== undefined;
+  if (!assistantsOnBugs) {
+    for (let i = 0; i < assistantCount(game); i++) {
+      const target = game.activatedPerks.includes('multi-agent') ? game.agentTargets[i] : game.automationTarget;
+      addTargetRate(target, assistantOutput(game));
+    }
   }
-  const bug = game.activatedPerks.includes('bug-fix-agent') ? oldestOpenBug(game) : undefined;
+  const bugWork = openBugs(game).reduce((total, bug) => total + Math.max(0, bug.required - bug.progress), 0);
+  const bugRate = (game.activatedPerks.includes('bug-fix-agent') && oldestOpenBug(game) ? 1 : 0) +
+    (assistantsOnBugs ? assistantCount(game) * assistantOutput(game) : 0);
   return Array.from(rates, ([item, rate]) => Math.min(rate, item.required - item.progress))
     .reduce((total, rate) => total + rate, 0) +
-    (bug ? Math.min(1, bug.required - bug.progress) : 0);
+    Math.min(bugRate, bugWork);
+}
+
+/** True when assistants fix open bugs before returning to their tasks. */
+export function assistantsFixBugs(game: Game): boolean {
+  return game.activatedPerks.includes('ai-testing-subscription') && assistantCount(game) > 0;
 }
 
 export function automate(game: Game): void {
@@ -518,14 +528,18 @@ export function automate(game: Game): void {
     }
   }
   for (let i = 0; i < assistantCount(game); i++) {
+    const bug = assistantsFixBugs(game) ? oldestOpenBug(game) : undefined;
     const target = game.activatedPerks.includes('multi-agent') ? game.agentTargets[i] : game.automationTarget;
-    const item = automationTask(game, target);
+    const item = bug ?? automationTask(game, target);
     if (!item) continue;
     const carry = game.agentCarry[i];
     if (carry === undefined) continue;
     const tenths = carry + assistantOutputTenths(game);
     game.agentCarry[i] = tenths % 10;
-    work(game, item.id, Math.floor(tenths / 10), true);
+    const amount = Math.floor(tenths / 10);
+    if (bug) {
+      if (amount > 0) applyWork(game, bug, amount);
+    } else work(game, item.id, amount, true);
   }
   const bug = game.activatedPerks.includes('bug-fix-agent') ? oldestOpenBug(game) : undefined;
   if (bug) applyWork(game, bug, 1);

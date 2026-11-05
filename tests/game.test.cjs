@@ -138,9 +138,10 @@ assert.deepEqual(perks.map(({ id, name, kind }) => [id, name, kind]), [
   ['bug-fix-agent', 'Bug-fix Agent', 'simple'],
   ['earl', 'Install Earl', 'upgradeable'],
   ['testing-skills', 'Improve Testing Skills', 'simple'],
-  ['auto-testing', 'Automate Testing', 'simple']
+  ['auto-testing', 'Automate Testing', 'simple'],
+  ['ai-testing-subscription', 'Upgrade AI Subscription for testing', 'simple']
 ]);
-assert.equal(perks.length, 11);
+assert.equal(perks.length, 12);
 assert.equal(perks[7].actionsRequired, 10000);
 assert.equal(perks[7].rate, undefined);
 assert.match(perks[7].description, /1 bug-fixing action\s*\/\s*sec/i);
@@ -149,7 +150,7 @@ assert.equal(perks[6].rate, undefined);
 assert.equal(perks[5].actionsRequired, 4000);
 assert.equal(perks[5].rate, undefined);
 assert.match(perks[5].description, /double.*assistant/i);
-const goals = [50, 200, 700, 1000, 2000, 4000, 6000, 10000, 17000, 20000, 25000];
+const goals = [50, 200, 700, 1000, 2000, 4000, 6000, 10000, 17000, 20000, 25000, 28000];
 assert.deepEqual(perks.map(perk => perk.actionsRequired), goals);
 assert.match(perks[9].description, /manual.*coverage.*0\.005 percentage points/i);
 assert.match(perks[10].description, /Earl.*coverage.*0\.001 percentage points\/sec.*automatic coverage upgrades/i);
@@ -1969,10 +1970,10 @@ for (const change of [
 }
 
 const budgetPerks = newGame();
-budgetPerks.actions = 25000;
+budgetPerks.actions = 28000;
 budgetPerks.budget = 3;
 for (const perk of perks) assert.equal(activatePerk(budgetPerks, perk.id), true);
-assert.equal(budgetPerks.actions, 25000);
+assert.equal(budgetPerks.actions, 28000);
 assert.equal(budgetPerks.budget, 3);
 assert.equal(improveCoverage(budgetPerks), true);
 assert.equal(budgetPerks.budget, 2);
@@ -2231,6 +2232,54 @@ assert.equal(loadGame(storage).lastDeploymentActions, 0);
     saveGame(memory, negative);
     assert.throws(() => loadGame(memory), field);
   }
+}
+
+{
+  const { assistantsFixBugs } = require('../src/app/game/game.ts');
+  const setup = withPerk => {
+    const value = newGame();
+    for (const story of ['S-01', 'S-02']) {
+      for (const task of value.items.filter(entry => entry.type === 'task' && entry.parent === story)) work(value, task.id, task.required);
+    }
+    value.actions = 28000;
+    for (const id of ['code-assistant', 'multi-agent', ...(withPerk ? ['ai-testing-subscription'] : [])]) {
+      assert.equal(activatePerk(value, id), true, id);
+    }
+    value.agentTargets = [null, null];
+    value.agentCarry = [0, 0];
+    value.assistants = 2;
+    const task = value.items.find(entry => entry.type === 'task' && entry.parent === 'S-03');
+    assert.equal(assignAgent(value, task.id), true);
+    const bug = makeBug(value);
+    assert.ok(bug);
+    return { value, task, bug };
+  };
+
+  const without = setup(false);
+  assert.equal(assistantsFixBugs(without.value), false);
+  automate(without.value);
+  assert.equal(without.bug.progress, 0, 'assistants ignore bugs without the perk');
+  assert.equal(without.task.progress, 1);
+
+  const withPerk = setup(true);
+  assert.equal(assistantsFixBugs(withPerk.value), true);
+  assert.equal(currentAutomationRate(withPerk.value), 2);
+  const actionsBefore = withPerk.value.actions;
+  automate(withPerk.value);
+  assert.equal(withPerk.bug.progress, 2, 'both assistants fix the open bug');
+  assert.equal(withPerk.task.progress, 0, 'tasks wait while bugs are open');
+  assert.equal(withPerk.value.actions, actionsBefore + 2);
+  assert.equal(withPerk.value.agentTargets[0], withPerk.task.id, 'assignments are kept');
+  while (!withPerk.bug.done) automate(withPerk.value);
+  assert.equal(openBugs(withPerk.value).length, 0);
+  const taskBefore = withPerk.task.progress;
+  automate(withPerk.value);
+  assert.equal(withPerk.task.progress, taskBefore + 1, 'assigned assistant returns to its task');
+
+  const noAssistants = newGame();
+  noAssistants.actions = 28000;
+  assert.equal(activatePerk(noAssistants, 'ai-testing-subscription'), true);
+  assert.equal(assistantsFixBugs(noAssistants), false);
 }
 
 console.log('Gameplay checks passed.');
