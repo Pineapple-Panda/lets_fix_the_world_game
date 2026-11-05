@@ -1,10 +1,11 @@
 export interface Item {
   id: string;
-  type: 'task' | 'story' | 'bug';
+  type: 'task' | 'bug';
   title: string;
   detail: string;
   required: number;
-  parent?: string;
+  /** Total coding actions needed before this task becomes available (first release only). */
+  unlockAt?: number;
   progress: number;
   done: boolean;
   inTest: boolean;

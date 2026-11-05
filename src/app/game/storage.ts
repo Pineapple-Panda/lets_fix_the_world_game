@@ -2,231 +2,82 @@ import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
 import type { LaunchedGame } from '../models/launched.model.ts';
 import { perks } from '../models/perk.model.ts';
-import type { PerkId } from '../models/perk.model.ts';
-import { blueprint, improvements } from './content.ts';
-import { versionForDeployments } from '../models/version.model.ts';
-import { isAvailable, openBugs } from './game.ts';
 
+/**
+ * The save is a plain JSON snapshot without format versions: `{ level: 1, game }` or `{ level: 2, game }`.
+ * A save that does not match the current shape is simply ignored and the player starts over.
+ */
 export const saveKey = 'sprint-game';
 
-/** Save format version of the reduced level 2 state. Level 1 saves use versions 1–5. */
-export const launchedSaveVersion = 6;
+type Snapshot = Record<string, unknown>;
 
-export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedGame): string {
-  const value = JSON.stringify({ version: launchedSaveVersion, level: 2, game: { actions: state.actions, budget: state.budget } });
-  storage.setItem(saveKey, value);
-  return value;
-}
+const isObject = (value: unknown): value is Snapshot =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
-/** Returns the level 2 state, or null when the save is missing or belongs to level 1. Throws on a corrupt level 2 save. */
-export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
+/** Reads the stored snapshot for the given level, or null when it is missing, corrupt or for another level. */
+function readSnapshot(storage: Pick<Storage, 'getItem'>, level: 1 | 2): Snapshot | null {
   const saved = storage.getItem(saveKey);
   if (saved === null) return null;
-  const envelope: unknown = JSON.parse(saved);
-  if (envelope === null || typeof envelope !== 'object' || Array.isArray(envelope)) return null;
-  const record = envelope as Record<string, unknown>;
-  if (record.level !== 2) return null;
-  const game = record.game as Record<string, unknown> | null;
-  const isCount = (value: unknown): value is number =>
-    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-  if (record.version !== launchedSaveVersion || game === null || typeof game !== 'object' ||
-    !isCount(game.actions) || !isCount(game.budget)) {
-    throw new Error('Invalid or unsupported saved game');
+  try {
+    const envelope: unknown = JSON.parse(saved);
+    return isObject(envelope) && envelope.level === level && isObject(envelope.game) ? envelope.game : null;
+  } catch {
+    return null;
   }
-  return { actions: game.actions, budget: game.budget };
 }
 
-export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
-  const saved = storage.getItem(saveKey);
-  if (saved === null) return null;
-  const envelope: unknown = JSON.parse(saved);
-  const invalid = (): never => { throw new Error('Invalid or unsupported saved game'); };
-  const isObject = (value: unknown): value is Record<string, unknown> =>
-    value !== null && typeof value === 'object' && !Array.isArray(value);
-  const isArray = (value: unknown): value is unknown[] => Array.isArray(value);
-  const isCount = (value: unknown): value is number =>
-    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-  const isPerkId = (value: unknown): value is PerkId =>
-    typeof value === 'string' && perks.some(perk => perk.id === value);
-  const isItem = (value: unknown): value is Item => {
-    if (
-      !isObject(value) ||
-      typeof value.id !== 'string' ||
-      (value.type !== 'task' && value.type !== 'story' && value.type !== 'bug') ||
-      typeof value.title !== 'string' ||
-      typeof value.detail !== 'string' ||
-      !isCount(value.required) ||
-      !isCount(value.progress) ||
-      value.progress > value.required ||
-      typeof value.done !== 'boolean' ||
-      (value.inTest !== undefined && typeof value.inTest !== 'boolean')
-    ) return false;
-    if (value.type === 'story' && value.inTest === true) return false;
-    if (value.type !== 'story' && (
-      value.required === 0 ||
-      (value.inTest === true ? value.done || value.progress !== value.required : value.done !== (value.progress === value.required))
-    )) return false;
-    return value.type === 'task' ? typeof value.parent === 'string' : value.parent === undefined;
-  };
+const isItem = (value: unknown): value is Item =>
+  isObject(value) &&
+  typeof value.id === 'string' &&
+  (value.type === 'task' || value.type === 'bug') &&
+  typeof value.title === 'string' &&
+  typeof value.detail === 'string' &&
+  isCount(value.required) && value.required > 0 &&
+  isCount(value.progress) && value.progress <= value.required &&
+  (value.unlockAt === undefined || isCount(value.unlockAt)) &&
+  typeof value.done === 'boolean' &&
+  typeof value.inTest === 'boolean';
 
-  if (!isObject(envelope) || typeof envelope.version !== 'number' || ![1, 2, 3, 4, 5].includes(envelope.version) || !isObject(envelope.game)) return invalid();
-  const game = envelope.game;
-  if (
-    !isCount(game.actions) ||
-    (envelope.version >= 2 && (!isCount(game.budget) || !isCount(game.lastDeploymentActions))) ||
-    (envelope.version >= 4 && !isObject(game.appVersion)) ||
-    (game.budget !== undefined && !isCount(game.budget)) ||
-    (game.lastDeploymentActions !== undefined && (!isCount(game.lastDeploymentActions) || game.lastDeploymentActions > game.actions)) ||
-    (game.testCoverage !== undefined && (!isCount(game.testCoverage) || game.testCoverage > 100000)) ||
-    (game.manualCoverageUpgrades !== undefined && !isCount(game.manualCoverageUpgrades)) ||
-    (game.autoCoverageUpgrades !== undefined && !isCount(game.autoCoverageUpgrades)) ||
-    (envelope.version >= 4 && (!isObject(game.appVersion) || !isCount(game.appVersion.major) || !isCount(game.appVersion.minor) || !isCount(game.appVersion.patch) || game.appVersion.minor > 9 || game.appVersion.patch !== 0)) ||
-    !isCount(game.bugCount) ||
-    !isCount(game.seconds) ||
-    !isCount(game.deployments) ||
-    !isCount(game.assistants) ||
-    !isCount(game.assistantUpgrades) ||
-    !isArray(game.items) ||
-    !isArray(game.activatedPerks) ||
-    !isArray(game.archivedIds) ||
-    !isArray(game.agentTargets) ||
-    !isArray(game.agentCarry)
-  ) return invalid();
-  if (game.deployments === 0 && ((game.lastDeploymentActions ?? 0) !== 0 || (game.budget ?? 0) !== 0)) return invalid();
-  const expectedVersion = versionForDeployments(game.deployments);
-  if (envelope.version >= 4 && isObject(game.appVersion) &&
-    (game.appVersion.major !== expectedVersion.major || game.appVersion.minor !== expectedVersion.minor || game.appVersion.patch !== expectedVersion.patch)) return invalid();
-  if (
-    game.items.length !== blueprint.length + game.deployments * 15 + game.bugCount ||
-    game.agentTargets.length !== game.assistants ||
-    game.agentCarry.length !== game.assistants ||
-    !game.agentCarry.every(carry => isCount(carry) && carry < 10)
-  ) return invalid();
-  if (
-    new Set(game.activatedPerks).size !== game.activatedPerks.length ||
-    !game.activatedPerks.every(isPerkId) ||
-    (game.testCoverage !== undefined && game.testCoverage > 0 && !game.activatedPerks.includes('earl')) ||
-    (((game.manualCoverageUpgrades ?? 0) as number) > 0 &&
-      (!game.activatedPerks.includes('earl') || !game.activatedPerks.includes('testing-skills'))) ||
-    (((game.autoCoverageUpgrades ?? 0) as number) > 0 &&
-      (!game.activatedPerks.includes('earl') || !game.activatedPerks.includes('auto-testing'))) ||
-    (game.assistants > 0) !== game.activatedPerks.includes('code-assistant') ||
-    (game.assistantUpgrades > 0 &&
-      (!game.activatedPerks.includes('multi-agent') || !game.activatedPerks.includes('code-assistant')))
-  ) return invalid();
-
-  const itemsById = new Map<string, Item>();
-  const validatedItems: Item[] = [];
-  for (const item of game.items) {
-    if (!isItem(item) || itemsById.has(item.id) ||
-      (item.inTest && !game.activatedPerks.includes('earl'))) return invalid();
-    const restoredItem = { ...item, inTest: item.inTest ?? false };
-    itemsById.set(item.id, restoredItem);
-    validatedItems.push(restoredItem);
-  }
-  for (const expected of blueprint) {
-    const item = itemsById.get(expected.id);
-    if (
-      !item ||
-      item.type !== expected.type ||
-      item.parent !== expected.parent ||
-      (item.type === 'task' && item.required !== expected.required)
-    ) return invalid();
-  }
-  for (let deployment = 1; deployment <= game.deployments; deployment++) {
-    for (let index = 0; index < 5; index++) {
-      const storyId = `S-${String(5 * deployment + index + 1).padStart(2, '0')}`;
-      if (itemsById.get(storyId)?.type !== 'story') return invalid();
-      for (let taskIndex = 0; taskIndex < 2; taskIndex++) {
-        const taskId = `T-${String(15 + (deployment - 1) * 10 + index * 2 + taskIndex + 1).padStart(2, '0')}`;
-        const task = itemsById.get(taskId);
-        if (!task || task.type !== 'task' || task.parent !== storyId || task.required !== 30) return invalid();
-      }
-    }
-  }
-  for (let number = 1; number <= game.bugCount; number++) {
-    const bug = itemsById.get(`B-${String(number).padStart(2, '0')}`);
-    if (!bug || bug.type !== 'bug' || bug.required !== 6 + Math.min(number * 2, 10)) return invalid();
-  }
-  const archivedIds = game.archivedIds;
-  for (const item of itemsById.values()) {
-    if (item.type !== 'story') continue;
-    const children = validatedItems.filter(child => child.parent === item.id);
-    if (
-      !children.length ||
-      item.required !== children.reduce((sum, child) => sum + child.required, 0) ||
-      item.progress !== children.reduce((sum, child) => sum + child.progress, 0) ||
-      (item.done && children.some(child => !child.done))
-    ) return invalid();
-    const archived = Number(item.id.slice(2)) <= 5 * game.deployments;
-    if ([item, ...children].some(child =>
-      archivedIds.includes(child.id) !== archived || (archived && !child.done)
-    )) return invalid();
-  }
-  if (game.deployments === 0 && game.archivedIds.length) return invalid();
-  const isReference = (id: unknown, types: Item['type'][]) => {
-    if (id === null) return true;
-    if (typeof id !== 'string') return false;
-    const item = itemsById.get(id);
-    return item !== undefined && types.includes(item.type);
-  };
-  if (
-    !isReference(game.selected, ['task', 'bug']) ||
-    !isReference(game.automationTarget, ['task']) ||
-    !game.agentTargets.every(id =>
-      isReference(id, ['task']) && (id === null || (typeof id === 'string' && !itemsById.get(id)?.done && !itemsById.get(id)?.inTest))
-    ) ||
-    new Set(game.agentTargets.filter(id => id !== null)).size !== game.agentTargets.filter(id => id !== null).length ||
-    (!game.activatedPerks.includes('multi-agent') && game.agentTargets.some(id => id !== null)) ||
-    new Set(game.archivedIds).size !== game.archivedIds.length ||
-    !game.archivedIds.every(id => typeof id === 'string' && itemsById.get(id)?.done)
-  ) return invalid();
-  const restored = {
-    ...game,
-    items: validatedItems,
-    testCoverage: game.testCoverage ?? 0,
-    manualCoverageUpgrades: game.manualCoverageUpgrades ?? 0,
-    autoCoverageUpgrades: game.autoCoverageUpgrades ?? 0,
-    budget: game.budget ?? 0,
-    lastDeploymentActions: game.lastDeploymentActions ?? (game.deployments > 0 ? game.actions : 0),
-    appVersion: envelope.version >= 4 && isObject(game.appVersion)
-      ? { major: game.appVersion.major as number, minor: game.appVersion.minor as number, patch: game.appVersion.patch as number }
-      : versionForDeployments(game.deployments)
-  } as unknown as Game;
-  const selected = restored.selected === null ? undefined : itemsById.get(restored.selected);
-  if (selected?.type === 'task' && (!isAvailable(restored, selected) || openBugs(restored).length > 0)) {
-    return invalid();
-  }
-  if (openBugs(restored).length === 0 && [...itemsById.values()].some(item =>
-    item.type === 'story' &&
-    !item.done &&
-    isAvailable(restored, item) &&
-    validatedItems.filter(child => child.parent === item.id).every(child => child.done)
-  )) return invalid();
-  for (const expected of blueprint) {
-    const item = itemsById.get(expected.id)!;
-    item.title = expected.title;
-    item.detail = expected.detail;
-  }
-  for (let deployment = 1; deployment <= game.deployments; deployment++) {
-    for (const [index, story] of improvements.entries()) {
-      const storyId = `S-${String(5 * deployment + index + 1).padStart(2, '0')}`;
-      const item = itemsById.get(storyId)!;
-      item.title = story.title + (deployment > 1 ? ` (iteration ${deployment})` : '');
-      item.detail = story.detail;
-      for (const [taskIndex, task] of story.tasks.entries()) {
-        const taskId = `T-${String(15 + (deployment - 1) * 10 + index * 2 + taskIndex + 1).padStart(2, '0')}`;
-        const item = itemsById.get(taskId)!;
-        item.title = task.title;
-        item.detail = task.detail;
-      }
-    }
-  }
-  return restored;
+/** Basic shape check: enough to run the game safely, not a full consistency audit. */
+function isGame(game: Snapshot): boolean {
+  const version = game.appVersion;
+  return (
+    Array.isArray(game.items) && game.items.every(isItem) &&
+    (game.selected === null || typeof game.selected === 'string') &&
+    (game.automationTarget === null || typeof game.automationTarget === 'string') &&
+    ['actions', 'budget', 'lastDeploymentActions', 'testCoverage', 'manualCoverageUpgrades', 'autoCoverageUpgrades',
+      'bugCount', 'seconds', 'deployments', 'assistants', 'assistantUpgrades'].every(key => isCount(game[key])) &&
+    isObject(version) && isCount(version.major) && isCount(version.minor) && isCount(version.patch) &&
+    Array.isArray(game.activatedPerks) &&
+    game.activatedPerks.every(id => perks.some(perk => perk.id === id)) &&
+    Array.isArray(game.agentTargets) && game.agentTargets.every(id => id === null || typeof id === 'string') &&
+    Array.isArray(game.agentCarry) && game.agentCarry.every(isCount) &&
+    game.agentTargets.length === game.assistants && game.agentCarry.length === game.assistants
+  );
 }
 
 export function saveGame(storage: Pick<Storage, 'setItem'>, game: Game): string {
-  const value = JSON.stringify({ version: 5, game });
+  const value = JSON.stringify({ level: 1, game });
   storage.setItem(saveKey, value);
   return value;
+}
+
+/** The level 1 game, or null when there is no compatible level 1 save. */
+export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
+  const game = readSnapshot(storage, 1);
+  return game && isGame(game) ? game as unknown as Game : null;
+}
+
+export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedGame): string {
+  const value = JSON.stringify({ level: 2, game: { actions: state.actions, budget: state.budget } });
+  storage.setItem(saveKey, value);
+  return value;
+}
+
+/** The level 2 state, or null when there is no compatible level 2 save. */
+export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
+  const game = readSnapshot(storage, 2);
+  return game && isCount(game.actions) && isCount(game.budget) ? { actions: game.actions, budget: game.budget } : null;
 }

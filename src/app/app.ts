@@ -11,7 +11,7 @@ import {
   assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
-  openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs, upgradeAssistants,
+  openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
 import { canLaunch, launch, tickLaunched } from './game/launched';
@@ -22,9 +22,6 @@ import type { Item } from './models/item.model';
 import type { LaunchedGame } from './models/launched.model';
 import type { PerkId } from './models/perk.model';
 import { formatVersion, nextVersion } from './models/version.model';
-
-/** The user story board is hidden for now; set to true to show it above the task board again. */
-const showStoryBoard = false;
 
 @Component({
   selector: 'app-root',
@@ -60,12 +57,12 @@ export class AppComponent {
       won: canDeploy(game),
       canLaunch: canLaunch(game),
       multiAgent,
-      storiesDone: releaseStoriesDone(game),
+      releaseDone: releaseTasksDone(game),
+      releaseTotal: releaseTasksOf(game).length,
       appVersion: formatVersion(game.appVersion),
       releaseVersion: formatVersion(nextVersion(game.appVersion)),
       deploymentBudget: deploymentBudgetReward(game),
       availablePerks: available.filter(entry => entry.available).map(entry => entry.perk),
-      waitingForBugs: storiesWaitingForBugs(game),
       stats: {
         actions: game.actions,
         budget: game.budget,
@@ -103,12 +100,7 @@ export class AppComponent {
         autoRate: autoCoverageRate(game),
         upgradeStep: coverageUpgradeStep
       } : null,
-      boards: [
-        ...(showStoryBoard
-          ? [{ name: 'User stories', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'story') })) }]
-          : []),
-        { name: 'Tasks & bugs', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'task' || item.type === 'bug') })) }
-      ]
+      boards: [{ name: 'Tasks & bugs', columns }]
     };
   });
 
@@ -266,25 +258,16 @@ export class AppComponent {
       this.showIntro.set(true);
       return newGame();
     }
-    try {
-      const launched = loadLaunched(storage);
-      if (launched) {
-        if (storage.getItem(saveKey) !== snapshot) throw new Error('Saved game changed while loading');
-        this.savedSnapshot = snapshot;
-        this.launched.set(launched);
-        return newGame();
-      }
-      const savedGame = loadGame(storage);
-      if (storage.getItem(saveKey) !== snapshot) throw new Error('Saved game changed while loading');
-      this.savedSnapshot = snapshot;
-      this.showIntro.set(savedGame === null);
-      return savedGame ?? newGame();
-    } catch {
-      this.storageBlocked = true;
-      this.showIntro.set(snapshot === null);
-      this.saveWarning.set('The saved game could not be loaded or storage is unavailable. Saving is paused to protect existing data.');
+    // An incompatible or corrupt save is ignored: the player starts over and the next save replaces it.
+    this.savedSnapshot = snapshot;
+    const launched = loadLaunched(storage);
+    if (launched) {
+      this.launched.set(launched);
       return newGame();
     }
+    const savedGame = loadGame(storage);
+    this.showIntro.set(savedGame === null);
+    return savedGame ?? newGame();
   }
 
   private persistGame(game: Game): void {

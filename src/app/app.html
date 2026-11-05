@@ -32,7 +32,7 @@
                 }
                 @if (state.bugs.length) {
                     <div class="console-line error">{{ state.bugs.length === 1 ? 'A bug needs' : state.bugs.length + ' bugs need' }} your
-                        attention. Fix all bugs before working on other items or completing stories. Automation continues.
+                        attention. Fix all bugs before working on other tasks. Automation continues.
                     </div>
                 }
                 @for (perk of state.availablePerks; track perk.id) {
@@ -45,13 +45,13 @@
                     <div class="console-line success">An assistant performance upgrade is available in your toolkit.</div>
                 }
                 @if (state.won) {
-                    <div class="console-line success">Five stories complete. Deploy v{{ state.releaseVersion }} to earn {{ state.deploymentBudget }} budget and unlock more work.</div>
+                    <div class="console-line success">All tasks of this release are done. Deploy v{{ state.releaseVersion }} to earn {{ state.deploymentBudget }} budget and unlock more work.</div>
                 }
             </div>
         </section>
         <div class="workspace">
             <aside class="sidebar">
-                <app-action-base [selected]="state.selected" [canDeploy]="state.won" [storiesDone]="state.storiesDone"
+                <app-action-base [selected]="state.selected" [canDeploy]="state.won" [tasksDone]="state.releaseDone" [tasksTotal]="state.releaseTotal"
                                  [releaseVersion]="state.releaseVersion" [deploymentBudget]="state.deploymentBudget"
                                  (code)="code()" (deploy)="deploy()" />
                 <app-stats [stats]="state.stats" />
@@ -65,7 +65,7 @@
                 </app-perks>
             </aside>
             <app-board [boards]="state.boards" [selectedId]="game().selected"
-                       [waitingForBugs]="state.waitingForBugs" [bugCount]="state.bugs.length"
+                       [bugCount]="state.bugs.length"
                        [multiAgent]="state.multiAgent" [agentTargets]="game().agentTargets"
                        (itemSelected)="select($event)" (agentAssigned)="assignAgent($event)" />
         </div>

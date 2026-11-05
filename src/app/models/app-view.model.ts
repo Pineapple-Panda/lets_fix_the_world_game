@@ -13,12 +13,13 @@ export interface AppView {
   /** True once 100% coverage is reached; the launch dialog is shown and level 1 pauses. */
   canLaunch: boolean;
   multiAgent: boolean;
-  storiesDone: number;
+  /** Tasks of the current release that are done, and how many the release has. */
+  releaseDone: number;
+  releaseTotal: number;
   appVersion: string;
   releaseVersion: string;
   deploymentBudget: number;
   availablePerks: Perk[];
-  waitingForBugs: ReadonlySet<string>;
   stats: GameStats;
   perks: PerksView;
   /** Earl panel state; null until Earl is installed. */

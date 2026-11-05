@@ -18,7 +18,6 @@ export interface Game {
   bugCount: number;
   seconds: number;
   activatedPerks: PerkId[];
-  archivedIds: string[];
   deployments: number;
   assistants: number;
   assistantUpgrades: number;
