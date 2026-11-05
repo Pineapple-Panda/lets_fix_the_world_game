@@ -136,7 +136,7 @@ export class AppComponent {
       this.update(game => {
         game.seconds++;
         const chance = bugChance(game);
-        if (game.seconds >= 15 && canGenerateBugs(game) && openBugs(game).length < 2 && chance > 0 && Math.random() < chance) addBug(game);
+        if (game.seconds >= 15 && canGenerateBugs(game) && chance > 0 && Math.random() < chance) addBug(game);
         automate(game);
       });
     }, 1000);

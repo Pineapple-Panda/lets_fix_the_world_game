@@ -1650,15 +1650,16 @@ assert.deepEqual(loadGame(storage), testing);
 withRandom(0.5, () => automate(testing));
 assert.equal(testingTask.inTest, false);
 assert.equal(testingTask.done, false);
-assert.equal(testingTask.progress, testingTask.required - 1);
+assert.equal(testingTask.progress, Math.floor(testingTask.required / 2), 'a failed test halves the progress');
 assert.equal(testing.selected, testingTask.id);
 assert.equal(testing.actions, testActions);
-assert.equal(work(testing, testingTask.id, 1), true);
+const reworkActions = testingTask.required - testingTask.progress;
+assert.equal(work(testing, testingTask.id, reworkActions), true);
 assert.equal(testingTask.inTest, true);
 withRandom(0.499999, () => automate(testing));
 assert.equal(testingTask.inTest, false);
 assert.equal(testingTask.done, true);
-assert.equal(testing.actions, testActions + 1);
+assert.equal(testing.actions, testActions + reworkActions);
 
 const delayed = newGame();
 delayed.actions = 50000;
@@ -1702,7 +1703,10 @@ try {
 assert.equal(outcomeCalls, 5);
 assert.deepEqual(concurrent.items.filter(entry => entry.parent === 'S-01').map(entry => entry.done), [true, false, true, false, true]);
 assert.equal(concurrent.items.find(entry => entry.id === 'S-01').done, false);
-for (const task of concurrent.items.filter(entry => entry.parent === 'S-01' && !entry.done)) assert.equal(work(concurrent, task.id, 1), true);
+for (const task of concurrent.items.filter(entry => entry.parent === 'S-01' && !entry.done)) {
+  assert.equal(task.progress, Math.floor(task.required / 2));
+  assert.equal(work(concurrent, task.id, task.required - task.progress), true);
+}
 withRandom(0, () => automate(concurrent));
 assert.equal(concurrent.items.find(entry => entry.id === 'S-01').done, true);
 
@@ -1724,11 +1728,13 @@ const taskBeforeBugTick = earlBugs.items.find(entry => entry.id === 'T-10').prog
 saveGame(storage, earlBugs);
 assert.deepEqual(loadGame(storage), earlBugs);
 withRandom(0.5, () => automate(earlBugs));
-assert.equal(earlOldBug.progress, earlOldBug.required - 1);
+assert.equal(earlOldBug.progress, Math.floor(earlOldBug.required / 2), 'a failed bug test halves the bug progress');
 assert.equal(earlOldBug.inTest, false);
 assert.equal(earlNewBug.progress, 1);
 assert.ok(earlBugs.items.find(entry => entry.id === 'T-10').progress > taskBeforeBugTick);
-withRandom(0, () => automate(earlBugs));
+// The bug-fix agent reworks the oldest bug at 1 action / sec until it re-enters the test.
+const reworkTicks = earlOldBug.required - earlOldBug.progress;
+for (let tick = 0; tick < reworkTicks; tick++) withRandom(0, () => automate(earlBugs));
 assert.equal(earlOldBug.inTest, true);
 assert.equal(earlOldBug.done, false);
 assert.equal(earlNewBug.progress, 1);
@@ -2296,6 +2302,62 @@ assert.equal(loadGame(storage).lastDeploymentActions, 0);
   preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
   assert.deepEqual(openPerks(preview), [byId('ai-testing-subscription')],
     'testing perks stay hidden until Earl is unlocked');
+}
+
+{
+  const { testPassChance } = require('../src/app/game/game.ts');
+  const passGame = newGame();
+  passGame.actions = 17000;
+  assert.equal(activatePerk(passGame, 'earl'), true);
+  assert.equal(testPassChance(passGame), 0.5);
+  passGame.testCoverage = 50000;
+  assert.equal(testPassChance(passGame), 0.75);
+  passGame.testCoverage = 100000;
+  assert.equal(testPassChance(passGame), 1);
+  assert.equal(work(passGame, 'T-01', 10), true);
+  const passTask = passGame.items.find(entry => entry.id === 'T-01');
+  assert.equal(passTask.inTest, true);
+  withRandom(0.999999, () => automate(passGame));
+  assert.equal(passTask.done, true, 'full coverage always passes');
+
+  const halfGame = newGame();
+  halfGame.actions = 17000;
+  assert.equal(activatePerk(halfGame, 'earl'), true);
+  halfGame.testCoverage = 20000;
+  assert.equal(work(halfGame, 'T-01', 10), true);
+  const halfTask = halfGame.items.find(entry => entry.id === 'T-01');
+  withRandom(0.599999, () => automate(halfGame));
+  assert.equal(halfTask.done, true, 'just below the 60% pass chance passes');
+  assert.equal(work(halfGame, 'T-02', 10), true);
+  const failTask = halfGame.items.find(entry => entry.id === 'T-02');
+  withRandom(0.6, () => automate(halfGame));
+  assert.equal(failTask.done, false);
+  assert.equal(failTask.progress, 5, 'failed test halves the progress');
+  assert.equal(halfGame.items.find(entry => entry.id === 'S-01').progress, 10 + 5 + 0 + 0 + 0);
+
+  const unlimited = newGame();
+  for (const story of ['S-01', 'S-02']) {
+    for (const task of unlimited.items.filter(entry => entry.type === 'task' && entry.parent === story)) work(unlimited, task.id, task.required);
+  }
+  unlimited.actions = 15000;
+  const baseChance = bugChance(unlimited);
+  assert.equal(baseChance, 0.6);
+  for (let count = 1; count <= 5; count++) {
+    assert.ok(makeBug(unlimited), `bug ${count} can be added`);
+    assert.equal(openBugs(unlimited).length, count);
+    assert.ok(Math.abs(bugChance(unlimited) - baseChance / (1 + count) ** 2) < 1e-12, `chance with ${count} open bugs`);
+  }
+
+  const inTestDeploy = structuredClone(afterFirstDeployment);
+  inTestDeploy.activatedPerks.push('earl');
+  const pendingTask = inTestDeploy.items.find(entry => entry.type === 'task' && !entry.done);
+  pendingTask.progress = pendingTask.required;
+  pendingTask.inTest = true;
+  for (const story of inTestDeploy.items.filter(entry => entry.type === 'story')) story.done = true;
+  assert.equal(canDeploy(inTestDeploy), false, 'nothing deploys while an item is still in test');
+  pendingTask.inTest = false;
+  pendingTask.done = true;
+  assert.equal(canDeploy(inTestDeploy), true);
 }
 
 console.log('Gameplay checks passed.');

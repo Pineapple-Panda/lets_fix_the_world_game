@@ -88,7 +88,8 @@ export function boardItems(game: Game): Item[] {
 
 export function canDeploy(game: Game): boolean {
   return game.items.filter(item => item.type === 'story' && item.done).length >= storiesPerRelease * (game.deployments + 1) &&
-    openBugs(game).length === 0;
+    openBugs(game).length === 0 &&
+    !game.items.some(item => item.inTest);
 }
 
 /** Stories completed towards the upcoming release. */
@@ -547,12 +548,18 @@ export function automate(game: Game): void {
   }
   const bug = game.activatedPerks.includes('bug-fix-agent') ? oldestOpenBug(game) : undefined;
   if (bug) applyWork(game, bug, 1);
+  const passChance = testPassChance(game);
   for (const item of tests) {
     item.inTest = false;
-    if (Math.random() < 0.5) item.done = true;
-    else item.progress = item.required - 1;
+    if (Math.random() < passChance) item.done = true;
+    else item.progress = Math.floor(item.progress / 2);
     settle(game);
   }
+}
+
+/** Chance that an item in IN TEST passes: 50% without coverage, rising linearly to 100% at full coverage. */
+export function testPassChance(game: Game): number {
+  return 0.5 + 0.5 * Math.min(100000, game.testCoverage) / 100000;
 }
 
 export function canGenerateBugs(game: Game): boolean {
@@ -565,7 +572,9 @@ export function bugChance(game: Game): number {
     game.actions >= 8500 ? 0.16 :
     game.actions >= 7500 ? 0.12 :
     game.actions >= 4000 ? 0.08 : 0.04;
-  return game.activatedPerks.includes('earl') ? chance * (1 - game.testCoverage / 100000) : chance;
+  const covered = game.activatedPerks.includes('earl') ? chance * (1 - game.testCoverage / 100000) : chance;
+  // There is no hard cap on simultaneous bugs; instead every open bug makes the next one less likely.
+  return covered / (1 + openBugs(game).length) ** 2;
 }
 
 export function automationRegressions(game: Game): boolean {
