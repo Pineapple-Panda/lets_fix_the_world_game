@@ -22,10 +22,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run build -- --base-href=/lets_fix_the_world_game/
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: ./dist/clicker-game/browser
+          path: ./dist/lets-fix-the-world-game/browser
 
   deploy:
     needs: build
