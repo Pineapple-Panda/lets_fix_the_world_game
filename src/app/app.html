@@ -70,7 +70,12 @@
                        (itemSelected)="select($event)" (agentAssigned)="assignAgent($event)" />
         </div>
         <footer><span>SPRINT / A LITTLE GAME ABOUT MAKING THINGS</span>
-            <button id="reset" class="reset" type="button" (click)="reset()">Reset sprint</button>
+            <span class="footer-actions">
+                <button id="dev-mode" class="dev-toggle" type="button" [class.on]="devMode()" [attr.aria-pressed]="devMode()"
+                        title="Dev mode: every Write code / Fix bug click counts as 30 actions"
+                        (click)="toggleDevMode()">DEV {{ devMode() ? 'ON' : 'OFF' }}</button>
+                <button id="reset" class="reset" type="button" (click)="reset()">Reset sprint</button>
+            </span>
         </footer>
     </main>
     }
