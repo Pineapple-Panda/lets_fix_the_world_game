@@ -662,6 +662,46 @@ app-board {
     cursor: not-allowed;
 }
 
+/* ---------- Level 2: live stats only ---------- */
+
+.live-stats {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.live-stat {
+    min-width: 240px;
+    padding: 20px 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+.live-stat span {
+    display: block;
+    color: var(--faint);
+    font: 600 11px var(--sans);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.live-stat strong {
+    display: block;
+    margin-top: 4px;
+    font: 600 34px var(--mono);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.level-two > .console-line {
+    flex: none;
+    margin-bottom: 8px;
+}
+
 /* ---------- Footer ---------- */
 
 footer {

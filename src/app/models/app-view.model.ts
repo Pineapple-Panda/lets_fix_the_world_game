@@ -10,6 +10,8 @@ export interface AppView {
   regressions: boolean;
   selected: Item | undefined;
   won: boolean;
+  /** True once 100% coverage is reached; the launch dialog is shown and level 1 pauses. */
+  canLaunch: boolean;
   multiAgent: boolean;
   storiesDone: number;
   appVersion: string;

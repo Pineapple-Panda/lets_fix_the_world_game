@@ -2383,4 +2383,52 @@ assert.equal(loadGame(storage).lastDeploymentActions, 0);
   assert.equal(auto.deployments, ready.deployments + 1);
 }
 
+{
+  const { canLaunch, launch, tickLaunched, launchCoverage } = require('../src/app/game/launched.ts');
+  const { saveLaunched, loadLaunched, launchedSaveVersion } = require('../src/app/game/storage.ts');
+  assert.equal(launchCoverage, 100000);
+
+  const almost = newGame();
+  almost.actions = 17000;
+  assert.equal(canLaunch(almost), false, 'no launch without Earl');
+  assert.equal(activatePerk(almost, 'earl'), true);
+  almost.testCoverage = 99999;
+  assert.equal(canLaunch(almost), false);
+  assert.equal(launch(almost), null);
+  almost.testCoverage = 100000;
+  almost.budget = 1234;
+  assert.equal(canLaunch(almost), true);
+  assert.deepEqual(launch(almost), { actions: 17000, budget: 1234 }, 'launch keeps only actions and budget');
+
+  const live = { actions: 100, budget: 7 };
+  assert.deepEqual(tickLaunched(live, () => 0), { actions: 150, budget: 7 }, 'minimum 50 actions per second');
+  assert.deepEqual(tickLaunched(live, () => 0.999999), { actions: 400, budget: 7 }, 'maximum 300 actions per second');
+  assert.deepEqual(live, { actions: 100, budget: 7 }, 'tick does not mutate the previous state');
+  for (let i = 0; i < 200; i++) {
+    const gained = tickLaunched(live).actions - live.actions;
+    assert.ok(Number.isInteger(gained) && gained >= 50 && gained <= 300, String(gained));
+  }
+  assert.equal(tickLaunched({ actions: Number.MAX_SAFE_INTEGER, budget: 0 }, () => 0.5).actions, Number.MAX_SAFE_INTEGER);
+
+  const memory = new Map();
+  const liveStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value) };
+  assert.equal(loadLaunched(liveStorage), null, 'no save');
+  saveGame(liveStorage, newGame());
+  assert.equal(loadLaunched(liveStorage), null, 'a level 1 save is not a level 2 save');
+  const raw = saveLaunched(liveStorage, { actions: 5000, budget: 42 });
+  assert.deepEqual(JSON.parse(raw), { version: launchedSaveVersion, level: 2, game: { actions: 5000, budget: 42 } });
+  assert.ok(raw.length < 100, 'level 2 save is tiny');
+  assert.deepEqual(loadLaunched(liveStorage), { actions: 5000, budget: 42 });
+  assert.throws(() => loadGame(liveStorage), 'level 1 loader rejects level 2 saves');
+  for (const broken of [
+    { version: 5, level: 2, game: { actions: 1, budget: 1 } },
+    { version: 6, level: 2, game: { actions: -1, budget: 1 } },
+    { version: 6, level: 2, game: { actions: 1 } },
+    { version: 6, level: 2, game: null }
+  ]) {
+    memory.set('sprint-game', JSON.stringify(broken));
+    assert.throws(() => loadLaunched(liveStorage), JSON.stringify(broken));
+  }
+}
+
 console.log('Gameplay checks passed.');

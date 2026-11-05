@@ -2,6 +2,23 @@
     @if (showIntro()) {
         <app-intro (dismissed)="dismissIntro()" />
     }
+    @if (launched(); as live) {
+        <main class="level-two">
+            @if (saveWarning()) {
+                <div class="console-line error" role="status">{{ saveWarning() }}</div>
+            }
+            <section class="live-stats" aria-label="Live statistics">
+                <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ live.actions.toLocaleString('en-US') }}</strong></div>
+                <div class="live-stat"><span>Budget</span><strong id="live-budget">{{ live.budget.toLocaleString('en-US') }}</strong></div>
+            </section>
+            <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
+                <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
+            </footer>
+        </main>
+    } @else {
+    @if (view().canLaunch) {
+        <app-launch (launched)="launchApplication()" />
+    }
     <main>
         @let state = view();
         <header class="app-meta"><span>APPLICATION VERSION</span><strong>v{{ state.appVersion }}</strong></header>
@@ -56,4 +73,5 @@
             <button id="reset" class="reset" type="button" (click)="reset()">Reset sprint</button>
         </footer>
     </main>
+    }
 </div>

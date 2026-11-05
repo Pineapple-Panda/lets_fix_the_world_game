@@ -1,5 +1,6 @@
 import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
+import type { LaunchedGame } from '../models/launched.model.ts';
 import { perks } from '../models/perk.model.ts';
 import type { PerkId } from '../models/perk.model.ts';
 import { blueprint, improvements } from './content.ts';
@@ -7,6 +8,33 @@ import { versionForDeployments } from '../models/version.model.ts';
 import { isAvailable, openBugs } from './game.ts';
 
 export const saveKey = 'sprint-game';
+
+/** Save format version of the reduced level 2 state. Level 1 saves use versions 1–5. */
+export const launchedSaveVersion = 6;
+
+export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedGame): string {
+  const value = JSON.stringify({ version: launchedSaveVersion, level: 2, game: { actions: state.actions, budget: state.budget } });
+  storage.setItem(saveKey, value);
+  return value;
+}
+
+/** Returns the level 2 state, or null when the save is missing or belongs to level 1. Throws on a corrupt level 2 save. */
+export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
+  const saved = storage.getItem(saveKey);
+  if (saved === null) return null;
+  const envelope: unknown = JSON.parse(saved);
+  if (envelope === null || typeof envelope !== 'object' || Array.isArray(envelope)) return null;
+  const record = envelope as Record<string, unknown>;
+  if (record.level !== 2) return null;
+  const game = record.game as Record<string, unknown> | null;
+  const isCount = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+  if (record.version !== launchedSaveVersion || game === null || typeof game !== 'object' ||
+    !isCount(game.actions) || !isCount(game.budget)) {
+    throw new Error('Invalid or unsupported saved game');
+  }
+  return { actions: game.actions, budget: game.budget };
+}
 
 export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
   const saved = storage.getItem(saveKey);
