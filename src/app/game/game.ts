@@ -10,6 +10,26 @@ export type { Game } from '../models/game.model.ts';
 export type { Item } from '../models/item.model.ts';
 export type { Perk, PerkId } from '../models/perk.model.ts';
 
+/** True for a non-negative safe integer (counts, budgets, action totals). */
+function isCount(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+/** True for a count that can still be incremented without leaving the safe integer range. */
+function isIncrementable(value: number): boolean {
+  return isCount(value) && value < Number.MAX_SAFE_INTEGER;
+}
+
+/** True when the action counters are valid and the last deployment does not lie in the future. */
+function hasValidActionHistory(game: Game): boolean {
+  return isCount(game.actions) && isCount(game.lastDeploymentActions) && game.lastDeploymentActions <= game.actions;
+}
+
+/** True when `cost` is a positive safe integer and the budget is valid and large enough to pay it. */
+function canAfford(game: Game, cost: number): boolean {
+  return Number.isSafeInteger(cost) && cost > 0 && isCount(game.budget) && game.budget >= cost;
+}
+
 export function newGame(): Game {
   const game: Game = {
     items: blueprint.map(item => ({ ...item, progress: 0, done: false, inTest: false })),
@@ -71,12 +91,10 @@ export function sprintComplete(game: Game): boolean {
 
 export function deploymentBudgetReward(game: Game): number {
   if (
-    !Number.isSafeInteger(game.deployments) || game.deployments < 0 ||
-    !Number.isSafeInteger(game.actions) || game.actions < 0 ||
-    !Number.isSafeInteger(game.lastDeploymentActions) || game.lastDeploymentActions < 0 ||
-    game.lastDeploymentActions > game.actions ||
-    !Number.isSafeInteger(game.appVersion.major) || game.appVersion.major < 0 ||
-    !Number.isSafeInteger(game.appVersion.minor) || game.appVersion.minor < 0 || game.appVersion.minor > 9 ||
+    !isCount(game.deployments) ||
+    !hasValidActionHistory(game) ||
+    !isCount(game.appVersion.major) ||
+    !isCount(game.appVersion.minor) || game.appVersion.minor > 9 ||
     game.appVersion.patch !== 0
   ) return 0;
   const currentVersion = versionForDeployments(game.deployments);
@@ -85,16 +103,14 @@ export function deploymentBudgetReward(game: Game): number {
   if (!Number.isSafeInteger(releaseVersion.major)) return 0;
   const versionMultiplier = releaseVersion.major + releaseVersion.minor / 10;
   const reward = Math.round((game.actions - game.lastDeploymentActions) * versionMultiplier);
-  return Number.isSafeInteger(reward) && reward >= 0 ? reward : 0;
+  return isCount(reward) ? reward : 0;
 }
 
 export function deploy(game: Game): boolean {
   if (
     !canDeploy(game) ||
-    !Number.isSafeInteger(game.actions) || game.actions < 0 ||
-    !Number.isSafeInteger(game.lastDeploymentActions) || game.lastDeploymentActions < 0 ||
-    game.lastDeploymentActions > game.actions ||
-    !Number.isSafeInteger(game.budget) || game.budget < 0
+    !hasValidActionHistory(game) ||
+    !isCount(game.budget)
   ) return false;
   const reward = deploymentBudgetReward(game);
   const currentVersion = versionForDeployments(game.deployments);
@@ -232,8 +248,7 @@ export function coverageStep(game: Game): number {
 }
 
 export function improveCoverage(game: Game): boolean {
-  if (!game.activatedPerks.includes('earl') || game.testCoverage >= 100000 ||
-    !Number.isSafeInteger(game.budget) || game.budget < coverageCost) return false;
+  if (!game.activatedPerks.includes('earl') || game.testCoverage >= 100000 || !canAfford(game, coverageCost)) return false;
   game.budget -= coverageCost;
   game.testCoverage = Math.min(100000, game.testCoverage + coverageStep(game));
   return true;
@@ -277,7 +292,7 @@ export function nextAssistantCount(game: Game): number {
 export function assistantLimit(game: Game): number {
   let limit = Math.max(1, game.assistants);
   let budget = game.budget;
-  while (Number.isSafeInteger(budget) && budget >= 0 && Number.isSafeInteger(limit)) {
+  while (isCount(budget) && isCount(limit)) {
     const cost = upgradeThreshold(limit - 1);
     if (!Number.isSafeInteger(cost) || budget < cost || limit === Number.MAX_SAFE_INTEGER) break;
     budget -= cost;
@@ -291,9 +306,8 @@ export function addAssistant(game: Game): boolean {
   if (
     !game.activatedPerks.includes('code-assistant') ||
     !game.activatedPerks.includes('multi-agent') ||
-    !Number.isSafeInteger(game.assistants) || game.assistants < 1 || game.assistants === Number.MAX_SAFE_INTEGER ||
-    !Number.isSafeInteger(cost) || cost <= 0 ||
-    !Number.isSafeInteger(game.budget) || game.budget < cost
+    !isIncrementable(game.assistants) || game.assistants < 1 ||
+    !canAfford(game, cost)
   ) return false;
   game.budget -= cost;
   game.assistants++;
@@ -332,9 +346,8 @@ export function upgradeAssistants(game: Game): boolean {
   if (
     !game.activatedPerks.includes('code-assistant') ||
     !game.activatedPerks.includes('multi-agent') ||
-    !Number.isSafeInteger(game.assistantUpgrades) || game.assistantUpgrades < 0 || game.assistantUpgrades === Number.MAX_SAFE_INTEGER ||
-    !Number.isSafeInteger(cost) || cost <= 0 ||
-    !Number.isSafeInteger(game.budget) || game.budget < cost
+    !isIncrementable(game.assistantUpgrades) ||
+    !canAfford(game, cost)
   ) return false;
   game.budget -= cost;
   game.assistantUpgrades++;
