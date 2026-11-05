@@ -2282,4 +2282,20 @@ assert.equal(loadGame(storage).lastDeploymentActions, 0);
   assert.equal(assistantsFixBugs(noAssistants), false);
 }
 
+{
+  const byId = id => perks.find(perk => perk.id === id);
+  const preview = newGame();
+  preview.actions = 21000;
+  preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id).concat('earl', 'testing-skills');
+  assert.deepEqual(openPerks(preview), [byId('auto-testing'), byId('ai-testing-subscription')],
+    'locked Automate Testing is previewed before later perks');
+  preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
+  assert.deepEqual(openPerks(preview), [byId('auto-testing'), byId('earl'), byId('testing-skills')],
+    'unlocked testing perks are promoted, the next preview follows unlock order');
+  preview.actions = 16999;
+  preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
+  assert.deepEqual(openPerks(preview), [byId('ai-testing-subscription')],
+    'testing perks stay hidden until Earl is unlocked');
+}
+
 console.log('Gameplay checks passed.');

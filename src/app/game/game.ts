@@ -281,7 +281,11 @@ export function openPerks(game: Game): Perk[] {
   const available = perks.filter(perk => !game.activatedPerks.includes(perk.id) &&
     (perk.id !== 'earl' || perkUnlocked(game, perk)));
   const promoted = available.filter(perk => priorityIds.includes(perk.id) && perkUnlocked(game, perk));
-  const result = available.filter(perk => !priorityIds.includes(perk.id)).slice(0, 3 - promoted.length);
+  // Locked testing perks are previewed in unlock order once Earl is reachable; before that they stay hidden.
+  const earlUnlocked = perks.some(perk => perk.id === 'earl' && perkUnlocked(game, perk));
+  const result = available
+    .filter(perk => !promoted.includes(perk) && (!priorityIds.includes(perk.id) || earlUnlocked))
+    .slice(0, 3 - promoted.length);
   return [...result, ...promoted];
 }
 
