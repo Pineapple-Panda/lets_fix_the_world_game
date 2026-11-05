@@ -1,3 +1,4 @@
+import type { BoardColumn } from '../models/board.model.ts';
 import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
 import { perks } from '../models/perk.model.ts';
@@ -9,6 +10,9 @@ export { perks } from '../models/perk.model.ts';
 export type { Game } from '../models/game.model.ts';
 export type { Item } from '../models/item.model.ts';
 export type { Perk, PerkId } from '../models/perk.model.ts';
+
+/** Number of stories that have to be completed for each release (and that each deployment adds). */
+export const storiesPerRelease = 5;
 
 /** True for a non-negative safe integer (counts, budgets, action totals). */
 function isCount(value: number): boolean {
@@ -71,8 +75,8 @@ export function isAvailable(game: Game, item: Item): boolean {
   }
   const storyNumber = /^S-(\d+)$/.exec(item.id);
   return !!storyNumber &&
-    Number(storyNumber[1]) > 5 &&
-    Number(storyNumber[1]) <= 5 + game.deployments * 5 &&
+    Number(storyNumber[1]) > storiesPerRelease &&
+    Number(storyNumber[1]) <= storiesPerRelease * (game.deployments + 1) &&
     game.items.some(entry => entry.type === 'story' && entry.id === item.id);
 }
 
@@ -81,8 +85,50 @@ export function boardItems(game: Game): Item[] {
 }
 
 export function canDeploy(game: Game): boolean {
-  return game.items.filter(item => item.type === 'story' && item.done).length >= 5 * (game.deployments + 1) &&
+  return game.items.filter(item => item.type === 'story' && item.done).length >= storiesPerRelease * (game.deployments + 1) &&
     openBugs(game).length === 0;
+}
+
+/** Stories completed towards the upcoming release. */
+export function releaseStoriesDone(game: Game): number {
+  return game.items.filter(item => item.type === 'story' && item.done).length - game.deployments * storiesPerRelease;
+}
+
+/** The selected task or bug, if it can still be worked on. */
+export function selectedWorkItem(game: Game): Item | undefined {
+  return game.items.find(item =>
+    item.id === game.selected && !item.done && (item.type === 'task' || item.type === 'bug')
+  );
+}
+
+/** Ids of stories whose tasks are all done but which cannot complete while bugs are open. */
+export function storiesWaitingForBugs(game: Game): Set<string> {
+  if (!openBugs(game).length) return new Set();
+  return new Set(game.items.filter(item =>
+    item.type === 'story' && !item.done && item.progress >= item.required &&
+    game.items.some(child => child.parent === item.id) &&
+    game.items.every(child => child.parent !== item.id || child.done)
+  ).map(item => item.id));
+}
+
+/** Board columns for the visible items; the IN TEST column only exists while Earl is active. */
+export function boardColumns(game: Game): BoardColumn[] {
+  const todo: Item[] = [];
+  const inProgress: Item[] = [];
+  const inTest: Item[] = [];
+  const done: Item[] = [];
+  for (const item of boardItems(game)) {
+    if (item.done) done.push(item);
+    else if (item.inTest) inTest.push(item);
+    else if (item.progress > 0 || item.id === game.selected) inProgress.push(item);
+    else todo.push(item);
+  }
+  return [
+    { name: 'TO DO', items: todo },
+    { name: 'IN PROGRESS', items: inProgress },
+    ...(game.activatedPerks.includes('earl') ? [{ name: 'IN TEST', items: inTest }] : []),
+    { name: 'DONE', items: done }
+  ];
 }
 
 export function sprintComplete(game: Game): boolean {
@@ -128,7 +174,7 @@ export function deploy(game: Game): boolean {
   game.archivedIds = game.items.filter(item => item.done).map(item => item.id);
   game.deployments++;
   for (const [index, story] of improvements.entries()) {
-    const id = `S-${String(5 * game.deployments + index + 1).padStart(2, '0')}`;
+    const id = `S-${String(storiesPerRelease * game.deployments + index + 1).padStart(2, '0')}`;
     const suffix = game.deployments > 1 ? ` (iteration ${game.deployments})` : '';
     for (const [taskIndex, task] of story.tasks.entries()) {
       game.items.push({

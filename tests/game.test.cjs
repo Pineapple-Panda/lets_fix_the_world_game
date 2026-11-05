@@ -2105,4 +2105,49 @@ saveGame(storage, newGame());
 assert.equal(loadGame(storage).budget, 0);
 assert.equal(loadGame(storage).lastDeploymentActions, 0);
 
+{
+  const { storiesPerRelease, releaseStoriesDone, selectedWorkItem, storiesWaitingForBugs, boardColumns } = require('../src/app/game/game.ts');
+  assert.equal(storiesPerRelease, 5);
+
+  const view = newGame();
+  const columnNames = value => boardColumns(value).map(column => column.name);
+  const columnIds = (value, name) => boardColumns(value).find(column => column.name === name).items.map(entry => entry.id);
+  assert.deepEqual(columnNames(view), ['TO DO', 'IN PROGRESS', 'DONE']);
+  assert.equal(selectedWorkItem(view), undefined);
+  assert.equal(releaseStoriesDone(view), 0);
+  assert.equal(storiesWaitingForBugs(view).size, 0);
+
+  const firstTask = view.items.find(entry => entry.type === 'task' && entry.parent === 'S-01');
+  assert.ok(columnIds(view, 'TO DO').includes(firstTask.id));
+  assert.equal(selectItem(view, firstTask.id), true);
+  assert.equal(selectedWorkItem(view), firstTask);
+  assert.ok(columnIds(view, 'IN PROGRESS').includes(firstTask.id));
+  assert.ok(!columnIds(view, 'TO DO').includes(firstTask.id));
+
+  for (const task of view.items.filter(entry => entry.type === 'task' && entry.parent === 'S-01')) work(view, task.id, task.required);
+  assert.equal(selectedWorkItem(view), undefined);
+  assert.ok(columnIds(view, 'DONE').includes('S-01'));
+  assert.equal(releaseStoriesDone(view), 1);
+
+  const columnsTotal = boardColumns(view).reduce((sum, column) => sum + column.items.length, 0);
+  assert.equal(columnsTotal, boardItems(view).length);
+
+  const blocked = newGame();
+  const storyTasks = story => blocked.items.filter(entry => entry.type === 'task' && entry.parent === story);
+  for (const story of ['S-01', 'S-02']) for (const task of storyTasks(story)) work(blocked, task.id, task.required);
+  const [lastTask, ...otherTasks] = storyTasks('S-03').reverse();
+  for (const task of otherTasks) work(blocked, task.id, task.required);
+  assert.equal(storiesWaitingForBugs(blocked).size, 0);
+  assert.ok(makeBug(blocked));
+  assert.equal(storiesWaitingForBugs(blocked).size, 0);
+  assert.equal(work(blocked, lastTask.id, lastTask.required, true), true);
+  assert.equal(blocked.items.find(entry => entry.id === 'S-03').done, false);
+  assert.deepEqual([...storiesWaitingForBugs(blocked)], ['S-03']);
+  assert.equal(releaseStoriesDone(blocked), 2);
+
+  const testing = structuredClone(view);
+  testing.activatedPerks.push('earl');
+  assert.deepEqual(columnNames(testing), ['TO DO', 'IN PROGRESS', 'IN TEST', 'DONE']);
+}
+
 console.log('Gameplay checks passed.');

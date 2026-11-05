@@ -6,9 +6,10 @@ import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
-  assistantOutput, automate, automationRegressions, boardItems, bugChance, canDeploy, deploymentBudgetReward,
+  assistantOutput, automate, automationRegressions, boardColumns, bugChance, canDeploy, deploymentBudgetReward,
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, currentAutomationRate, deploy, improveCoverage, newGame, nextAssistantCount,
-  nextAssistantUpgrade, openBugs, openPerks, perkUnlocked, selectItem, upgradeAssistants, work
+  nextAssistantUpgrade, openBugs, openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs,
+  upgradeAssistants, work
 } from './game/game';
 import { loadGame, saveGame, saveKey } from './game/storage';
 import type { AppView } from './models/app-view.model';
@@ -37,37 +38,24 @@ export class AppComponent {
   readonly view = computed((): AppView => {
     const game = this.game();
     const bugs = openBugs(game);
-    const selected = game.items.find(item =>
-      item.id === game.selected && !item.done && (item.type === 'task' || item.type === 'bug')
-    );
     const assistants = assistantCount(game);
     const multiAgent = game.activatedPerks.includes('multi-agent');
     const available = openPerks(game).map(perk => ({ perk, available: perkUnlocked(game, perk) }));
-    const visibleItems = boardItems(game);
     const testingEnabled = game.activatedPerks.includes('earl');
-    const columns = [
-      { name: 'TO DO', items: visibleItems.filter(item => !item.done && !item.inTest && item.progress === 0 && item.id !== game.selected) },
-      { name: 'IN PROGRESS', items: visibleItems.filter(item => !item.done && !item.inTest && (item.progress > 0 || item.id === game.selected)) },
-      ...(testingEnabled ? [{ name: 'IN TEST', items: visibleItems.filter(item => item.inTest) }] : []),
-      { name: 'DONE', items: visibleItems.filter(item => item.done) }
-    ];
+    const columns = boardColumns(game);
 
     return {
       bugs,
       regressions: automationRegressions(game),
-      selected,
+      selected: selectedWorkItem(game),
       won: canDeploy(game),
       multiAgent,
-      storiesDone: game.items.filter(item => item.type === 'story' && item.done).length - game.deployments * 5,
+      storiesDone: releaseStoriesDone(game),
       appVersion: formatVersion(game.appVersion),
       releaseVersion: formatVersion(nextVersion(game.appVersion)),
       deploymentBudget: deploymentBudgetReward(game),
       availablePerks: available.filter(entry => entry.available).map(entry => entry.perk),
-      waitingForBugs: new Set(game.items.filter(item =>
-        item.type === 'story' && !item.done && bugs.length > 0 && item.progress >= item.required &&
-        game.items.some(child => child.parent === item.id) &&
-        game.items.every(child => child.parent !== item.id || child.done)
-      ).map(item => item.id)),
+      waitingForBugs: storiesWaitingForBugs(game),
       stats: {
         actions: game.actions,
         budget: game.budget,
@@ -251,7 +239,7 @@ export class AppComponent {
     const currentGame = structuredClone(this.game());
     const game = change(currentGame) || currentGame;
     const bugs = openBugs(game);
-    let selected = game.items.find(item => item.id === game.selected && !item.done && (item.type === 'task' || item.type === 'bug'));
+    let selected = selectedWorkItem(game);
     if (bugs.length && (!selected || selected.type !== 'bug')) selected = bugs[0];
     game.selected = selected?.id ?? null;
     this.game.set(game);
