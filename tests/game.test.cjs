@@ -139,9 +139,10 @@ assert.deepEqual(perks.map(({ id, name, kind }) => [id, name, kind]), [
   ['earl', 'Install Earl', 'upgradeable'],
   ['testing-skills', 'Improve Testing Skills', 'simple'],
   ['auto-testing', 'Automate Testing', 'simple'],
-  ['ai-testing-subscription', 'Upgrade AI Subscription for testing', 'simple']
+  ['ai-testing-subscription', 'Upgrade AI Subscription for testing', 'simple'],
+  ['auto-deploy', 'Continuous Deployment', 'simple']
 ]);
-assert.equal(perks.length, 12);
+assert.equal(perks.length, 13);
 assert.equal(perks[7].actionsRequired, 10000);
 assert.equal(perks[7].rate, undefined);
 assert.match(perks[7].description, /1 bug-fixing action\s*\/\s*sec/i);
@@ -150,7 +151,7 @@ assert.equal(perks[6].rate, undefined);
 assert.equal(perks[5].actionsRequired, 4000);
 assert.equal(perks[5].rate, undefined);
 assert.match(perks[5].description, /double.*assistant/i);
-const goals = [50, 200, 700, 1000, 2000, 4000, 6000, 10000, 17000, 20000, 25000, 28000];
+const goals = [50, 200, 700, 1000, 2000, 4000, 6000, 10000, 17000, 20000, 25000, 28000, 32000];
 assert.deepEqual(perks.map(perk => perk.actionsRequired), goals);
 assert.match(perks[9].description, /manual.*coverage.*0\.005 percentage points/i);
 assert.match(perks[10].description, /Earl.*coverage.*0\.001 percentage points\/sec.*automatic coverage upgrades/i);
@@ -1976,10 +1977,10 @@ for (const change of [
 }
 
 const budgetPerks = newGame();
-budgetPerks.actions = 28000;
+budgetPerks.actions = 32000;
 budgetPerks.budget = 3;
 for (const perk of perks) assert.equal(activatePerk(budgetPerks, perk.id), true);
-assert.equal(budgetPerks.actions, 28000);
+assert.equal(budgetPerks.actions, 32000);
 assert.equal(budgetPerks.budget, 3);
 assert.equal(improveCoverage(budgetPerks), true);
 assert.equal(budgetPerks.budget, 2);
@@ -2293,14 +2294,14 @@ assert.equal(loadGame(storage).lastDeploymentActions, 0);
   const preview = newGame();
   preview.actions = 21000;
   preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id).concat('earl', 'testing-skills');
-  assert.deepEqual(openPerks(preview), [byId('auto-testing'), byId('ai-testing-subscription')],
+  assert.deepEqual(openPerks(preview), [byId('auto-testing'), byId('ai-testing-subscription'), byId('auto-deploy')],
     'locked Automate Testing is previewed before later perks');
   preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
   assert.deepEqual(openPerks(preview), [byId('auto-testing'), byId('earl'), byId('testing-skills')],
     'unlocked testing perks are promoted, the next preview follows unlock order');
   preview.actions = 16999;
   preview.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
-  assert.deepEqual(openPerks(preview), [byId('ai-testing-subscription')],
+  assert.deepEqual(openPerks(preview), [byId('ai-testing-subscription'), byId('auto-deploy')],
     'testing perks stay hidden until Earl is unlocked');
 }
 
@@ -2358,6 +2359,28 @@ assert.equal(loadGame(storage).lastDeploymentActions, 0);
   pendingTask.inTest = false;
   pendingTask.done = true;
   assert.equal(canDeploy(inTestDeploy), true);
+}
+
+{
+  const { autoDeploy } = require('../src/app/game/game.ts');
+  const ready = newGame();
+  for (const task of ready.items.filter(entry => entry.type === 'task')) assert.equal(work(ready, task.id, task.required), true);
+  ready.actions = 32000;
+  assert.equal(canDeploy(ready), true);
+  const manualOnly = structuredClone(ready);
+  assert.equal(autoDeploy(manualOnly), false, 'no auto deploy without the perk');
+  assert.equal(manualOnly.deployments, ready.deployments);
+  const auto = structuredClone(ready);
+  auto.actions = Math.max(auto.actions, 32000);
+  assert.equal(activatePerk(auto, 'auto-deploy'), true);
+  const budgetBefore = auto.budget;
+  const reward = deploymentBudgetReward(auto);
+  assert.equal(autoDeploy(auto), true);
+  assert.equal(auto.deployments, ready.deployments + 1);
+  assert.equal(auto.budget, budgetBefore + reward);
+  assert.equal(canDeploy(auto), false);
+  assert.equal(autoDeploy(auto), false, 'nothing to deploy until the next release is ready');
+  assert.equal(auto.deployments, ready.deployments + 1);
 }
 
 console.log('Gameplay checks passed.');

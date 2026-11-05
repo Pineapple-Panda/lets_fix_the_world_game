@@ -10,7 +10,8 @@ export type PerkId =
   | 'earl'
   | 'testing-skills'
   | 'auto-testing'
-  | 'ai-testing-subscription';
+  | 'ai-testing-subscription'
+  | 'auto-deploy';
 
 export interface Perk {
   id: PerkId;
@@ -121,5 +122,13 @@ export const perks: Perk[] = [
     icon: 'AB',
     kind: 'simple',
     actionsRequired: 28000
+  },
+  {
+    id: 'auto-deploy',
+    name: 'Continuous Deployment',
+    description: 'Ship it! Automatically deploys the next version as soon as a release is ready.',
+    icon: 'CD',
+    kind: 'simple',
+    actionsRequired: 32000
   }
 ];

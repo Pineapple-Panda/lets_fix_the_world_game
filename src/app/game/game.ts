@@ -206,6 +206,11 @@ export function deploy(game: Game): boolean {
   return true;
 }
 
+/** Deploys automatically when Continuous Deployment is active and a release is ready. */
+export function autoDeploy(game: Game): boolean {
+  return game.activatedPerks.includes('auto-deploy') && deploy(game);
+}
+
 export function settle(game: Game): void {
   let changed;
   do {

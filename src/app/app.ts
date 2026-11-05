@@ -7,7 +7,7 @@ import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
-  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, automate, automationRegressions, boardColumns, bugChance, canDeploy,
+  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
   openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs, upgradeAssistants,
@@ -130,6 +130,10 @@ export class AppComponent {
     const timer = setInterval(() => {
       if (this.showIntro()) return;
       if (this.view().won) {
+        if (this.game().activatedPerks.includes('auto-deploy')) {
+          this.update(game => { autoDeploy(game); });
+          return;
+        }
         if (this.saveWarning()) this.persistGame(this.game());
         return;
       }
