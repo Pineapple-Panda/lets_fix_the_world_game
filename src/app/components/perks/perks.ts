@@ -11,7 +11,6 @@ export class PerksComponent {
   readonly perkActivated = output<PerkId>();
   readonly assistantAdded = output<void>();
   readonly performanceUpgraded = output<void>();
-  readonly coverageImproved = output<void>();
 
   tooltip(perk: Perk): string {
     if (perk.id === 'earl') return `${perk.name}: ${perk.description} Test coverage: ${this.view().coverage.toFixed(3)}%.`;

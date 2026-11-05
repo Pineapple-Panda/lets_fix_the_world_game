@@ -36,9 +36,12 @@
                 <app-action-base [selected]="state.selected" [canDeploy]="state.won" [storiesDone]="state.storiesDone"
                                  [releaseVersion]="state.releaseVersion" [deploymentBudget]="state.deploymentBudget"
                                  (code)="code()" (deploy)="deploy()" />
+                @if (state.earl) {
+                    <app-earl [view]="state.earl" (coverageImproved)="improveCoverage()"
+                              (manualUpgraded)="upgradeManualCoverage()" (autoUpgraded)="upgradeAutoCoverage()" />
+                }
                 <app-perks [view]="state.perks" (perkActivated)="activate($event)"
-                           (assistantAdded)="addAssistant()" (performanceUpgraded)="upgradeAssistants()"
-                           (coverageImproved)="improveCoverage()" />
+                           (assistantAdded)="addAssistant()" (performanceUpgraded)="upgradeAssistants()" />
                 <div class="sidebar-footer"><span>BUILD. BREAK. FIX. REPEAT.</span><span>✳</span></div>
             </aside>
             <app-board [boards]="state.boards" [selectedId]="game().selected"

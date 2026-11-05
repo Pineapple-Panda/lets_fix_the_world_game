@@ -44,6 +44,8 @@ export function newGame(): Game {
     lastDeploymentActions: 0,
     appVersion: versionForDeployments(0),
     testCoverage: 0,
+    manualCoverageUpgrades: 0,
+    autoCoverageUpgrades: 0,
     bugCount: 0,
     seconds: 0,
     activatedPerks: [],
@@ -289,8 +291,46 @@ export function coveragePercent(game: Game): number {
 
 export const coverageCost = 1;
 
+/** Coverage units (1/1000 percentage point) added by each manual or automatic coverage upgrade: 0.005 pp. */
+export const coverageUpgradeStep = 5;
+/** Budget cost of one manual coverage upgrade (requires Improve Testing Skills). */
+export const manualCoverageUpgradeCost = 2000;
+/** Budget cost of one automatic coverage upgrade (requires Automate Testing). */
+export const autoCoverageUpgradeCost = 5000;
+
+/** Coverage units added by one manual "Improve coverage" click. */
 export function coverageStep(game: Game): number {
-  return game.activatedPerks.includes('testing-skills') ? 5 : 1;
+  return (game.activatedPerks.includes('testing-skills') ? 5 : 1) + coverageUpgradeStep * game.manualCoverageUpgrades;
+}
+
+/** Coverage units Earl adds automatically each second (0 without Automate Testing). */
+export function autoCoverageRate(game: Game): number {
+  if (!game.activatedPerks.includes('earl') || !game.activatedPerks.includes('auto-testing')) return 0;
+  return 1 + coverageUpgradeStep * game.autoCoverageUpgrades;
+}
+
+export function upgradeManualCoverage(game: Game): boolean {
+  if (
+    !game.activatedPerks.includes('earl') ||
+    !game.activatedPerks.includes('testing-skills') ||
+    !isIncrementable(game.manualCoverageUpgrades) ||
+    !canAfford(game, manualCoverageUpgradeCost)
+  ) return false;
+  game.budget -= manualCoverageUpgradeCost;
+  game.manualCoverageUpgrades++;
+  return true;
+}
+
+export function upgradeAutoCoverage(game: Game): boolean {
+  if (
+    !game.activatedPerks.includes('earl') ||
+    !game.activatedPerks.includes('auto-testing') ||
+    !isIncrementable(game.autoCoverageUpgrades) ||
+    !canAfford(game, autoCoverageUpgradeCost)
+  ) return false;
+  game.budget -= autoCoverageUpgradeCost;
+  game.autoCoverageUpgrades++;
+  return true;
 }
 
 export function improveCoverage(game: Game): boolean {
@@ -460,9 +500,8 @@ export function currentAutomationRate(game: Game): number {
 
 export function automate(game: Game): void {
   const tests = game.items.filter(item => item.inTest);
-  if (game.activatedPerks.includes('earl') && game.activatedPerks.includes('auto-testing')) {
-    game.testCoverage = Math.min(100000, game.testCoverage + 1);
-  }
+  const coverageRate = autoCoverageRate(game);
+  if (coverageRate) game.testCoverage = Math.min(100000, game.testCoverage + coverageRate);
   const base = baseAutomationRate(game);
   if (base) work(game, game.automationTarget, base, true);
   if (game.activatedPerks.includes('auto-assigner') && game.activatedPerks.includes('multi-agent')) {

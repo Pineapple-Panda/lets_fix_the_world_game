@@ -1,0 +1,32 @@
+@let state = view();
+<section class="panel upgrades earl-panel" aria-labelledby="earl-title">
+    <h2 class="tool-heading" id="earl-title"><span class="tool-icon" aria-hidden="true">E</span> Earl · Test coverage</h2>
+    <div class="upgrade-row">
+        <span>Coverage: {{ state.coverage.toFixed(3) }}%</span>
+        <button class="tool-button" type="button" [disabled]="state.coverage >= 100 || state.budget < state.coverageCost"
+                (click)="coverageImproved.emit()">Improve coverage</button>
+    </div>
+    <progress class="coverage-progress" [value]="state.coverageUnits" max="100000" aria-label="Test coverage"
+              [attr.aria-valuetext]="state.coverage.toFixed(3) + '%'">{{ state.coverage.toFixed(3) }}%</progress>
+    <small class="upgrade-hint">Each click costs {{ state.coverageCost }} budget, adds {{ points(state.coverageStep) }} percentage points and reduces the chance of new bugs.</small>
+
+    @if (state.testingSkills) {
+        <div class="upgrade-row">
+            <span>Manual upgrades: {{ state.manualUpgrades }}</span>
+            <button class="tool-button" type="button" [disabled]="state.budget < state.manualUpgradeCost"
+                    [attr.aria-label]="'Upgrade manual coverage by ' + points(state.upgradeStep) + ' percentage points per click for ' + state.manualUpgradeCost + ' budget'"
+                    (click)="manualUpgraded.emit()">+{{ points(state.upgradeStep) }}% / click</button>
+        </div>
+        <small class="upgrade-hint">Each manual upgrade costs {{ state.manualUpgradeCost }} budget.</small>
+    }
+
+    @if (state.autoTesting) {
+        <div class="upgrade-row">
+            <span>Automatic: +{{ points(state.autoRate) }}% / sec</span>
+            <button class="tool-button" type="button" [disabled]="state.budget < state.autoUpgradeCost"
+                    [attr.aria-label]="'Upgrade automatic coverage by ' + points(state.upgradeStep) + ' percentage points per second for ' + state.autoUpgradeCost + ' budget'"
+                    (click)="autoUpgraded.emit()">+{{ points(state.upgradeStep) }}% / sec</button>
+        </div>
+        <small class="upgrade-hint">Each automatic upgrade costs {{ state.autoUpgradeCost }} budget.</small>
+    }
+</section>

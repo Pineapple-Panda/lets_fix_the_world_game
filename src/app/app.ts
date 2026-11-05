@@ -1,15 +1,17 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
 import { ActionBaseComponent } from './components/action-base/action-base';
 import { BoardComponent } from './components/board/board';
+import { EarlComponent } from './components/earl/earl';
 import { IntroComponent } from './components/intro/intro';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
-  assistantOutput, automate, automationRegressions, boardColumns, bugChance, canDeploy, deploymentBudgetReward,
-  canGenerateBugs, coverageCost, coveragePercent, coverageStep, currentAutomationRate, deploy, improveCoverage, newGame, nextAssistantCount,
-  nextAssistantUpgrade, openBugs, openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs,
-  upgradeAssistants, work
+  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, automate, automationRegressions, boardColumns, bugChance, canDeploy,
+  canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
+  deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
+  openPerks, perkUnlocked, releaseStoriesDone, selectedWorkItem, selectItem, storiesWaitingForBugs, upgradeAssistants,
+  upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
 import { loadGame, saveGame, saveKey } from './game/storage';
 import type { AppView } from './models/app-view.model';
@@ -20,7 +22,7 @@ import { formatVersion, nextVersion } from './models/version.model';
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, IntroComponent, PerksComponent, StatsComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, PerksComponent, StatsComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -41,7 +43,6 @@ export class AppComponent {
     const assistants = assistantCount(game);
     const multiAgent = game.activatedPerks.includes('multi-agent');
     const available = openPerks(game).map(perk => ({ perk, available: perkUnlocked(game, perk) }));
-    const testingEnabled = game.activatedPerks.includes('earl');
     const columns = boardColumns(game);
 
     return {
@@ -74,15 +75,25 @@ export class AppComponent {
         budget: game.budget,
         assistantCost: nextAssistantCount(game),
         performanceCost: nextAssistantUpgrade(game),
-        coverageCost,
         performanceUpgrades: game.assistantUpgrades,
         assistantOutput: assistantOutput(game),
-        earlActive: testingEnabled,
+        coverage: coveragePercent(game)
+      },
+      earl: game.activatedPerks.includes('earl') ? {
+        budget: game.budget,
         coverage: coveragePercent(game),
         coverageUnits: game.testCoverage,
+        coverageCost,
         coverageStep: coverageStep(game),
-        autoTesting: game.activatedPerks.includes('auto-testing')
-      },
+        testingSkills: game.activatedPerks.includes('testing-skills'),
+        manualUpgrades: game.manualCoverageUpgrades,
+        manualUpgradeCost: manualCoverageUpgradeCost,
+        autoTesting: game.activatedPerks.includes('auto-testing'),
+        autoUpgrades: game.autoCoverageUpgrades,
+        autoUpgradeCost: autoCoverageUpgradeCost,
+        autoRate: autoCoverageRate(game),
+        upgradeStep: coverageUpgradeStep
+      } : null,
       boards: [
         { name: 'User stories', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'story') })) },
         { name: 'Tasks & bugs', columns: columns.map(column => ({ ...column, items: column.items.filter(item => item.type === 'task' || item.type === 'bug') })) }
@@ -164,6 +175,14 @@ export class AppComponent {
 
   improveCoverage(): void {
     this.update(game => { improveCoverage(game); });
+  }
+
+  upgradeManualCoverage(): void {
+    this.update(game => { upgradeManualCoverage(game); });
+  }
+
+  upgradeAutoCoverage(): void {
+    this.update(game => { upgradeAutoCoverage(game); });
   }
 
   dismissIntro(): void {

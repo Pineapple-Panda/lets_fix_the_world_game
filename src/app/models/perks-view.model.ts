@@ -15,12 +15,7 @@ export interface PerksView {
   budget: number;
   assistantCost: number;
   performanceCost: number;
-  coverageCost: number;
   performanceUpgrades: number;
   assistantOutput: number;
-  earlActive: boolean;
   coverage: number;
-  coverageUnits: number;
-  coverageStep: number;
-  autoTesting: boolean;
 }

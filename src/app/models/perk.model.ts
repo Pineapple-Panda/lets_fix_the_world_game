@@ -100,7 +100,7 @@ export const perks: Perk[] = [
   {
     id: 'testing-skills',
     name: 'Improve Testing Skills',
-    description: 'Manual coverage upgrades increase coverage by 0.005 percentage points.',
+    description: 'Manual coverage clicks add 0.005 percentage points. Unlocks manual coverage upgrades in the Earl panel.',
     icon: 'TS',
     kind: 'simple',
     actionsRequired: 20000
@@ -108,7 +108,7 @@ export const perks: Perk[] = [
   {
     id: 'auto-testing',
     name: 'Automate Testing',
-    description: 'Automatic coverage rises 0.001 percentage points/sec when Earl is installed.',
+    description: 'Earl raises coverage by 0.001 percentage points/sec. Unlocks automatic coverage upgrades in the Earl panel.',
     icon: 'AT',
     kind: 'simple',
     actionsRequired: 25000
