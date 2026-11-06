@@ -3,9 +3,9 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDuration, dataCentersActive, epicDefinition, epicDone, epicDuration,
-  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, greenWorld, inProtest, infrastructureEpics,
+  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
-  productForGoal, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
+  productDefinition, productForGoal, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
@@ -156,11 +156,12 @@ export class LevelTwoComponent {
     const cost = upgradeCost(state, productId);
     const cardPrograms = productPrograms.filter(program => !state.completedPrograms.includes(program.id));
     return {
+      productName: productDefinition(productId)?.name ?? productId,
       problemName: problemName(problem),
       progress: state.worldProgress[problem],
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
-      lawsuit: productId === greenWorld && state.lawsuit ? {
+      lawsuit: state.lawsuit && lawsuitCase(state)?.product === productId ? {
         ...lawsuitCase(state)!,
         courtSeconds: state.lawsuit.courtSeconds,
         canSettle: state.budget >= settlementCost(state)

@@ -121,6 +121,14 @@ export interface LaunchedProduct {
 }
 
 /** A product the platform releases once all of its world goals are reached. */
+/** A flimsy accusation against one of your products. */
+export interface LawsuitCase {
+  /** Product whose programs the court freezes. */
+  product: string;
+  plaintiff: string;
+  accusation: string;
+}
+
 export interface ProductDefinition {
   id: string;
   name: string;

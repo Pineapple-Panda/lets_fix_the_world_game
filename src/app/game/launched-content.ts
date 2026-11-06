@@ -1,5 +1,5 @@
 import type {
-  EpicDefinition, LaunchedPerk, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
+  EpicDefinition, LaunchedPerk, LawsuitCase, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
 } from '../models/launched.model.ts';
 
 /** Perks of level 2. Level 1 perks that were never activated are gone after the launch. */
@@ -334,8 +334,8 @@ export const epics: EpicDefinition[] = [
 ];
 
 /**
- * Programs of the Green World card. They run continuously: each second they cost upkeep and add climate
- * solution progress. They need integrity: nothing runs at 0%, and below 50% protests can stop them.
+ * Programs of the product cards (Green World, Fair Share). They run continuously: each second they cost upkeep
+ * and add solution progress. They need integrity: nothing runs at 0%, and below 50% protests can stop them.
  */
 export const programs: ProgramDefinition[] = [
   {
@@ -404,18 +404,50 @@ export const programs: ProgramDefinition[] = [
     minActions: 1500000,
     milestoneRate: 1,
     unlocksEpic: 'data-center-green-connector'
+  },
+
+  // Fair Share
+  {
+    id: 'mealora-delivery',
+    product: 'fair-share',
+    problem: 'hunger',
+    name: 'Mealora Worldwide Food Delivery',
+    detail: 'Builds a worldwide delivery service that brings surplus food from farms, markets and restaurants to the people who need it. The couriers ride e-bikes, mostly.',
+    cost: 1000000,
+    upkeep: 500,
+    rate: 0.006,
+    slots: 1
+  },
+  {
+    id: 'hunger-relief-pricing',
+    product: 'fair-share',
+    problem: 'hunger',
+    name: 'Fair Plate Pricing for Online Food Orders',
+    detail: 'A pricing system for online food orders that passes 5% of every payment on to hunger relief funds. Nobody misses the 5%, everybody notices the full plates.',
+    cost: 1500000,
+    upkeep: 0,
+    rate: 0.008,
+    minMinor: 1
   }
 ];
 
 /**
- * Flimsy lawsuits. Once the climate work starts to hurt their business (30% climate solution) and the
+ * Flimsy lawsuits. Once a product's work starts to hurt their business (30% solution of its problem) and the
  * platform looks squeaky clean (integrity above 80%), these companies drag you to court.
  */
-export const lawsuits: { plaintiff: string; accusation: string }[] = [
-  { plaintiff: 'Mississippi Corp', accusation: 'claims your reforestation network casts “unauthorised shade” on its soy fields.' },
-  { plaintiff: 'Mississippi Corp', accusation: 'says your methane maps violate the trade secret of “how much our cows burp”.' },
-  { plaintiff: 'Bananas Inc.', accusation: 'alleges that a stable climate destroys the market for its premium hurricane-resistant bananas.' },
-  { plaintiff: 'Bananas Inc.', accusation: 'sues for defamation because your dashboard listed its plantations next to the word “deforestation”.' },
-  { plaintiff: 'EdisonX', accusation: 'demands damages because your smart grid made its rocket launches look “energetically embarrassing”.' },
-  { plaintiff: 'EdisonX', accusation: 'claims to have invented wind, and wants royalties.' }
+export const lawsuits: LawsuitCase[] = [
+  // Green World
+  { product: 'green-world', plaintiff: 'Mississippi Corp', accusation: 'claims your reforestation network casts “unauthorised shade” on its soy fields.' },
+  { product: 'green-world', plaintiff: 'Mississippi Corp', accusation: 'says your methane maps violate the trade secret of “how much our cows burp”.' },
+  { product: 'green-world', plaintiff: 'Bananas Inc.', accusation: 'alleges that a stable climate destroys the market for its premium hurricane-resistant bananas.' },
+  { product: 'green-world', plaintiff: 'Bananas Inc.', accusation: 'sues for defamation because your dashboard listed its plantations next to the word “deforestation”.' },
+  { product: 'green-world', plaintiff: 'EdisonX', accusation: 'demands damages because your smart grid made its rocket launches look “energetically embarrassing”.' },
+  { product: 'green-world', plaintiff: 'EdisonX', accusation: 'claims to have invented wind, and wants royalties.' },
+  // Fair Share
+  { product: 'fair-share', plaintiff: 'Mississippi Corp', accusation: 'says free surplus food is “unfair competition” for its premium soy snacks.' },
+  { product: 'fair-share', plaintiff: 'Mississippi Corp', accusation: 'claims your delivery routes trespass on the airspace above its warehouses.' },
+  { product: 'fair-share', plaintiff: 'Bananas Inc.', accusation: 'alleges that full stomachs reduce the demand for its “emergency bananas”.' },
+  { product: 'fair-share', plaintiff: 'Bananas Inc.', accusation: 'sues because your pricing system rounds its banana prices to the nearest honest number.' },
+  { product: 'fair-share', plaintiff: 'EdisonX', accusation: 'claims to have invented lunch, and wants royalties.' },
+  { product: 'fair-share', plaintiff: 'EdisonX', accusation: 'demands damages because your e-bike couriers are faster than its delivery rockets.' }
 ];

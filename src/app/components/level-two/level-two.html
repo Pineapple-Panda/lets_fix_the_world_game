@@ -28,7 +28,7 @@
                             <div class="lawsuit" role="alert">
                                 <strong>⚖️ Sued by {{ lawsuit.plaintiff }}</strong>
                                 <small>{{ lawsuit.plaintiff }} {{ lawsuit.accusation }}</small>
-                                <small class="panel-warning">A court injunction freezes all Green World programs.</small>
+                                <small class="panel-warning">A court injunction freezes all {{ panel.productName }} programs.</small>
                                 @if (lawsuit.courtSeconds !== null) {
                                     <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. The accusations are flimsy, you will win.</small>
                                 } @else {

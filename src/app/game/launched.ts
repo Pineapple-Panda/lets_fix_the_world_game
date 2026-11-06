@@ -1,6 +1,6 @@
 import type { Game } from '../models/game.model.ts';
 import type {
-  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, ProgramDefinition, ProgramState,
+  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
 import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals } from './launched-content.ts';
@@ -25,8 +25,6 @@ export const dataCentersPerk = 'data-centers';
 export const addServerPerkId = 'add-server';
 /** Client whose riot-control robots resolve protests automatically. */
 export const robotClient = 'edisonx';
-/** The product whose programs can be sued. */
-export const greenWorld = 'green-world';
 /** Epic that runs the data centres on green energy. */
 export const connectorEpic = 'data-center-green-connector';
 
@@ -507,15 +505,16 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
  * that cannot pay its upkeep pauses for that second. A program with a milestone ends by itself once it reaches 100%.
  */
 function runPrograms(next: LaunchedGame, random: () => number): void {
-  // A court injunction freezes the Green World programs while a lawsuit is open.
-  if (!next.programs.length || integrityBlocked(next) || next.lawsuit) return;
+  if (!next.programs.length || integrityBlocked(next)) return;
+  // A court injunction freezes the programs of the sued product while the lawsuit is open.
+  const sued = lawsuitCase(next)?.product;
   const chance = protestChance(next);
   const growth = resistanceGrowth(next);
   const robots = robotsOnSite(next) ? robotPower : 0;
   const progress = { ...next.worldProgress };
   const running = next.programs.map(entry => {
     const program = programDefinition(entry.id);
-    if (!program) return entry;
+    if (!program || program.product === sued) return entry;
     // A protest grows with distrust and shrinks while robots are on site; the program waits meanwhile.
     if (inProtest(entry)) {
       return { ...entry, resistance: lowerResistance(Math.min(maxResistance, entry.resistance + growth), robots) };
@@ -697,8 +696,8 @@ export function startEpic(state: LaunchedGame, id: string): LaunchedGame | null 
 
 // ---------- Lawsuits ----------
 
-/** Lawsuits only start once climate work hurts business ... */
-export const lawsuitClimate = 30;
+/** Lawsuits only start once a product's work hurts business (solution progress of its problem) ... */
+export const lawsuitProgress = 30;
 /** ... and the platform looks too clean to ignore. */
 export const lawsuitIntegrity = 80;
 /** Chance per second of a lawsuit while both conditions hold. */
@@ -725,10 +724,20 @@ export function courtDuration(state: LaunchedGame): number {
   return Math.round(baseCourtDuration * escalation(state));
 }
 
-/** Whether companies feel threatened enough to sue. */
-export function lawsuitRisk(state: LaunchedGame): boolean {
-  return state.worldProgress.climate >= lawsuitClimate && state.integrity > lawsuitIntegrity &&
-    productActive(state, greenWorld);
+/** The world problem a product's programs work on (Green World: climate, Fair Share: hunger). */
+export function productProblem(productId: string): WorldProblem | undefined {
+  return programs.find(program => program.product === productId)?.problem;
+}
+
+/**
+ * Whether companies feel threatened enough to sue a product: it is active, its problem is solved to 30% or more
+ * and integrity is above 80%. Without a product: whether any product is at risk.
+ */
+export function lawsuitRisk(state: LaunchedGame, productId?: string): boolean {
+  if (productId === undefined) return products.some(definition => lawsuitRisk(state, definition.id));
+  const problem = productProblem(productId);
+  return !!problem && productActive(state, productId) &&
+    state.worldProgress[problem] >= lawsuitProgress && state.integrity > lawsuitIntegrity;
 }
 
 /** One second of lawsuit logic (mutates `next`): a new case may be filed, a fought case counts down. */
@@ -739,13 +748,15 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
     next.lawsuit = courtSeconds <= 0 ? null : { ...next.lawsuit, courtSeconds };
     return;
   }
-  if (lawsuitRisk(next) && random() < lawsuitChance) {
-    next.lawsuit = { caseId: Math.min(lawsuits.length - 1, Math.floor(random() * lawsuits.length)), courtSeconds: null };
+  // Only one lawsuit at a time; the case is drawn from those against the products at risk.
+  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => lawsuitRisk(next, entry.product));
+  if (open.length && random() < lawsuitChance) {
+    next.lawsuit = { caseId: open[Math.min(open.length - 1, Math.floor(random() * open.length))]!.caseId, courtSeconds: null };
     next.lawsuitsFiled = next.lawsuitsFiled + 1;
   }
 }
 
-export function lawsuitCase(state: LaunchedGame): { plaintiff: string; accusation: string } | undefined {
+export function lawsuitCase(state: LaunchedGame): LawsuitCase | undefined {
   return state.lawsuit ? lawsuits[state.lawsuit.caseId] : undefined;
 }
 

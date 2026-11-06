@@ -1338,6 +1338,38 @@ test('every lawsuit costs and takes 20% more than the one before', () => {
   assert.equal(launched.settlementCost(again), 720000, 'the third lawsuit is 1.2² as expensive');
 });
 
+const fairShareActive = overrides => greenWorldActive({
+  products: [{ id: 'green-world', major: 1, minor: 0, active: true }, { id: 'fair-share', major: 1, minor: 0, active: true }], ...overrides
+});
+
+test('Fair Share runs the Mealora delivery service and the fair pricing system for hunger', () => {
+  let live = launched.startProgram(fairShareActive(), 'mealora-delivery');
+  assert.equal(live.budget, 10000000 - 1000000);
+  assert.equal(launched.programBlocker(fairShareActive(), 'hunger-relief-pricing'), 'Needs v1.1');
+  const hunger = live.worldProgress.hunger;
+  live = climateAfter(live, 100);
+  assert.ok(Math.abs(live.worldProgress.hunger - hunger - 0.6) < 1e-9, 'Mealora adds 0.006% hunger solution per second');
+  const v11 = launched.upgradeProduct(fairShareActive(), 'fair-share');
+  assert.equal(launched.programBlocker(v11, 'hunger-relief-pricing'), null);
+  assert.equal(launched.programBlocker(greenWorldActive(), 'mealora-delivery'), 'Activate the product first');
+});
+
+test('Fair Share gets sued under the same conditions, and only its programs are frozen', () => {
+  const hunger = value => ({ ...liveState().worldProgress, hunger: value });
+  assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: hunger(29.9) }), 'fair-share'), false);
+  assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 80, worldProgress: hunger(30) }), 'fair-share'), false);
+  assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: hunger(30) }), 'fair-share'), true);
+  assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: hunger(30) }), 'green-world'), false);
+  const sued = launched.tickLaunched(fairShareActive({ integrity: 90, worldProgress: hunger(30) }), () => 0);
+  assert.equal(launched.lawsuitCase(sued).product, 'fair-share', 'only Fair Share cases while only Fair Share is at risk');
+  const running = [{ id: 'mealora-delivery', resistance: 0, milestone: 0 }, { id: 'reforestation-network', resistance: 0, milestone: 0 }];
+  const frozen = launched.tickLaunched({ ...sued, integrity: 70, programs: running }, () => 0.99);
+  assert.equal(frozen.worldProgress.hunger, 30, 'Fair Share programs are frozen');
+  assert.ok(frozen.worldProgress.climate > 0, 'Green World keeps running');
+  const protest = launched.tickLaunched(fairShareActive({ integrity: 25, programs: [running[0]] }), () => 0);
+  assert.equal(protest.programs[0].resistance, 20, 'protests hit Fair Share as well');
+});
+
 test('Green World upgrades raise the version and make programs stronger', () => {
   let live = greenWorldActive();
   assert.equal(launched.upgradeCost(live, 'green-world'), 500000);
