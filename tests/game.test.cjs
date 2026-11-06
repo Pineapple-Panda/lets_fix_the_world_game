@@ -592,7 +592,7 @@ test('incompatible or corrupt saves are ignored', () => {
 });
 
 const liveState = overrides => ({
-  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], ...overrides
+  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -621,13 +621,13 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.testCoverage = 100000;
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
-    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: []
+    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: []
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
-    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: []
+    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: []
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -723,9 +723,10 @@ test('climate epics build on each other and unlock the feature at the end', () =
     ['climate-collect-measurements', 10000, 120],
     ['climate-aggregate-measurements', 15000, 60],
     ['climate-clean-data', 20000, 60],
-    ['climate-feed-algorithm', 25000, 180]
+    ['climate-feed-algorithm', 25000, 180],
+    ['climate-standalone-api', 700000, 300]
   ]);
-  let live = liveState({ budget: 1000000, perks: ['workflow-abstraction'], serverSlots: 5 });
+  let live = liveState({ budget: 2000000, perks: ['workflow-abstraction'], serverSlots: 5 });
   assert.equal(launched.epicUnlocked(live, 'climate-algorithm'), true);
   assert.equal(launched.epicUnlocked(live, 'climate-collect-measurements'), false);
   assert.equal(launched.startEpic(live, 'climate-collect-measurements'), null, 'needs the previous epic first');
@@ -741,7 +742,23 @@ test('climate epics build on each other and unlock the feature at the end', () =
     assert.equal(launched.epicDone(live, epic.id), true, epic.id);
   }
   assert.equal(launched.goalComplete(live, 'climate'), true);
+  assert.deepEqual(live.products, [{ goal: 'climate', major: 1, minor: 0, active: false }], 'the goal releases its product');
+  assert.equal(launched.productTitle(live.products[0]), 'Green World v1.0');
+  const ticked = launched.tickLaunched(live, () => 0);
+  assert.equal(ticked.products.length, 1, 'a product is released only once');
   assert.equal(launched.goalComplete(live, 'war'), false, 'goals without epics are never complete');
+});
+
+test('Green World can be activated once and its version can change', () => {
+  const live = liveState({ products: [{ goal: 'climate', major: 1, minor: 0, active: false }] });
+  assert.equal(launched.activateProduct(liveState(), 'climate'), null, 'nothing to activate before release');
+  const active = launched.activateProduct(live, 'climate');
+  assert.equal(active.products[0].active, true);
+  assert.equal(launched.activateProduct(active, 'climate'), null, 'already active');
+  assert.equal(launched.productTitle({ goal: 'climate', major: 2, minor: 3, active: true }), 'Green World v2.3');
+  const store = memoryStorage();
+  storage.saveLaunched(store, active);
+  assert.deepEqual(storage.loadLaunched(store), active);
 });
 
 test('more server slots allow more epics at the same time', () => {

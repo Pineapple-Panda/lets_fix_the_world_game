@@ -1,6 +1,6 @@
 import type { Game } from '../models/game.model.ts';
-import type { EpicDefinition, LaunchedGame, LaunchedPerk } from '../models/launched.model.ts';
-import { epics, launchedPerks } from './launched-content.ts';
+import type { EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct } from '../models/launched.model.ts';
+import { epics, launchedPerks, worldGoals } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -27,7 +27,8 @@ export function launch(game: Game): LaunchedGame | null {
     budgetActions: game.actions,
     perks: [],
     serverSlots: 1,
-    epics: []
+    epics: [],
+    products: []
   };
 }
 
@@ -44,7 +45,8 @@ export function skippedLevelTwo(): LaunchedGame {
     budgetActions: skipLevelActions,
     perks: [],
     serverSlots: 1,
-    epics: []
+    epics: [],
+    products: []
   };
 }
 
@@ -70,7 +72,29 @@ export function tickLaunched(state: LaunchedGame, random: () => number = Math.ra
     next.budget = cap(next.budget + (next.actions - next.budgetActions) * budgetPerAction);
     next.budgetActions = next.actions;
   }
+  // A completed world goal releases its product, starting at version 1.0.
+  const released = worldGoals
+    .filter(goal => goalComplete(next, goal.id) && !next.products.some(product => product.goal === goal.id))
+    .map((goal): LaunchedProduct => ({ goal: goal.id, major: 1, minor: 0, active: false }));
+  if (released.length) next.products = [...next.products, ...released];
   return next;
+}
+
+export function product(state: LaunchedGame, goal: string): LaunchedProduct | undefined {
+  return state.products.find(entry => entry.goal === goal);
+}
+
+/** Display name of a released product, e.g. "Green World v1.0". */
+export function productTitle(released: LaunchedProduct): string {
+  const name = worldGoals.find(goal => goal.id === released.goal)?.feature ?? released.goal;
+  return `${name} v${released.major}.${released.minor}`;
+}
+
+/** Switches a released product on. It has no effect yet; what it does is still to be defined. */
+export function activateProduct(state: LaunchedGame, goal: string): LaunchedGame | null {
+  const released = product(state, goal);
+  if (!released || released.active) return null;
+  return { ...state, products: state.products.map(entry => entry.goal === goal ? { ...entry, active: true } : entry) };
 }
 
 export function launchedPerkUnlocked(state: LaunchedGame, perk: LaunchedPerk): boolean {

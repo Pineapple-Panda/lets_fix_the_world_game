@@ -15,7 +15,7 @@ import {
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { activateLaunchedPerk, canLaunch, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
+import { activateLaunchedPerk, activateProduct, canLaunch, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -265,6 +265,10 @@ export class AppComponent {
 
   activateLaunchedPerk(id: string): void {
     this.updateLaunched(state => activateLaunchedPerk(state, id));
+  }
+
+  activateProduct(goal: string): void {
+    this.updateLaunched(state => activateProduct(state, goal));
   }
 
   startEpic(id: string): void {

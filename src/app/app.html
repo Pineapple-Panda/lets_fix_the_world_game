@@ -7,7 +7,8 @@
             @if (saveWarning()) {
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
-            <app-level-two [state]="live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)" />
+            <app-level-two [state]="live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
+                           (productActivated)="activateProduct($event)" />
             <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
                 <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
             </footer>

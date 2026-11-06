@@ -76,6 +76,10 @@ export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedG
   return value;
 }
 
+const isProduct = (value: unknown): boolean =>
+  isObject(value) && typeof value.goal === 'string' && isCount(value.major) && isCount(value.minor) &&
+  typeof value.active === 'boolean';
+
 const isEpic = (value: unknown): boolean =>
   isObject(value) && typeof value.id === 'string' && isCount(value.progress) && typeof value.done === 'boolean';
 
@@ -86,7 +90,8 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !game ||
     !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
     !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
-    !Array.isArray(game.epics) || !game.epics.every(isEpic)
+    !Array.isArray(game.epics) || !game.epics.every(isEpic) ||
+    !Array.isArray(game.products) || !game.products.every(isProduct)
   ) return null;
   return game as unknown as LaunchedGame;
 }

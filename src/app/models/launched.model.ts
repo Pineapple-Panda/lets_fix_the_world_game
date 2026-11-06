@@ -19,6 +19,17 @@ export interface LaunchedGame {
   /** How many epics the server can process at the same time. */
   serverSlots: number;
   epics: LaunchedEpic[];
+  /** Products released by completed world goals (e.g. Green World). */
+  products: LaunchedProduct[];
+}
+
+/** A product that a completed world goal releases. Its version can be raised later. */
+export interface LaunchedProduct {
+  /** World goal that released the product. */
+  goal: string;
+  major: number;
+  minor: number;
+  active: boolean;
 }
 
 export interface LaunchedPerk {

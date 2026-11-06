@@ -13,7 +13,7 @@ export const launchedPerks: LaunchedPerk[] = [
 
 /** The problems the platform sets out to fix. Goals without epics are not shown yet. */
 export const worldGoals: WorldGoal[] = [
-  { id: 'climate', name: 'Climate Change', feature: 'Climate Action Planner' },
+  { id: 'climate', name: 'Climate Change', feature: 'Green World' },
   { id: 'war', name: 'War', feature: 'Conflict Early Warning' },
   { id: 'hunger', name: 'Hunger', feature: 'Food Supply Tracker' },
   { id: 'poverty', name: 'Poverty', feature: 'Aid Distribution Network' },
@@ -65,5 +65,13 @@ export const epics: EpicDefinition[] = [
     detail: 'Train the mitigation model on the cleaned data and hope the GPU bill stays below the climate budget.',
     cost: 25000,
     duration: 180
+  },
+  {
+    id: 'climate-standalone-api',
+    goal: 'climate',
+    title: 'Implement Standalone Climate Changer API',
+    detail: 'Wrap the model in its own versioned, rate-limited API so governments can call it without calling us.',
+    cost: 700000,
+    duration: 300
   }
 ];

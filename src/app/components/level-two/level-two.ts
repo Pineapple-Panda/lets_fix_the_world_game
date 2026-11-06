@@ -1,7 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import {
   addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, epicDone, goalComplete,
-  goalEpics, launchedPerkUnlocked, openLaunchedPerks, runningEpics, serverLoad, serverOnline
+  goalEpics, launchedPerkUnlocked, openLaunchedPerks, product, productTitle, runningEpics, serverLoad, serverOnline
 } from '../../game/launched';
 import { launchedPerks, worldGoals } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
@@ -15,6 +15,7 @@ export class LevelTwoComponent {
   readonly state = input.required<LaunchedGame>();
   readonly perkActivated = output<string>();
   readonly epicStarted = output<string>();
+  readonly productActivated = output<string>();
 
   protected readonly view = computed(() => {
     const state = this.state();
@@ -32,6 +33,8 @@ export class LevelTwoComponent {
         perk,
         unlocked: launchedPerkUnlocked(state, perk) && (perk.id !== addServerPerkId || serverOnline(state))
       })),
+      greenWorld: product(state, 'climate'),
+      greenWorldTitle: product(state, 'climate') ? productTitle(product(state, 'climate')!) : '',
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
