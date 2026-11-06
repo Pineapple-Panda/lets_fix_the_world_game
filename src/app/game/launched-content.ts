@@ -368,7 +368,7 @@ export const programs: ProgramDefinition[] = [
     cost: 600000,
     upkeep: 300,
     rate: 0.005,
-    minMinor: 1
+    minVersion: 1.1
   },
   {
     id: 'carbon-price-lobbying',
@@ -427,7 +427,20 @@ export const programs: ProgramDefinition[] = [
     cost: 1500000,
     upkeep: 0,
     rate: 0.008,
-    minMinor: 1
+    minVersion: 1.1
+  },
+  {
+    id: 'free-meal-service',
+    product: 'fair-share',
+    problem: 'hunger',
+    name: 'Free Meal Service for the Global South',
+    detail: 'The Fair Plate share pays for the food, the Mealora network delivers it: free meals for the countries hit hardest by hunger. Only works while both programs run.',
+    cost: 3000000,
+    upkeep: 2000,
+    rate: 0.02,
+    minVersion: 2,
+    minProgress: 30,
+    requiresPrograms: ['mealora-delivery', 'hunger-relief-pricing']
   }
 ];
 

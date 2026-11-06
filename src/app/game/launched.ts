@@ -3,7 +3,7 @@ import type {
   EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals } from './launched-content.ts';
+import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals, worldProblems } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -437,10 +437,22 @@ export function protestChance(state: LaunchedGame): number {
   return maxProtestChance * distrust(state);
 }
 
+/** Versions as steps: v1.0 → 10, v1.1 → 11, v2.0 → 20. */
+function versionStep(major: number, minor: number): number {
+  return major * 10 + minor;
+}
+
 /** Multiplier on program output from product upgrades: v1.0 ×1, v1.1 ×1.25, v1.2 ×1.5 … */
 export function programBoost(state: LaunchedGame, productId: string): number {
   const released = product(state, productId);
-  return released ? 1 + upgradeBonus * (released.minor + (released.major - 1) * 10) : 1;
+  return released ? 1 + upgradeBonus * (versionStep(released.major, released.minor) - versionStep(1, 0)) : 1;
+}
+
+/** Names of the programs a program needs that are not running right now (missing or in protest). */
+export function missingPrograms(state: LaunchedGame, id: string): string[] {
+  return (programDefinition(id)?.requiresPrograms ?? [])
+    .filter(required => !state.programs.some(entry => entry.id === required && !inProtest(entry)))
+    .map(required => programDefinition(required)?.name ?? required);
 }
 
 /** Why a program cannot start right now, or null when it can. */
@@ -458,9 +470,16 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
     return `Needs ${program.minIntegrity}% integrity`;
   }
   const released = product(state, program.product);
-  if (program.minMinor !== undefined && (released?.minor ?? 0) < program.minMinor) {
-    return `Needs v${released?.major ?? 1}.${program.minMinor}`;
+  if (program.minVersion !== undefined &&
+    versionStep(released?.major ?? 1, released?.minor ?? 0) < Math.round(program.minVersion * 10)) {
+    return `Needs v${program.minVersion.toFixed(1)}`;
   }
+  if (program.minProgress !== undefined && state.worldProgress[program.problem] < program.minProgress) {
+    const problem = worldProblems.find(entry => entry.id === program.problem)?.name ?? program.problem;
+    return `Needs ${program.minProgress}% ${problem} solution`;
+  }
+  const missing = missingPrograms(state, id);
+  if (missing.length) return `Needs ${missing.join(' and ')} running`;
   if ((program.slots ?? 0) > 0 && usedSlots(state) + (program.slots ?? 0) > state.serverSlots) {
     return `Needs ${program.slots} free server ${program.slots === 1 ? 'slot' : 'slots'}`;
   }
@@ -503,7 +522,8 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
 /**
  * One second of all running programs (mutates `next`): at 0% integrity everything is frozen. Below 50%
  * protests can break out; a protested program makes no progress until the protest is resolved. A program
- * that cannot pay its upkeep pauses for that second. A program with a milestone ends by itself once it reaches 100%.
+ * that cannot pay its upkeep, or whose required programs do not run, pauses for that second. A program with a
+ * milestone ends by itself once it reaches 100%.
  */
 function runPrograms(next: LaunchedGame, random: () => number): void {
   if (!next.programs.length || integrityBlocked(next)) return;
@@ -513,6 +533,8 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
   const growth = resistanceGrowth(next);
   const robots = robotsOnSite(next) ? robotPower : 0;
   const progress = { ...next.worldProgress };
+  // Required programs are checked against the start of the second.
+  const before = { ...next };
   const running = next.programs.map(entry => {
     const program = programDefinition(entry.id);
     if (!program || program.product === sued) return entry;
@@ -521,7 +543,7 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
       return { ...entry, resistance: lowerResistance(Math.min(maxResistance, entry.resistance + growth), robots) };
     }
     if (chance > 0 && random() < chance) return { ...entry, resistance: protestResistance };
-    if (!programFunded(next, entry.id)) return entry;
+    if (missingPrograms(before, entry.id).length || !programFunded(next, entry.id)) return entry;
     next.budget = cap(Math.max(0, next.budget - program.upkeep));
     progress[program.problem] = percent(progress[program.problem] + program.rate * programBoost(next, program.product));
     if (program.integrity) next.integrity = percent(next.integrity + program.integrity);

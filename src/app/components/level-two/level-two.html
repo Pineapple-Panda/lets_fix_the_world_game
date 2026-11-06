@@ -85,8 +85,11 @@
                                     <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
                                             (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
                                 } @else if (entry.running) {
-                                    <small [class.panel-warning]="entry.unfunded" [class.epic-done]="!entry.unfunded && !panel.frozen">
-                                        {{ panel.frozen ? 'Frozen' : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
+                                    @let paused = entry.unfunded || entry.waitingFor.length > 0;
+                                    <small [class.panel-warning]="paused" [class.epic-done]="!paused && !panel.frozen">
+                                        {{ panel.frozen ? 'Frozen'
+                                            : entry.waitingFor.length ? 'Paused: needs ' + entry.waitingFor.join(' and ') + ' running'
+                                            : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
                                     </small>
                                     <button class="tool-button client-end" type="button" [attr.aria-label]="'Stop ' + entry.program.name"
                                             (click)="programStopped.emit(entry.program.id)">Stop</button>

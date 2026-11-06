@@ -3,7 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, courtWinChance, dataCentersActive, epicDefinition, epicDone, epicDuration,
-  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics,
+  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
@@ -188,6 +188,7 @@ export class LevelTwoComponent {
           milestone: program.milestoneRate ? (running?.milestone ?? 0) : null,
           unlocksEpic: program.unlocksEpic ? epicDefinition(program.unlocksEpic)?.title : undefined,
           unfunded: !!running && !inProtest(running) && !programFunded(state, program.id),
+          waitingFor: running ? missingPrograms(state, program.id) : [],
           blocker: running ? null : programBlocker(state, program.id)
         };
       })

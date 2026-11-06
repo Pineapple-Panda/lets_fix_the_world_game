@@ -1366,6 +1366,30 @@ test('Fair Share runs the Mealora delivery service and the fair pricing system f
   assert.equal(launched.programBlocker(greenWorldActive(), 'mealora-delivery'), 'Activate the product first');
 });
 
+test('the free meal service needs v2.0, 30% hunger and both other Fair Share programs running', () => {
+  const v2 = { id: 'fair-share', major: 2, minor: 0, active: true };
+  const both = [{ id: 'mealora-delivery', resistance: 0, milestone: 0 }, { id: 'hunger-relief-pricing', resistance: 0, milestone: 0 }];
+  const ready = overrides => fairShareActive({ serverSlots: 4, products: [{ id: 'green-world', major: 1, minor: 0, active: true }, v2],
+    worldProgress: { ...liveState().worldProgress, hunger: 30 }, programs: both, ...overrides });
+  assert.equal(launched.programBlocker(ready(), 'free-meal-service'), null);
+  assert.equal(launched.programBlocker(fairShareActive({ programs: both, worldProgress: { ...liveState().worldProgress, hunger: 30 } }), 'free-meal-service'), 'Needs v2.0');
+  assert.equal(launched.programBlocker(ready({ worldProgress: { ...liveState().worldProgress, hunger: 29 } }), 'free-meal-service'), 'Needs 30% Hunger solution');
+  assert.equal(launched.programBlocker(ready({ programs: [both[0]] }), 'free-meal-service'),
+    'Needs Fair Plate Pricing for Online Food Orders running');
+  assert.equal(launched.programBlocker(ready(), 'hunger-relief-pricing'), 'Already running');
+  assert.equal(launched.programBlocker(ready({ programs: [] }), 'hunger-relief-pricing'), null, 'v1.1 programs stay available at v2.0');
+
+  let live = launched.startProgram(ready(), 'free-meal-service');
+  assert.equal(live.budget, 10000000 - 3000000);
+  const running = climateAfter(live, 10);
+  const alone = climateAfter(launched.stopProgram(live, 'mealora-delivery'), 10);
+  const hungerOnlyPricing = climateAfter(ready({ programs: [both[1]] }), 10);
+  assert.ok(Math.abs(alone.worldProgress.hunger - hungerOnlyPricing.worldProgress.hunger) < 1e-9, 'paused without Mealora');
+  assert.ok(running.worldProgress.hunger > alone.worldProgress.hunger + 0.5, 'runs with both: +0.02%/s ×1.25^10');
+  const protest = launched.tickLaunched({ ...live, programs: [{ ...both[0], resistance: 20 }, both[1], { id: 'free-meal-service', resistance: 0, milestone: 0 }] }, () => 0.99);
+  assert.deepEqual(launched.missingPrograms(protest, 'free-meal-service'), ['Mealora Worldwide Food Delivery'], 'a protest pauses it too');
+});
+
 test('Fair Share gets sued under the same conditions, and only its programs are frozen', () => {
   const hunger = value => ({ ...liveState().worldProgress, hunger: value });
   assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: hunger(29.9) }), 'fair-share'), false);

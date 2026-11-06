@@ -92,8 +92,12 @@ export interface ProgramDefinition {
   slots?: number;
   /** Only startable at this integrity or more. */
   minIntegrity?: number;
-  /** Only startable from this product minor version on (e.g. 1 = v1.1). */
-  minMinor?: number;
+  /** Only startable from this product version on (e.g. 1.1 or 2.0). */
+  minVersion?: number;
+  /** Only startable once the program's problem is solved to this percentage. */
+  minProgress?: number;
+  /** Only startable, and only makes progress, while these programs run (not in protest). */
+  requiresPrograms?: string[];
   /** Only startable once total coding actions reach this value. */
   minActions?: number;
   /** Milestone progress in percent per second while the program runs (e.g. 1 = done after 100 s). */
