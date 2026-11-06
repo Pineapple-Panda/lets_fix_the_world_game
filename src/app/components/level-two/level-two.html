@@ -217,7 +217,7 @@
         </div>
         @if (v.canPitch) {
             <button class="code-button pitch-button" type="button" [attr.aria-label]="'Pitch to investors for ' + v.pitchValue + ' budget'"
-                    aria-keyshortcuts="Space" (click)="pitched.emit()">Pitch to investors <kbd>Space</kbd><span>+{{ format(v.pitchValue) }} budget</span></button>
+                    (click)="pitched.emit()">Pitch to investors <span>+{{ format(v.pitchValue) }} budget</span></button>
         }
 
         <div class="focus" role="group" aria-labelledby="focus-title">

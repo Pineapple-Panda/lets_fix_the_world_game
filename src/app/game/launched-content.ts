@@ -29,7 +29,7 @@ export const launchedPerks: LaunchedPerk[] = [
   {
     id: 'pitch-deck',
     name: 'Pitch Deck Generator',
-    description: 'Turns any idea into 40 slides with hockey-stick charts. Unlocks "Pitch to investors": every click (or the space bar) brings in budget.',
+    description: 'Turns any idea into 40 slides with hockey-stick charts. Unlocks "Pitch to investors": every click brings in budget.',
     icon: 'PD',
     actionsRequired: 1000000
   },

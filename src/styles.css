@@ -1527,12 +1527,3 @@ footer {
 .pitch-button:active {
     transform: translateY(1px);
 }
-
-.pitch-button kbd {
-    margin-left: 8px;
-    padding: 0 5px;
-    border: 1px solid rgba(30, 31, 34, .35);
-    border-radius: 3px;
-    font: 600 10px var(--mono);
-    opacity: .75;
-}
