@@ -30,7 +30,7 @@
                          [attr.aria-valuenow]="problem.value | number: '1.0-0'">
                         <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
                     </div>
-                    <b>{{ problem.value | number: '1.0-1' }}%</b>
+                    <b>{{ problem.value | number: '1.3-3' }}%</b>
                 </div>
             }
 
@@ -42,7 +42,7 @@
                     <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
                          [style.width.%]="v.integrity"></div>
                 </div>
-                <b>{{ v.integrity | number: '1.0-1' }}%</b>
+                <b>{{ v.integrity | number: '1.3-3' }}%</b>
             </div>
             <small class="upgrade-hint">Who you work with changes how the world sees you. Some clients only sign at the right level.</small>
             @if (v.tegridy) {

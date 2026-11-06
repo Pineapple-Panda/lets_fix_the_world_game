@@ -701,7 +701,7 @@ app-level-two {
 
 .world-row {
     display: grid;
-    grid-template-columns: 96px 1fr 44px;
+    grid-template-columns: 96px 1fr 62px;
     align-items: center;
     gap: 8px;
     margin-top: 5px;
