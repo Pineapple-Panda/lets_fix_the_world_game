@@ -182,6 +182,13 @@
             <div class="load-track" role="meter" aria-label="Server load" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.load">
                 <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>
             </div>
+            <small class="upgrade-hint" id="rented-slots">
+                @if (v.rented) {
+                    {{ v.rented }} {{ v.rented === 1 ? 'slot' : 'slots' }} rented: {{ v.renters }}
+                } @else {
+                    No slots rented
+                }
+            </small>
 
             <h3 class="tool-heading ops-subheading">Epics</h3>
             @for (entry of v.goals; track entry.goal.id) {
