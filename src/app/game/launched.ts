@@ -28,7 +28,8 @@ export function launch(game: Game): LaunchedGame | null {
     perks: [],
     serverSlots: 1,
     epics: [],
-    products: []
+    products: [],
+    focus: 0
   };
 }
 
@@ -46,7 +47,8 @@ export function skippedLevelTwo(): LaunchedGame {
     perks: [],
     serverSlots: 1,
     epics: [],
-    products: []
+    products: [],
+    focus: 0
   };
 }
 
@@ -56,8 +58,33 @@ const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
  * One second in level 2: actions grow by 50–300, running epics advance by one second of server time,
  * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction`).
  */
+/** Slider range and the strongest effect at each end. */
+export const focusLimit = 100;
+export const maxActionBoost = 0.5;
+export const maxBudgetBoost = 1;
+
+const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
+
+/** Multiplier for actions per second: up to ×1.5 with the slider fully on "ship features". */
+export function actionBoost(state: LaunchedGame): number {
+  return 1 + maxActionBoost * Math.max(0, -clampFocus(state.focus)) / focusLimit;
+}
+
+/** Multiplier for the budget payout: up to ×2 with the slider fully on "monetise". */
+export function budgetBoost(state: LaunchedGame): number {
+  return 1 + maxBudgetBoost * Math.max(0, clampFocus(state.focus)) / focusLimit;
+}
+
+/** Moves the focus slider; values are clamped to -100…100. */
+export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | null {
+  if (!Number.isFinite(focus)) return null;
+  const next = clampFocus(focus);
+  return next === state.focus ? null : { ...state, focus: next };
+}
+
 export function tickLaunched(state: LaunchedGame, random: () => number = Math.random): LaunchedGame {
-  const gained = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
+  const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
+  const gained = Math.round(base * actionBoost(state));
   const next: LaunchedGame = {
     ...state,
     actions: cap(state.actions + gained),
@@ -69,7 +96,7 @@ export function tickLaunched(state: LaunchedGame, random: () => number = Math.ra
     })
   };
   if (next.seconds % budgetInterval === 0) {
-    next.budget = cap(next.budget + (next.actions - next.budgetActions) * budgetPerAction);
+    next.budget = cap(next.budget + Math.round((next.actions - next.budgetActions) * budgetPerAction * budgetBoost(next)));
     next.budgetActions = next.actions;
   }
   // A product is released (at version 1.0) once all of its world goals are reached.

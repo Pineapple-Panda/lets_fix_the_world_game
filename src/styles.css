@@ -769,22 +769,64 @@ app-level-two {
 
 .live-stats {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+}
+
+.live-stats-perks {
+    grid-template-columns: 1fr !important;
+    margin-top: 8px;
+}
+
+.focus {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+}
+
+.focus-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--faint);
+    font-size: 10px;
+}
+
+.focus-labels b {
+    display: block;
+    font-weight: 600;
+}
+
+.focus-labels span:last-child {
+    text-align: right;
+}
+
+.focus-labels .on {
+    color: var(--ink);
+}
+
+.focus-labels .on b {
+    color: var(--green);
+}
+
+.focus-title {
+    color: var(--muted);
+    font: 600 11px var(--sans);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.focus-slider {
+    width: 100%;
+    margin: 6px 0 0;
+    accent-color: var(--blue);
 }
 
 .live-perks .active-tools {
     margin-top: 4px;
-}
-
-@media (max-width: 1200px) {
-    .live-stats {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .live-perks {
-        grid-column: 1 / -1;
-    }
 }
 
 .live-stat {

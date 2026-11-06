@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import {
-  addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
+  actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
   goalComplete, goalEpics, launchedPerkUnlocked, openLaunchedPerks, previousEpic, product, productForGoal, productTitle,
   networkOnline, runningEpics, serverLoad, serverOnline
 } from '../../game/launched';
@@ -17,12 +17,13 @@ export class LevelTwoComponent {
   readonly perkActivated = output<string>();
   readonly epicStarted = output<string>();
   readonly productActivated = output<string>();
+  readonly focusChanged = output<number>();
 
   protected readonly view = computed(() => {
     const state = this.state();
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
-      payoutRate: budgetPerAction,
+      payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
       activePerks: [
         ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
         // Add Server can be taken many times; show it once with its count.
@@ -39,6 +40,8 @@ export class LevelTwoComponent {
         const released = product(state, definition.id);
         return { definition, released, title: released ? productTitle(released) : '' };
       }),
+      actionBoost: Math.round((actionBoost(state) - 1) * 100),
+      budgetBoost: Math.round((budgetBoost(state) - 1) * 100),
       networkOnline: networkOnline(state),
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),

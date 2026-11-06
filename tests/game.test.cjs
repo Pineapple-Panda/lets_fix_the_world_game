@@ -592,7 +592,7 @@ test('incompatible or corrupt saves are ignored', () => {
 });
 
 const liveState = overrides => ({
-  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], ...overrides
+  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -621,13 +621,13 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.testCoverage = 100000;
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
-    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: []
+    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
-    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: []
+    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -656,6 +656,33 @@ test('every 5 seconds the budget grows by the new actions (1 budget per action)'
   assert.equal(live.budgetActions, live.actions);
   for (let second = 1; second <= 5; second++) live = launched.tickLaunched(live, () => 0.999999);
   assert.equal(live.budget, 7 + 5 * 50 + 5 * 300);
+});
+
+test('the focus slider boosts either actions or the budget payout', () => {
+  const neutral = liveState();
+  assert.equal(launched.actionBoost(neutral), 1);
+  assert.equal(launched.budgetBoost(neutral), 1);
+  const features = launched.setFocus(neutral, -100);
+  assert.equal(launched.actionBoost(features), 1.5, 'full "ship features": +50% actions');
+  assert.equal(launched.budgetBoost(features), 1, 'no budget bonus on that side');
+  assert.equal(launched.tickLaunched(features, () => 0).actions, neutral.actions + 75);
+  const money = launched.setFocus(neutral, 100);
+  assert.equal(launched.actionBoost(money), 1);
+  assert.equal(launched.budgetBoost(money), 2, 'full "monetise": double budget per new action');
+  let live = money;
+  for (let second = 0; second < 5; second++) live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.budget, 5 * 50 * 2);
+  const half = launched.setFocus(neutral, -50);
+  assert.equal(launched.actionBoost(half), 1.25);
+  assert.equal(launched.setFocus(neutral, 500).focus, 100, 'clamped');
+  assert.equal(launched.setFocus(neutral, -37.4).focus, -37);
+  assert.equal(launched.setFocus(neutral, 0), null, 'no change');
+  assert.equal(launched.setFocus(neutral, Number.NaN), null);
+  const store = memoryStorage();
+  storage.saveLaunched(store, half);
+  assert.deepEqual(storage.loadLaunched(store), half);
+  store.data.set(storage.saveKey, JSON.stringify({ level: 2, game: { ...half, focus: 150 } }));
+  assert.equal(storage.loadLaunched(store), null, 'focus out of range');
 });
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {

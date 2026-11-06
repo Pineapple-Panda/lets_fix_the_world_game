@@ -91,7 +91,8 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
     !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
     !Array.isArray(game.epics) || !game.epics.every(isEpic) ||
-    !Array.isArray(game.products) || !game.products.every(isProduct)
+    !Array.isArray(game.products) || !game.products.every(isProduct) ||
+    typeof game.focus !== 'number' || !Number.isInteger(game.focus) || game.focus < -100 || game.focus > 100
   ) return null;
   return game as unknown as LaunchedGame;
 }

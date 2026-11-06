@@ -21,6 +21,11 @@ export interface LaunchedGame {
   epics: LaunchedEpic[];
   /** Products released by completed world goals (e.g. Green World). */
   products: LaunchedProduct[];
+  /**
+   * Focus slider from -100 to 100: negative ships features (more actions),
+   * positive monetises (more budget per new action), 0 is neutral.
+   */
+  focus: number;
 }
 
 /** A released product (e.g. Green World). Its version can be raised later. */

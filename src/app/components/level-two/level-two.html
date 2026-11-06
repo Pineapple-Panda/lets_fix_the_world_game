@@ -55,6 +55,21 @@
                 <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
                 <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
             </div>
+        </div>
+
+        <div class="focus" role="group" aria-labelledby="focus-title">
+            <div class="focus-labels">
+                <span [class.on]="v.actionBoost > 0">Ship features <b>+{{ v.actionBoost }}% actions</b></span>
+                <span class="focus-title" id="focus-title">Focus</span>
+                <span [class.on]="v.budgetBoost > 0">Monetise <b>+{{ v.budgetBoost }}% budget</b></span>
+            </div>
+            <input class="focus-slider" type="range" min="-100" max="100" step="10" [value]="s.focus"
+                   aria-label="Focus between shipping features (more actions) and monetising (more budget)"
+                   [attr.aria-valuetext]="s.focus < 0 ? '+' + v.actionBoost + '% actions' : s.focus > 0 ? '+' + v.budgetBoost + '% budget' : 'Balanced'"
+                   (input)="focusChanged.emit(+$any($event.target).value)" />
+        </div>
+
+        <div class="live-stats live-stats-perks">
             <div class="live-stat live-perks">
                 <span>Activated perks</span>
                 @if (v.activePerks.length) {
