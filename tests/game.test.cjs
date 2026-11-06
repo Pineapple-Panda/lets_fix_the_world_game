@@ -707,13 +707,13 @@ test('every Add Server adds one step to the focus effect (x2, x3, x4, ...)', () 
   assert.equal(launched.budgetBoost(liveState({ serverSlots: 3, focus: -100 })), 0, 'budget never goes below 0');
   const half = liveState({ serverSlots: 2, focus: 50 });
   assert.equal(launched.budgetBoost(half), 2);
-  let live = launched.activateLaunchedPerk(liveState({ actions: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');
+  let live = launched.activateLaunchedPerk(liveState({ budget: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');
   assert.equal(launched.actionBoost(live), 2, 'activating Add Server doubles it right away');
 });
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction', 'data-centers', 'add-server', 'network-financing']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -721,30 +721,27 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['data-centers', 'add-server', 'network-financing']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
-test('Add Server comes back every 50,000 actions from 100,000 on and adds one slot', () => {
-  const offline = liveState({ actions: 100000 });
+test('Add Server costs budget: 100,000 for the first, 10% more for every further server', () => {
+  const offline = liveState({ budget: 1000000 });
   assert.equal(launched.activateLaunchedPerk(offline, 'add-server'), null, 'needs the server first');
-  let live = liveState({ actions: 99999, perks: ['workflow-abstraction'] });
-  assert.equal(launched.addServerPerk(live).actionsRequired, 100000);
-  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null);
-  live.actions = 100000;
-  live = launched.activateLaunchedPerk(live, 'add-server');
+  let live = liveState({ actions: 0, budget: 99999, perks: ['workflow-abstraction'] });
+  assert.equal(launched.addServerPrice(live), 100000);
+  assert.equal(launched.addServerPerk(live).actionsRequired, 0, 'no action threshold any more');
+  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null, 'not enough budget');
+  live = launched.activateLaunchedPerk({ ...live, budget: 1000000 }, 'add-server');
   assert.equal(live.serverSlots, 2);
-  assert.equal(launched.addedServers(live), 1);
-  assert.equal(launched.addServerPerk(live).actionsRequired, 150000);
-  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null, 'not again before 150,000');
-  live.actions = 260000;
+  assert.equal(live.budget, 900000);
+  assert.equal(launched.addServerPrice(live), 110000, '+10%');
   live = launched.activateLaunchedPerk(live, 'add-server');
+  assert.equal(live.budget, 790000);
+  assert.equal(launched.addServerPrice(live), 121000);
   live = launched.activateLaunchedPerk(live, 'add-server');
+  assert.equal(launched.addServerPrice(live), 133100);
   assert.equal(live.serverSlots, 4);
-  assert.equal(launched.addServerPerk(live).actionsRequired, 250000);
-  live = launched.activateLaunchedPerk(live, 'add-server');
-  assert.equal(launched.addServerPerk(live).actionsRequired, 300000);
-  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null);
   assert.deepEqual(live.perks, ['workflow-abstraction'], 'Add Server is not stored as a one-time perk');
 });
 
@@ -757,8 +754,8 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['data-centers', 'network-financing', 'add-server'],
-    'perks are listed by unlock threshold (Add Server now at 300,000)');
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing'],
+    'perks are listed by unlock threshold; Add Server needs no actions');
 });
 
 test('Tegridy Farms: a 1,000,000 deal, then +1 integrity per 100,000 bag', () => {

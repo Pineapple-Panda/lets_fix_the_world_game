@@ -230,24 +230,30 @@ export function launchedPerkUnlocked(state: LaunchedGame, perk: LaunchedPerk): b
   return state.actions >= perk.actionsRequired;
 }
 
-/** The repeatable "Add Server" perk: first at 100,000 actions, then again every 50,000 actions. */
+/** The repeatable "Add Server" perk: bought with budget, 100,000 for the first server, 10% more for each further one. */
 export const addServerPerkId = 'add-server';
-export const addServerFirstAt = 100000;
-export const addServerEvery = 50000;
+export const addServerBasePrice = 100000;
+export const addServerPriceStep = 1.1;
+
+/** Budget price of the next server: 100,000 × 1.1 per server already added (rounded). */
+export function addServerPrice(state: LaunchedGame): number {
+  return Math.round(addServerBasePrice * addServerPriceStep ** addedServers(state));
+}
 
 /** Servers bought with the Add Server perk (the first slot comes with the workflow perk). */
 export function addedServers(state: LaunchedGame): number {
   return Math.max(0, state.serverSlots - 1);
 }
 
-/** The next Add Server perk, with its threshold based on how many servers were already added. */
+/** The next Add Server perk, priced by how many servers were already added. */
 export function addServerPerk(state: LaunchedGame): LaunchedPerk {
   return {
     id: addServerPerkId,
     name: 'Add Server',
-    description: 'Rack another server: +1 slot, so one more epic can run at the same time. Comes back every 50,000 actions.',
+    description: 'Rack another server: +1 slot, so one more epic can run at the same time. Each server costs 10% more than the last.',
     icon: 'SV',
-    actionsRequired: addServerFirstAt + addServerEvery * addedServers(state)
+    actionsRequired: 0,
+    cost: addServerPrice(state)
   };
 }
 
@@ -298,7 +304,7 @@ export function buyTegridy(state: LaunchedGame): LaunchedGame | null {
 
 /** Whether a perk can be taken right now: enough actions, enough budget for bought perks, and its prerequisites. */
 export function launchedPerkAvailable(state: LaunchedGame, perk: LaunchedPerk): boolean {
-  if (perk.id === addServerPerkId) return serverOnline(state) && launchedPerkUnlocked(state, perk);
+  if (perk.id === addServerPerkId) return serverOnline(state) && state.budget >= (perk.cost ?? 0);
   if (perk.id === robotPerk.id) {
     return state.rentals.includes(robotClient) && !state.perks.includes(robotPerk.id) &&
       launchedPerkUnlocked(state, perk) && state.budget >= (perk.cost ?? 0);
@@ -327,8 +333,9 @@ export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedG
   }
   if (id === addServerPerkId) {
     // Adding a server only makes sense once there is a server to extend.
-    if (!serverOnline(state) || !launchedPerkUnlocked(state, addServerPerk(state))) return null;
-    return { ...state, serverSlots: state.serverSlots + 1 };
+    const perk = addServerPerk(state);
+    if (!launchedPerkAvailable(state, perk)) return null;
+    return { ...state, budget: state.budget - (perk.cost ?? 0), serverSlots: state.serverSlots + 1 };
   }
   const perk = launchedPerks.find(entry => entry.id === id);
   if (!perk || state.perks.includes(id) || !launchedPerkAvailable(state, perk)) return null;
