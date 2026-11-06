@@ -179,13 +179,14 @@ export function tickLaunched(
   // Rented slots pay every second, nudge the solution progress a tiny bit and move integrity.
   next.budget = cap(next.budget + rentalIncome(next));
   const progress = { ...next.worldProgress };
+  const factor = clientFactor(next);
   for (const id of next.rentals) {
     const client = rentalClient(id);
     if (!client) continue;
     for (const [problem, delta] of Object.entries(client.progress) as [WorldProblem, number][]) {
-      progress[problem] = percent(progress[problem] + delta);
+      progress[problem] = percent(progress[problem] + delta * factor);
     }
-    next.integrity = percent(next.integrity + client.integrity);
+    next.integrity = percent(next.integrity + client.integrity * factor);
   }
   // Epics that just finished add a fixed amount of solution progress to each of their problems.
   const finished = next.epics.filter(epic => epic.done && !state.epics.find(before => before.id === epic.id)?.done);
@@ -560,13 +561,20 @@ export function rentalClient(id: string): RentalClient | undefined {
 }
 
 /** Budget per second from all rented slots. */
+/** Data centres make every client 25% stronger: more income, and bigger effects in both directions. */
+export const dataCenterClientBoost = 1.25;
+
+export function clientFactor(state: LaunchedGame): number {
+  return state.perks.includes(dataCentersPerk) ? dataCenterClientBoost : 1;
+}
+
 export function rentalIncome(state: LaunchedGame): number {
-  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0);
+  return Math.round(state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0) * clientFactor(state));
 }
 
 /** Solution progress per second the current clients add to a problem (negative slows it down). */
 export function rentalProgress(state: LaunchedGame, problem: WorldProblem): number {
-  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.progress[problem] ?? 0), 0);
+  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.progress[problem] ?? 0), 0) * clientFactor(state);
 }
 
 /** Whether a client is willing to sign at the current integrity. Running contracts are not affected. */

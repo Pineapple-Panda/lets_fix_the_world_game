@@ -808,6 +808,20 @@ test('"Migrate to Data Centers": 80,000 actions, 350,000 budget, epics take half
   assert.equal(slow.epics[0].done, false);
 });
 
+test('data centres make every client 25% stronger, good and bad', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 8 };
+  const plain = launched.rentSlot(launched.rentSlot(liveState({ ...online, integrity: 15 }), 'ministry-digital'), 'edisonx');
+  const boosted = { ...plain, perks: [...plain.perks, 'data-centers'] };
+  assert.equal(launched.clientFactor(plain), 1);
+  assert.equal(launched.clientFactor(boosted), 1.25);
+  assert.equal(launched.rentalIncome(boosted), Math.round(launched.rentalIncome(plain) * 1.25));
+  assert.ok(Math.abs(launched.rentalProgress(boosted, 'hunger') - 0.003 * 1.25) < 1e-12, 'positive effects grow');
+  assert.ok(Math.abs(launched.rentalProgress(boosted, 'climate') + 0.005 * 1.25) < 1e-12, 'negative effects grow too');
+  const afterPlain = launched.tickLaunched(plain, () => 0);
+  const afterBoosted = launched.tickLaunched(boosted, () => 0);
+  assert.ok(Math.abs((15 - afterBoosted.integrity) - (15 - afterPlain.integrity) * 1.25) < 1e-9, 'integrity loss grows by 25%');
+});
+
 test('epics cost budget, take server time and need a free server slot', () => {
   const offline = liveState({ budget: 10000 });
   assert.equal(launched.startEpic(offline, 'climate-algorithm'), null, 'needs the server');

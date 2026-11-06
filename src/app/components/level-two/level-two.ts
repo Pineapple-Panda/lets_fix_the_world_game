@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canBuyTegridy, canStartEpic, clientAvailable, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
+  canBuyTegridy, canStartEpic, clientAvailable, clientFactor, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
   protestChance, resistanceGrowth, robotPerk, robotPower, robotsOnSite,
   upgradeCost, dataCentersPerk, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
@@ -67,11 +67,12 @@ export class LevelTwoComponent {
         available: clientAvailable(state, client.id),
         condition: client.minIntegrity !== undefined ? `Only signs at ${client.minIntegrity}% integrity or more`
           : client.maxIntegrity !== undefined ? `Only signs at ${client.maxIntegrity}% integrity or less` : '',
+        income: Math.round(client.income * clientFactor(state)),
         effects: (Object.entries(client.progress) as [string, number][]).map(([problem, delta]) => ({
           name: worldProblems.find(entry => entry.id === problem)?.name ?? problem,
-          delta
+          delta: Math.round(delta * clientFactor(state) * 100000) / 100000
         })),
-        integrity: client.integrity
+        integrity: Math.round(client.integrity * clientFactor(state) * 100000) / 100000
       })),
       integrity: state.integrity,
       tegridy: tegridyActive(state),
