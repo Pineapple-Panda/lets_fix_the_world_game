@@ -22,11 +22,11 @@
     @if (v.networkOnline) {
         <article class="ops-card ops-network" aria-labelledby="network-title">
             <h2 class="tool-heading" id="network-title">Network &amp; Financing</h2>
-            <h3 class="tool-heading ops-subheading">World progress</h3>
+            <h3 class="tool-heading ops-subheading">World Problem Solution Progress</h3>
             @for (problem of v.worldProgress; track problem.id) {
                 <div class="world-row">
                     <span>{{ problem.name }}</span>
-                    <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' progress'" aria-valuemin="0" aria-valuemax="100"
+                    <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' solution progress'" aria-valuemin="0" aria-valuemax="100"
                          [attr.aria-valuenow]="problem.value | number: '1.0-0'">
                         <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
                     </div>
