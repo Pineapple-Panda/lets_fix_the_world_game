@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, mediatorsTrained, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -67,7 +67,11 @@ export class LevelTwoComponent {
       running: runningEpics(state),
       rented: rentedSlots(state),
       rentalIncome: rentalIncome(state),
-      worldProgress: worldProblems.map(problem => ({ ...problem, value: state.worldProgress[problem.id] })),
+      worldProgress: worldProblems.map(problem => ({
+        ...problem,
+        value: state.worldProgress[problem.id],
+        eta: this.eta(secondsToSolve(state, problem.id))
+      })),
       clients: rentalClients.map(client => ({
         client,
         rented: state.rentals.includes(client.id),
@@ -159,7 +163,7 @@ export class LevelTwoComponent {
       productName: productDefinition(productId)?.name ?? productId,
       // Any running program blocked by a protest; makes the card border pulse.
       protest: state.programs.some(entry => inProtest(entry) && programDefinition(entry.id)?.product === productId),
-      problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id] })),
+      problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id], solved: problemSolved(state, id) })),
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
       lawsuit: state.lawsuit && lawsuitCase(state)?.product === productId ? {
@@ -175,6 +179,10 @@ export class LevelTwoComponent {
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
       robots: robotsOnSite(state),
       robotPower,
+      mediators: mediatorsTrained(state),
+      mediationPower,
+      clickPower: clickPower(state),
+      maxResistance,
       boostPercent: Math.round((boost - 1) * 100),
       upgradeCost: cost,
       canUpgrade: !integrityBlocked(state) && state.budget >= cost,
@@ -232,6 +240,15 @@ export class LevelTwoComponent {
     if (seconds < 60) return `${seconds}s`;
     const rest = seconds % 60;
     return rest ? `${Math.floor(seconds / 60)}:${String(rest).padStart(2, '0')} min` : `${seconds / 60} min`;
+  }
+
+  /** Time until a problem is solved: "solved", "≈ 12 min", "≈ 3 h", or "" when it does not move. */
+  protected eta(seconds: number | null): string {
+    if (seconds === null) return '';
+    if (seconds === 0) return 'solved';
+    if (seconds < 60) return '≈ 1 min';
+    const minutes = Math.round(seconds / 60);
+    return minutes < 120 ? `≈ ${minutes} min` : `≈ ${Math.round(minutes / 60)} h`;
   }
 
   /** 75 → "1:15". */

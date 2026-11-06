@@ -25,6 +25,14 @@ export const launchedPerks: LaunchedPerk[] = [
     description: 'Lovely platform. Shame about the invoice. Opens the Network & Financing desk to find partners and money.',
     icon: 'NF',
     actionsRequired: 250000
+  },
+  {
+    id: 'mediation-academy',
+    name: 'Conflict Mediation Academy',
+    description: 'Train mediators who listen first and talk second. Every Talk to the protesters click counts three times, and they calm protests on their own (−2 resistance per second).',
+    icon: 'MA',
+    actionsRequired: 3000000,
+    cost: 1500000
   }
 ];
 
@@ -509,6 +517,28 @@ export const programs: ProgramDefinition[] = [
     rate: 0.008,
     minIntegrity: 50,
     lawsuitMultiplier: 3
+  },
+  {
+    id: 'open-budget-ledger',
+    product: 'peace-integrity',
+    problem: 'corruption',
+    name: 'Open Budget Ledger',
+    detail: 'Puts every public contract, invoice and subsidy on a searchable public ledger. Sunlight is a great disinfectant, and an even better search filter.',
+    cost: 900000,
+    upkeep: 300,
+    rate: 0.006,
+    slots: 1
+  },
+  {
+    id: 'whistleblower-harbor',
+    product: 'peace-integrity',
+    problem: 'corruption',
+    name: 'Whistleblower Safe Harbor',
+    detail: 'An encrypted, anonymous channel for insiders, backed by lawyers who actually return calls. Bribes get awkward when anybody might be listening.',
+    cost: 1800000,
+    upkeep: 800,
+    rate: 0.012,
+    minVersion: 1.1
   },
   {
     id: 'high-tech-weapons',

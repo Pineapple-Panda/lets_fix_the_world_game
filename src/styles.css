@@ -1454,3 +1454,60 @@ footer {
     .ops-card.alert-lawsuit { animation: none; border-color: var(--purple); }
     .ops-card.alert-protest { animation: none; border-color: var(--red); }
 }
+
+/* ---------- Level 2: news ticker and the end of the level ---------- */
+
+.console-line.news::before {
+    content: '[NEWS ]';
+    color: var(--yellow);
+}
+
+.console-line.error.news-breaking::before,
+.news-ticker .console-line.error::before {
+    content: '[ALERT]';
+}
+
+.victory-facts {
+    display: grid;
+    gap: 4px;
+    margin: 14px 0;
+    font-size: 13px;
+}
+
+.victory-facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 3px;
+}
+
+.victory-facts dt {
+    color: var(--muted);
+}
+
+.victory-facts dd {
+    margin: 0;
+    font: 600 13px var(--mono);
+    text-align: right;
+}
+
+.victory-verdict {
+    font-style: italic;
+}
+
+.victory-teaser {
+    color: var(--purple);
+}
+
+/* Development card: progress rows with the time until the problem is solved. */
+.world-row:has(.world-eta) {
+    grid-template-columns: 96px 1fr 62px 54px;
+}
+
+.world-eta {
+    color: var(--muted);
+    font-size: 10px;
+    text-align: right;
+    white-space: nowrap;
+}

@@ -42,6 +42,24 @@ export interface LaunchedGame {
   lawsuitsFiled: number;
   /** Outcome of the last court case, shown on the product card until the next lawsuit; null if there is none. */
   verdict: Verdict | null;
+  /** Counters for the end-of-level summary. */
+  stats: LaunchedStats;
+  /** True once the player has seen the "world fixed" dialog. */
+  victorySeen: boolean;
+}
+
+/** How the level was played, shown when every problem is solved. */
+export interface LaunchedStats {
+  lawsuits: number;
+  lawsuitsWon: number;
+  lawsuitsLost: number;
+  lawsuitsSettled: number;
+  /** Clicks on "Talk to the protesters". */
+  protestClicks: number;
+  /** Seconds with a shady deal going on (a client or program that costs integrity or makes things worse). */
+  dirtySeconds: number;
+  /** Bags of Tegridy bought. */
+  tegridyBags: number;
 }
 
 /** How a fought lawsuit ended. */

@@ -1,6 +1,6 @@
 import type { Game } from '../models/game.model.ts';
 import type {
-  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
+  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
 import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals, worldProblems } from './launched-content.ts';
@@ -52,7 +52,9 @@ function newLaunchedState(actions: number, budget: number): LaunchedGame {
     completedPrograms: [],
     lawsuit: null,
     lawsuitsFiled: 0,
-    verdict: null
+    verdict: null,
+    stats: noStats(),
+    victorySeen: false
   };
 }
 
@@ -68,6 +70,11 @@ export const skipLevelBudget = 3000;
 /** Dev shortcut: a fresh level 2 state without playing level 1. */
 export function skippedLevelTwo(): LaunchedGame {
   return newLaunchedState(skipLevelActions, skipLevelBudget);
+}
+
+/** All end-of-level counters at 0. */
+export function noStats(): LaunchedStats {
+  return { lawsuits: 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0, protestClicks: 0, dirtySeconds: 0, tegridyBags: 0 };
 }
 
 /** Every problem at 0%. */
@@ -210,12 +217,27 @@ export function tickLaunched(
   next.worldProgress = progress;
   runPrograms(next, random);
   runLawsuit(next, random);
+  if (shadyDeals(next)) next.stats = { ...next.stats, dirtySeconds: next.stats.dirtySeconds + 1 };
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
     .filter(definition => definition.goals.every(goal => goalComplete(next, goal)) && !product(next, definition.id))
     .map((definition): LaunchedProduct => ({ id: definition.id, major: 1, minor: 0, active: false }));
   if (released.length) next.products = [...next.products, ...released];
   return next;
+}
+
+/** A client or running program that costs integrity or makes a problem worse (NSA, EdisonX, greenwashing, weapons). */
+export function shadyDeals(state: LaunchedGame): boolean {
+  return state.rentals.some(id => (rentalClient(id)?.integrity ?? 0) < 0) ||
+    state.programs.some(entry => {
+      const program = programDefinition(entry.id);
+      return !!program && ((program.integrity ?? 0) < 0 || program.rate < 0);
+    });
+}
+
+/** Closes the "world fixed" dialog for good. */
+export function dismissVictory(state: LaunchedGame): LaunchedGame | null {
+  return state.victorySeen ? null : { ...state, victorySeen: true };
 }
 
 export function product(state: LaunchedGame, id: string): LaunchedProduct | undefined {
@@ -314,7 +336,8 @@ export function buyTegridy(state: LaunchedGame): LaunchedGame | null {
   return {
     ...state,
     budget: state.budget - tegridyBagCost,
-    integrity: Math.min(100, state.integrity + tegridyBagIntegrity)
+    integrity: Math.min(100, state.integrity + tegridyBagIntegrity),
+    stats: { ...state.stats, tegridyBags: state.stats.tegridyBags + 1 }
   };
 }
 
@@ -394,7 +417,13 @@ export function integrityBlocked(state: LaunchedGame): boolean {
 /** A new protest needs this many clicks to resolve. */
 export const protestResistance = 20;
 /** Distrust can push a protest's resistance up to this many clicks, but not further. */
-export const maxResistance = 100;
+export const maxResistance = 50;
+/** Perk that trains mediators: protests end faster and peacefully. */
+export const mediationPerk = 'mediation-academy';
+/** Resistance one click removes with trained mediators (1 without). */
+export const mediationClick = 3;
+/** Resistance the mediators remove from every protest per second on their own. */
+export const mediationPower = 2;
 /** At 0% integrity a protest's resistance grows by this much per second (linearly less up to 50%). */
 export const maxResistanceGrowth = 2;
 /** Resistance the robots remove from every protest per second. */
@@ -408,6 +437,15 @@ function distrust(state: LaunchedGame): number {
 /** How much a protest's resistance grows per second: the lower the integrity, the faster. */
 export function resistanceGrowth(state: LaunchedGame): number {
   return maxResistanceGrowth * distrust(state);
+}
+
+export function mediatorsTrained(state: LaunchedGame): boolean {
+  return state.perks.includes(mediationPerk);
+}
+
+/** Resistance removed from every protest per second by robots and mediators together. */
+export function calmingPower(state: LaunchedGame): number {
+  return (robotsOnSite(state) ? robotPower : 0) + (mediatorsTrained(state) ? mediationPower : 0);
 }
 
 /** Riot-control robots on site: available while EdisonX rents a slot. */
@@ -469,6 +507,9 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
   if (state.programs.some(entry => entry.id === id)) return 'Already running';
   if (state.completedPrograms.includes(id)) return 'Already completed';
   if (!programRevealed(state, id)) return 'Not available yet';
+  if (program.rate > 0 && !program.milestoneRate && problemSolved(state, program.problem)) {
+    return `${worldProblems.find(entry => entry.id === program.problem)?.name ?? program.problem} is solved`;
+  }
   if (integrityBlocked(state)) return 'Integrity is 0%: nobody cooperates';
   if (program.minActions !== undefined && state.actions < program.minActions) {
     return `Needs ${program.minActions.toLocaleString('en-US')} total coding actions`;
@@ -505,12 +546,19 @@ export function stopProgram(state: LaunchedGame, id: string): LaunchedGame | nul
   return { ...state, programs: state.programs.filter(entry => entry.id !== id) };
 }
 
-/** One click on "Talk to the protesters": resistance -1. At 0 the protest is over and the program continues. */
+/** Resistance one "Talk to the protesters" click removes: 1, or 3 with trained mediators. */
+export function clickPower(state: LaunchedGame): number {
+  return mediatorsTrained(state) ? mediationClick : 1;
+}
+
+/** One click on "Talk to the protesters". At 0 the protest is over and the program continues. */
 export function resolveProtest(state: LaunchedGame, id: string): LaunchedGame | null {
   if (!state.programs.some(entry => entry.id === id && inProtest(entry))) return null;
+  const power = clickPower(state);
   return {
     ...state,
-    programs: state.programs.map(entry => entry.id === id ? { ...entry, resistance: lowerResistance(entry.resistance, 1) } : entry)
+    programs: state.programs.map(entry => entry.id === id ? { ...entry, resistance: lowerResistance(entry.resistance, power) } : entry),
+    stats: { ...state.stats, protestClicks: state.stats.protestClicks + 1 }
   };
 }
 
@@ -538,7 +586,7 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
   const sued = lawsuitCase(next)?.product;
   const chance = protestChance(next);
   const growth = resistanceGrowth(next);
-  const robots = robotsOnSite(next) ? robotPower : 0;
+  const robots = calmingPower(next);
   const progress = { ...next.worldProgress };
   // Required programs are checked against the start of the second.
   const before = { ...next };
@@ -561,14 +609,59 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
     return entry;
   });
   const completed = running.filter(entry => programDefinition(entry.id)?.milestoneRate && entry.milestone >= 100);
-  next.programs = running.filter(entry => !completed.includes(entry));
+  // Once a problem is solved, the programs working on it stop by themselves (no upkeep for nothing).
+  const solved = running.filter(entry => {
+    const program = programDefinition(entry.id);
+    return !!program && program.rate > 0 && !program.milestoneRate && progress[program.problem] >= 100;
+  });
+  next.programs = running.filter(entry => !completed.includes(entry) && !solved.includes(entry));
   if (completed.length) next.completedPrograms = [...next.completedPrograms, ...completed.map(entry => entry.id)];
   next.worldProgress = progress;
 }
 
-/** Budget for the next product version (v1.0 → v1.1 costs 500,000, v1.1 → v1.2 1,000,000, …). */
+/** A world problem at 100%. */
+export function problemSolved(state: LaunchedGame, problem: WorldProblem): boolean {
+  return state.worldProgress[problem] >= 100;
+}
+
+/** All world problems at 100%: the end of level 2. */
+export function worldFixed(state: LaunchedGame): boolean {
+  return (Object.keys(state.worldProgress) as WorldProblem[]).every(problem => problemSolved(state, problem));
+}
+
+/** Whether a running program makes progress this second (not frozen, no protest, funded, requirements met). */
+export function programWorking(state: LaunchedGame, entry: ProgramState): boolean {
+  const program = programDefinition(entry.id);
+  return !!program && !integrityBlocked(state) && lawsuitCase(state)?.product !== program.product &&
+    !inProtest(entry) && programFunded(state, entry.id) && !missingPrograms(state, entry.id).length;
+}
+
+/** Solution progress per second a problem gets right now from clients and working programs. */
+export function problemRate(state: LaunchedGame, problem: WorldProblem): number {
+  const programRate = state.programs
+    .filter(entry => programDefinition(entry.id)?.problem === problem && programWorking(state, entry))
+    .reduce((total, entry) => {
+      const program = programDefinition(entry.id)!;
+      return total + program.rate * programBoost(state, program.product);
+    }, 0);
+  return programRate + rentalProgress(state, problem);
+}
+
+/** Seconds until a problem is solved at the current rate, or null when it is not moving forward. */
+export function secondsToSolve(state: LaunchedGame, problem: WorldProblem): number | null {
+  if (problemSolved(state, problem)) return 0;
+  const rate = problemRate(state, problem);
+  return rate > 0 ? Math.ceil((100 - state.worldProgress[problem]) / rate) : null;
+}
+
+/**
+ * Budget for the next product version: 500,000 per step from v1.0 (v1.0 → v1.1 costs 500,000, v1.9 → v2.0
+ * 5,000,000, v2.0 → v2.1 5,500,000, …).
+ */
 export function upgradeCost(state: LaunchedGame, productId: string): number {
-  return upgradeCostStep * ((product(state, productId)?.minor ?? 0) + 1);
+  const released = product(state, productId);
+  const steps = released ? versionStep(released.major, released.minor) - versionStep(1, 0) : 0;
+  return upgradeCostStep * (steps + 1);
 }
 
 /** Raises an active product's version by 0.1; at v1.9 the next step is v2.0. */
@@ -742,8 +835,13 @@ export const courtWinChance = 0.65;
 export const damagesFactor = 2;
 /** Every further lawsuit costs and takes this much more. */
 export const lawsuitEscalation = 1.2;
+/** Without an open lawsuit, the escalation counter drops by one every this many seconds. */
+export const lawsuitCooldown = 120;
 
-/** Factor for the current lawsuit: the n-th lawsuit is 1.2^(n-1) times as expensive and long. */
+/**
+ * Factor for the current lawsuit: 1.2^(n-1), where n counts recent lawsuits. The count drops by one every two
+ * minutes without a lawsuit, so a quiet phase makes the next one cheaper again.
+ */
 function escalation(state: LaunchedGame): number {
   return lawsuitEscalation ** Math.max(0, state.lawsuitsFiled - 1);
 }
@@ -801,8 +899,11 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
     next.budget = Math.max(0, next.budget - damages);
     next.verdict = { product: sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };
     next.lawsuit = null;
+    next.stats = { ...next.stats, [won ? 'lawsuitsWon' : 'lawsuitsLost']: next.stats[won ? 'lawsuitsWon' : 'lawsuitsLost'] + 1 };
     return;
   }
+  // Quiet times calm the companies down again.
+  if (next.lawsuitsFiled > 0 && next.seconds % lawsuitCooldown === 0) next.lawsuitsFiled = next.lawsuitsFiled - 1;
   // Only one lawsuit at a time; the case is drawn from those against the products at risk. Cases tied to a
   // program are filed while that program runs.
   const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.program
@@ -812,6 +913,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
     next.lawsuit = { caseId: open[Math.min(open.length - 1, Math.floor(random() * open.length))]!.caseId, courtSeconds: null };
     next.lawsuitsFiled = next.lawsuitsFiled + 1;
     next.verdict = null;
+    next.stats = { ...next.stats, lawsuits: next.stats.lawsuits + 1 };
   }
 }
 
@@ -823,11 +925,41 @@ export function lawsuitCase(state: LaunchedGame): LawsuitCase | undefined {
 export function settleLawsuit(state: LaunchedGame): LaunchedGame | null {
   const cost = settlementCost(state);
   if (!state.lawsuit || state.lawsuit.courtSeconds !== null || state.budget < cost) return null;
-  return { ...state, budget: state.budget - cost, lawsuit: null };
+  return { ...state, budget: state.budget - cost, lawsuit: null, stats: { ...state.stats, lawsuitsSettled: state.stats.lawsuitsSettled + 1 } };
 }
 
 /** Go to court: free, but the programs stay frozen until the verdict, and a loss costs damages. */
 export function fightLawsuit(state: LaunchedGame): LaunchedGame | null {
   if (!state.lawsuit || state.lawsuit.courtSeconds !== null) return null;
   return { ...state, lawsuit: { ...state.lawsuit, courtSeconds: courtDuration(state) } };
+}
+
+// ---------- End of level 2 ----------
+
+/** 8,040 seconds → "2 h 14 min", 300 → "5 min". */
+function playTime(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  return minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
+}
+
+/** A few facts about how the world was fixed, and one line about how clean it was. */
+export function victorySummary(state: LaunchedGame): { facts: { label: string; value: string }[]; verdict: string } {
+  const { stats } = state;
+  const shady = state.seconds > 0 ? Math.round(stats.dirtySeconds / state.seconds * 100) : 0;
+  const facts = [
+    { label: 'Time to fix the world', value: playTime(state.seconds) },
+    { label: 'Lawsuits', value: stats.lawsuits ? `${stats.lawsuits} (${stats.lawsuitsWon} won, ${stats.lawsuitsLost} lost, ${stats.lawsuitsSettled} settled)` : 'None. Suspicious.' },
+    { label: 'Talks with protesters', value: stats.protestClicks.toLocaleString('en-US') },
+    { label: 'Time with shady deals', value: `${shady}%` },
+    { label: 'Integrity at the end', value: `${Math.round(state.integrity)}%` },
+    ...(stats.tegridyBags ? [{ label: 'Bags of Tegridy', value: stats.tegridyBags.toLocaleString('en-US') }] : [])
+  ];
+  const verdict = shady < 5 && state.integrity >= 70
+    ? 'A saint with a server farm. History will write songs about you, royalty-free.'
+    : shady < 30
+      ? 'Mostly clean. Nobody needs to know about the rest.'
+      : shady < 60
+        ? 'You fixed the world, partly with the help of the people who broke it.'
+        : 'The world is fixed. Your conscience is still in the backlog.';
+  return { facts, verdict };
 }

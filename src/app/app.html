@@ -4,9 +4,19 @@
     }
     @if (launched(); as live) {
         <main class="level-two">
-            @if (saveWarning()) {
-                <div class="console-line error" role="status">{{ saveWarning() }}</div>
+            @if (victory(); as summary) {
+                <app-victory [summary]="summary" (dismissed)="dismissVictory()" />
             }
+            <section class="console news-ticker" aria-label="World news">
+                <div class="console-body" role="status" aria-live="polite" tabindex="0">
+                    @if (saveWarning()) {
+                        <div class="console-line error">{{ saveWarning() }}</div>
+                    }
+                    @for (line of news(); track line.text) {
+                        <div class="console-line" [class.error]="line.breaking" [class.news]="!line.breaking">{{ line.text }}</div>
+                    }
+                </div>
+            </section>
             <app-level-two [state]="live" [fastEpics]="devMode()" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
                            (productActivated)="activateProduct($event)" (focusChanged)="setFocus($event)"
                            (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)"

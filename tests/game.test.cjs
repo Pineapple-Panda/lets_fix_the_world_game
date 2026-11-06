@@ -593,7 +593,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -601,7 +601,7 @@ test('level 2 saves are small and separate from level 1', () => {
   const state = liveState({ budget: 42, perks: ['workflow-abstraction'], epics: [{ id: 'climate-algorithm', progress: 3, done: false }] });
   const raw = storage.saveLaunched(store, state);
   assert.deepEqual(JSON.parse(raw), { level: 2, game: state });
-  assert.ok(raw.length < 500);
+  assert.ok(raw.length < 700);
   assert.deepEqual(storage.loadLaunched(store), state);
   assert.equal(storage.loadGame(store), null);
   store.data.set(storage.saveKey, JSON.stringify({ level: 2, game: { actions: 5000, budget: 42 } }));
@@ -623,14 +623,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -713,7 +713,7 @@ test('every Add Server adds one step to the focus effect (x2, x3, x4, ...)', () 
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing', 'mediation-academy']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -721,7 +721,7 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'mediation-academy']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
@@ -754,7 +754,7 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing'],
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'mediation-academy'],
     'perks are listed by unlock threshold; Add Server needs no actions');
 });
 
@@ -1242,9 +1242,9 @@ test('a protest takes 20 clicks, and low integrity adds resistance every second'
   assert.equal(growing.worldProgress.climate, 0, 'no progress while protested');
   const steady = launched.tickLaunched(greenWorldActive({ integrity: 60, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }] }), () => 0.99);
   assert.equal(steady.programs[0].resistance, 20, 'an old protest does not grow above 50% integrity');
-  assert.equal(launched.maxResistance, 100);
-  const capped = launched.tickLaunched(greenWorldActive({ integrity: 1, programs: [{ id: 'reforestation-network', resistance: 99.5, milestone: 0 }] }), () => 0.99);
-  assert.equal(capped.programs[0].resistance, 100, 'resistance never grows beyond 100');
+  assert.equal(launched.maxResistance, 50);
+  const capped = launched.tickLaunched(greenWorldActive({ integrity: 1, programs: [{ id: 'reforestation-network', resistance: 49.5, milestone: 0 }] }), () => 0.99);
+  assert.equal(capped.programs[0].resistance, 50, "resistance never grows beyond 50 clicks");
 });
 
 test('EdisonX robots: a perk only for EdisonX clients that works only while EdisonX rents', () => {
@@ -1474,6 +1474,98 @@ test('Fair Share gets sued under the same conditions, and only its programs are 
   assert.ok(frozen.worldProgress.climate > 0, 'Green World keeps running');
   const protest = launched.tickLaunched(fairShareActive({ integrity: 25, programs: [running[0]] }), () => 0);
   assert.equal(protest.programs[0].resistance, 20, 'protests hit Fair Share as well');
+});
+
+test('upgrade costs keep rising after v2.0', () => {
+  const at = (major, minor) => greenWorldActive({ products: [{ id: 'green-world', major, minor, active: true }] });
+  assert.equal(launched.upgradeCost(at(1, 9), 'green-world'), 5000000, 'v1.9 → v2.0');
+  assert.equal(launched.upgradeCost(at(2, 0), 'green-world'), 5500000, 'v2.0 → v2.1 is not cheap again');
+  assert.equal(launched.upgradeCost(at(2, 5), 'green-world'), 8000000);
+});
+
+test('the lawsuit counter calms down again during quiet times', () => {
+  const quiet = greenWorldActive({ lawsuitsFiled: 3, seconds: launched.lawsuitCooldown - 1 });
+  assert.equal(launched.tickLaunched(quiet, () => 0.99).lawsuitsFiled, 2, 'one step less every two minutes');
+  assert.equal(launched.tickLaunched({ ...quiet, seconds: 10 }, () => 0.99).lawsuitsFiled, 3);
+  const open = launched.tickLaunched({ ...quiet, lawsuit: { caseId: 0, courtSeconds: null } }, () => 0.99);
+  assert.equal(open.lawsuitsFiled, 3, 'no calming down while a lawsuit is open');
+});
+
+test('programs stop by themselves once their problem is solved, and the summary tells the story', () => {
+  const nearly = greenWorldActive({ worldProgress: { ...liveState().worldProgress, climate: 99.999 },
+    programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }] });
+  const solved = launched.tickLaunched(nearly, () => 0.99);
+  assert.equal(solved.worldProgress.climate, 100);
+  assert.deepEqual(solved.programs, [], 'no upkeep for a solved problem');
+  assert.equal(launched.programBlocker(solved, 'reforestation-network'), 'Climate change is solved');
+  assert.equal(launched.secondsToSolve(solved, 'climate'), 0);
+
+  const running = greenWorldActive({ worldProgress: { ...liveState().worldProgress, climate: 99 },
+    programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }] });
+  assert.equal(launched.secondsToSolve(running, 'climate'), 500, '1% left at 0.002% per second');
+  assert.equal(launched.secondsToSolve(greenWorldActive(), 'climate'), null, 'nothing moves');
+
+  const all = { climate: 100, war: 100, hunger: 100, poverty: 100, corruption: 100 };
+  const fixed = liveState({ worldProgress: all, seconds: 7200, integrity: 75,
+    stats: { ...launched.noStats(), lawsuits: 4, lawsuitsWon: 2, lawsuitsLost: 1, lawsuitsSettled: 1, dirtySeconds: 3600 } });
+  assert.equal(launched.worldFixed(fixed), true);
+  assert.equal(launched.worldFixed(liveState({ worldProgress: { ...all, war: 99 } })), false);
+  const summary = launched.victorySummary(fixed);
+  assert.deepEqual(summary.facts.slice(0, 2), [
+    { label: 'Time to fix the world', value: '2 h 0 min' },
+    { label: 'Lawsuits', value: '4 (2 won, 1 lost, 1 settled)' }]);
+  assert.equal(summary.facts.find(fact => fact.label === 'Time with shady deals').value, '50%');
+  assert.equal(summary.verdict, 'You fixed the world, partly with the help of the people who broke it.');
+  assert.equal(launched.dismissVictory(fixed).victorySeen, true);
+  assert.equal(launched.dismissVictory({ ...fixed, victorySeen: true }), null);
+});
+
+test('shady deals are counted every second', () => {
+  const clean = launched.tickLaunched(liveState(), () => 0.99);
+  assert.equal(clean.stats.dirtySeconds, 0);
+  const shady = launched.tickLaunched(liveState({ rentals: ['nsa'] }), () => 0.99);
+  assert.equal(shady.stats.dirtySeconds, 1);
+});
+
+test('protests take at most 50 clicks, mediators calm them faster and peacefully', () => {
+  const protest = overrides => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }], ...overrides });
+  const content = require('../src/app/game/launched-content.ts');
+  const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
+  assert.equal(perk.actionsRequired, 3000000);
+  assert.equal(perk.cost, 1500000);
+  const clicked = launched.resolveProtest(protest({ perks: ['mediation-academy'] }), 'reforestation-network');
+  assert.equal(clicked.programs[0].resistance, 17, 'one click counts three times');
+  assert.equal(clicked.stats.protestClicks, 1);
+  const calmer = launched.tickLaunched(protest({ perks: ['mediation-academy'] }), () => 0.99);
+  assert.ok(Math.abs(calmer.programs[0].resistance - 19) < 1e-9, '+1 distrust, −2 mediators');
+  assert.equal(launched.resolveProtest(protest(), 'reforestation-network').programs[0].resistance, 19, 'one click without mediators');
+});
+
+test('the news ticker reacts to the world and breaks lawsuits and protests first', () => {
+  const news = require('../src/app/game/news.ts');
+  const feed = news.newsFeed(greenWorldActive({ seconds: 600 }));
+  assert.equal(feed.length, 3);
+  assert.ok(feed.every(line => !line.breaking && line.text.length > 10));
+  assert.deepEqual(news.newsFeed(greenWorldActive({ seconds: 600 })), feed, 'stable within a slot');
+  const sued = news.newsFeed(greenWorldActive({ seconds: 600, lawsuit: { caseId: 0, courtSeconds: null },
+    programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }] }));
+  assert.deepEqual(sued.slice(0, 2).map(line => line.text), [
+    'BREAKING: Mississippi Corp sues Green World.',
+    'BREAKING: Protesters block "Community Reforestation Network".']);
+  const fixed = { climate: 100, war: 100, hunger: 100, poverty: 100, corruption: 100 };
+  const texts = new Set();
+  for (let second = 0; second < 2000; second += 12) news.newsFeed(liveState({ seconds: second, worldProgress: fixed })).forEach(line => texts.add(line.text));
+  assert.ok(texts.has('Brown envelopes discontinued due to falling demand.'), 'headlines follow the progress');
+  assert.ok(!texts.has('Heatwave declared "the new normal". Normal files a complaint.'));
+});
+
+test('Peace & Integrity has three corruption programs', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  assert.deepEqual(content.programs.filter(program => program.problem === 'corruption').map(program => program.id),
+    ['tax-the-rich', 'open-budget-ledger', 'whistleblower-harbor']);
+  assert.equal(launched.programBlocker(peaceActive(), 'whistleblower-harbor'), 'Needs v1.1');
+  const ledger = climateAfter(launched.startProgram(peaceActive(), 'open-budget-ledger'), 100);
+  assert.ok(Math.abs(ledger.worldProgress.corruption - 0.6) < 1e-9);
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {
