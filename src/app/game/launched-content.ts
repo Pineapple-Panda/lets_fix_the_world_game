@@ -27,6 +27,13 @@ export const launchedPerks: LaunchedPerk[] = [
     actionsRequired: 250000
   },
   {
+    id: 'pitch-deck',
+    name: 'Pitch Deck Generator',
+    description: 'Turns any idea into 40 slides with hockey-stick charts. Unlocks "Pitch to investors": every click (or the space bar) brings in budget.',
+    icon: 'PD',
+    actionsRequired: 1000000
+  },
+  {
     id: 'mediation-academy',
     name: 'Conflict Mediation Academy',
     description: 'Train mediators who listen first and talk second. Every Talk to the protesters click counts three times, and they calm protests on their own (−2 resistance per second).',

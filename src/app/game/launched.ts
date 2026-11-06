@@ -77,6 +77,13 @@ export function noStats(): LaunchedStats {
   return { lawsuits: 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0, protestClicks: 0, dirtySeconds: 0, tegridyBags: 0, pitches: 0 };
 }
 
+/** Perk that unlocks the "Pitch to investors" button. */
+export const pitchPerk = 'pitch-deck';
+
+export function canPitch(state: LaunchedGame): boolean {
+  return state.perks.includes(pitchPerk);
+}
+
 /** A pitch is worth at least this much budget. */
 export const pitchBase = 100;
 /** A pitch is worth this share of the current budget income per second. */
@@ -97,8 +104,9 @@ export function pitchValue(state: LaunchedGame): number {
   return Math.max(pitchBase, Math.round(budgetPerSecond(state) * pitchShare));
 }
 
-/** One click on "Pitch to investors". */
-export function pitch(state: LaunchedGame): LaunchedGame {
+/** One click on "Pitch to investors" (needs the Pitch Deck Generator). */
+export function pitch(state: LaunchedGame): LaunchedGame | null {
+  if (!canPitch(state)) return null;
   return {
     ...state,
     budget: cap(state.budget + pitchValue(state)),

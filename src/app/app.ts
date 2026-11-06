@@ -185,6 +185,8 @@ export class AppComponent {
     if (target instanceof HTMLElement && target.isContentEditable) return;
     if (target instanceof Element && target.closest('button, input, select, textarea, [role="button"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"]')) return;
     event.preventDefault();
+    // Level 2: the space bar pitches to investors (one pitch per press, holding the key does not repeat).
+    if (this.launched() && !event.repeat) this.pitch();
   }
 
   select(item: Item): void {

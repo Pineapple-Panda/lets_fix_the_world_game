@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, mediatorsTrained, pitchValue, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -50,6 +50,7 @@ export class LevelTwoComponent {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
       pitchValue: pitchValue(state),
+      canPitch: canPitch(state),
       // Only the next three perks (by unlock threshold) are offered at a time.
       openPerks: openLaunchedPerks(state).slice(0, 3).map(perk => ({
         perk,
