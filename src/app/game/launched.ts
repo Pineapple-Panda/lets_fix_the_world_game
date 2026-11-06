@@ -118,7 +118,33 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
  * One second in level 2: actions grow by 50–300 (scaled by the focus slider), running epics advance by one second of server time,
  * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
  */
-export function tickLaunched(state: LaunchedGame, random: () => number = Math.random): LaunchedGame {
+/** Dev mode: epics take at most this many seconds. */
+export const devEpicDuration = 5;
+export const devBoostActions = 100000;
+export const devBoostBudget = 30000;
+
+/** Seconds an epic needs; capped at 5 in dev mode. */
+export function epicDuration(epic: EpicDefinition, fastEpics = false): number {
+  return fastEpics ? Math.min(devEpicDuration, epic.duration) : epic.duration;
+}
+
+/**
+ * Dev shortcut: +100,000 actions and +30,000 budget. The extra actions are not paid out as budget again.
+ */
+export function devBoost(state: LaunchedGame): LaunchedGame {
+  return {
+    ...state,
+    actions: cap(state.actions + devBoostActions),
+    budgetActions: cap(state.budgetActions + devBoostActions),
+    budget: cap(state.budget + devBoostBudget)
+  };
+}
+
+export function tickLaunched(
+  state: LaunchedGame,
+  random: () => number = Math.random,
+  fastEpics = false
+): LaunchedGame {
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
   const gained = Math.round(base * actionBoost(state));
   const next: LaunchedGame = {
@@ -128,7 +154,8 @@ export function tickLaunched(state: LaunchedGame, random: () => number = Math.ra
     epics: state.epics.map(epic => {
       if (epic.done) return epic;
       const progress = epic.progress + 1;
-      return { ...epic, progress, done: progress >= (epicDefinition(epic.id)?.duration ?? 0) };
+      const definition = epicDefinition(epic.id);
+      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, fastEpics) : 0) };
     })
   };
   if (next.seconds % budgetInterval === 0) {

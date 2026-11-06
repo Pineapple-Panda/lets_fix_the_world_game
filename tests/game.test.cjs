@@ -954,6 +954,26 @@ test('rental clients and world problems are defined', () => {
   assert.ok(edison.effects.climate < 1 && edison.effects.corruption < 1);
 });
 
+test('level 2 dev mode: 5-second epics and a boost of 100,000 actions and 30,000 budget', () => {
+  const boosted = launched.devBoost(liveState({ actions: 40000, budget: 10, budgetActions: 40000 }));
+  assert.equal(boosted.actions, 140000);
+  assert.equal(boosted.budget, 30010);
+  let paid = boosted;
+  for (let second = 0; second < 5; second++) paid = launched.tickLaunched(paid, () => 0);
+  assert.equal(paid.budget, 30010 + 5 * 50, 'the boosted actions are not paid out as budget again');
+
+  const epic = launched.epicDefinition('climate-collect-measurements');
+  assert.equal(launched.epicDuration(epic), 120);
+  assert.equal(launched.epicDuration(epic, true), 5);
+  assert.equal(launched.epicDuration(launched.epicDefinition('climate-algorithm'), true), 5);
+  let live = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
+  for (let second = 0; second < 5; second++) live = launched.tickLaunched(live, () => 0, true);
+  assert.equal(live.epics[0].done, true, 'done after 5 seconds in dev mode');
+  let normal = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
+  for (let second = 0; second < 5; second++) normal = launched.tickLaunched(normal, () => 0);
+  assert.equal(normal.epics[0].done, false);
+});
+
 test('more server slots allow more epics at the same time', () => {
   const twoSlots = liveState({ budget: 100000, perks: ['workflow-abstraction'], serverSlots: 2,
     epics: [{ id: 'other-epic', progress: 0, done: false }] });

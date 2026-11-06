@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canStartEpic, epicDone, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkUnlocked, networkOnline,
+  canStartEpic, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkUnlocked, networkOnline,
   openLaunchedPerks, previousEpic, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline
 } from '../../game/launched';
@@ -17,6 +17,8 @@ import type { LaunchedGame } from '../../models/launched.model';
 })
 export class LevelTwoComponent {
   readonly state = input.required<LaunchedGame>();
+  /** Dev mode: epics take at most 5 seconds. */
+  readonly fastEpics = input(false);
   readonly perkActivated = output<string>();
   readonly epicStarted = output<string>();
   readonly productActivated = output<string>();
@@ -26,6 +28,7 @@ export class LevelTwoComponent {
 
   protected readonly view = computed(() => {
     const state = this.state();
+    const fast = this.fastEpics();
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
@@ -86,8 +89,8 @@ export class LevelTwoComponent {
             ? `Released: ${productTitle(released)}`
             : `Goal reached · ${target?.name ?? 'The product'} also needs ${missing.join(' and ')}`,
           next: next && {
-            epic: next,
-            progress: entry ? Math.min(entry.progress, next.duration) : 0,
+            epic: { ...next, duration: epicDuration(next, fast) },
+            progress: entry ? Math.min(entry.progress, epicDuration(next, fast)) : 0,
             running: !!entry,
             canStart: canStartEpic(state, next.id),
             // Within a system epics run one after another (Peace & Integrity: war first, then corruption).

@@ -15,7 +15,7 @@ import {
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { activateLaunchedPerk, activateProduct, canLaunch, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
+import { activateLaunchedPerk, activateProduct, canLaunch, devBoost, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -141,7 +141,7 @@ export class AppComponent {
     const timer = setInterval(() => {
       const launched = this.launched();
       if (launched) {
-        const next = tickLaunched(launched);
+        const next = tickLaunched(launched, Math.random, this.devMode());
         this.launched.set(next);
         this.persistLaunched(next);
         return;
@@ -261,6 +261,8 @@ export class AppComponent {
 
   toggleDevMode(): void {
     this.devMode.update(on => !on);
+    // In level 2, switching dev mode on also grants +100,000 actions and +30,000 budget.
+    if (this.devMode()) this.updateLaunched(state => devBoost(state));
   }
 
   activateLaunchedPerk(id: string): void {
