@@ -76,6 +76,8 @@ export interface LaunchedPerk {
   description: string;
   icon: string;
   actionsRequired: number;
+  /** Budget price for perks that are bought rather than unlocked by actions. */
+  cost?: number;
 }
 
 /** A world goal; it is reached once all of its epics are done. */

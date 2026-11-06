@@ -143,13 +143,17 @@
                 <div class="tool-details">
                     <strong>{{ entry.perk.name }}</strong>
                     <small>{{ entry.perk.description }}</small>
-                    <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    @if (entry.perk.cost) {
+                        <small>Costs {{ format(entry.perk.cost) }} budget · can be bought again</small>
+                    } @else {
+                        <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    }
                     @if (entry.perk.id === 'add-server' && !v.serverOnline) {
                         <small>Requires Abstract the Automation Workflow.</small>
                     }
                     @if (entry.unlocked) {
-                        <button class="tool-button" type="button" [attr.aria-label]="'Activate ' + entry.perk.name"
-                                (click)="perkActivated.emit(entry.perk.id)">Activate</button>
+                        <button class="tool-button" type="button" [attr.aria-label]="(entry.perk.cost ? 'Buy ' : 'Activate ') + entry.perk.name"
+                                (click)="perkActivated.emit(entry.perk.id)">{{ entry.perk.cost ? 'Buy' : 'Activate' }}</button>
                     }
                 </div>
             </div>

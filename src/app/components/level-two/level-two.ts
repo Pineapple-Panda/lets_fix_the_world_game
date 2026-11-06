@@ -1,8 +1,8 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkUnlocked, networkOnline,
+  actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
+  canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline
 } from '../../game/launched';
@@ -41,7 +41,7 @@ export class LevelTwoComponent {
       ],
       openPerks: openLaunchedPerks(state).map(perk => ({
         perk,
-        unlocked: launchedPerkUnlocked(state, perk) && (perk.id !== addServerPerkId || serverOnline(state))
+        unlocked: launchedPerkAvailable(state, perk)
       })),
       // Top row of the grid, left to right. Each card stays locked until its product is released.
       productCards: products.map(definition => {

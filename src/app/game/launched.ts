@@ -249,8 +249,30 @@ export function addServerPerk(state: LaunchedGame): LaunchedPerk {
 
 /** Level 2 perks that are not activated yet, in unlock order. Add Server is always offered again. */
 export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
-  return [...launchedPerks.filter(perk => !state.perks.includes(perk.id)), addServerPerk(state)]
-    .sort((a, b) => a.actionsRequired - b.actionsRequired);
+  return [
+    ...launchedPerks.filter(perk => !state.perks.includes(perk.id)),
+    addServerPerk(state),
+    // Tegridy is on sale once Network & Financing is open, as often as you can afford it.
+    ...(networkOnline(state) ? [tegridyPerk] : [])
+  ].sort((a, b) => a.actionsRequired - b.actionsRequired);
+}
+
+/** A farm in Colorado sells integrity by the bag: 100,000 budget for +10 integrity, as often as you like. */
+export const tegridyPerk: LaunchedPerk = {
+  id: 'tegridy',
+  name: 'Buy Some Tegridy',
+  description: 'A small family farm in Colorado sells integrity by the bag. Nobody asks how it is grown. +10 integrity.',
+  icon: 'TF',
+  actionsRequired: 0,
+  cost: 100000
+};
+export const tegridyIntegrity = 10;
+
+/** Whether a perk can be taken right now: enough actions, enough budget for bought perks, and its prerequisites. */
+export function launchedPerkAvailable(state: LaunchedGame, perk: LaunchedPerk): boolean {
+  if (perk.id === addServerPerkId) return serverOnline(state) && launchedPerkUnlocked(state, perk);
+  if (perk.id === tegridyPerk.id) return networkOnline(state) && state.budget >= (perk.cost ?? 0);
+  return launchedPerkUnlocked(state, perk);
 }
 
 /** Perk that opens the Network & Financing card. */
@@ -262,6 +284,14 @@ export function networkOnline(state: LaunchedGame): boolean {
 }
 
 export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (id === tegridyPerk.id) {
+    if (!launchedPerkAvailable(state, tegridyPerk)) return null;
+    return {
+      ...state,
+      budget: state.budget - (tegridyPerk.cost ?? 0),
+      integrity: Math.min(100, state.integrity + tegridyIntegrity)
+    };
+  }
   if (id === addServerPerkId) {
     // Adding a server only makes sense once there is a server to extend.
     if (!serverOnline(state) || !launchedPerkUnlocked(state, addServerPerk(state))) return null;
