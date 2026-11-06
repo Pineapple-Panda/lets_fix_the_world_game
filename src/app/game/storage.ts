@@ -94,6 +94,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.products) || !game.products.every(isProduct) ||
     typeof game.focus !== 'number' || !Number.isInteger(game.focus) || game.focus < -100 || game.focus > 100 ||
     !Array.isArray(game.rentals) || !game.rentals.every(id => typeof id === 'string') ||
+    typeof game.integrity !== 'number' || game.integrity < 0 || game.integrity > 100 ||
     !isObject(game.worldProgress) ||
     !['climate', 'war', 'hunger', 'poverty', 'corruption'].every(problem => {
       const value = (game.worldProgress as Snapshot)[problem];

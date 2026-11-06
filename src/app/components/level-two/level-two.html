@@ -34,21 +34,37 @@
                 </div>
             }
 
+            <h3 class="tool-heading ops-subheading">Integrity</h3>
+            <div class="world-row integrity-row">
+                <span>Integrity</span>
+                <div class="world-track" role="meter" aria-label="Integrity" aria-valuemin="0" aria-valuemax="100"
+                     [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
+                    <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
+                         [style.width.%]="v.integrity"></div>
+                </div>
+                <b>{{ v.integrity | number: '1.0-1' }}%</b>
+            </div>
+            <small class="upgrade-hint">Who you work with changes how the world sees you. Some clients only sign at the right level.</small>
+
             <h3 class="tool-heading ops-subheading">Rent out server slots</h3>
-            <small class="upgrade-hint">A rented slot pays every second but is not available for epics. Clients change how much progress your epics bring.</small>
+            <small class="upgrade-hint">A rented slot pays every second but is not available for epics. Every second, clients nudge the solution progress and your integrity.</small>
             @if (v.rentalIncome) {
                 <small class="upgrade-hint">Rental income: +{{ format(v.rentalIncome) }} budget/sec</small>
             }
             @for (entry of v.clients; track entry.client.id) {
-                <div class="client" [class.rented]="entry.rented">
+                <div class="client" [class.rented]="entry.rented" [class.unavailable]="!entry.available && !entry.rented">
                     <strong>{{ entry.client.name }}</strong>
                     <small>{{ entry.client.description }}</small>
                     <small class="client-terms">
                         +{{ format(entry.client.income) }} budget/sec
                         @for (effect of entry.effects; track effect.name) {
-                            · <span [class.good]="effect.percent > 0" [class.bad]="effect.percent < 0">{{ effect.name }} {{ signed(effect.percent) }}%</span>
+                            · <span [class.good]="effect.delta > 0" [class.bad]="effect.delta < 0">{{ effect.name }} {{ rate(effect.delta) }}%/sec</span>
                         }
+                        · <span [class.good]="entry.integrity > 0" [class.bad]="entry.integrity < 0">Integrity {{ rate(entry.integrity) }}/sec</span>
                     </small>
+                    @if (entry.condition) {
+                        <small class="client-condition" [class.met]="entry.available">{{ entry.condition }}</small>
+                    }
                     @if (entry.rented) {
                         <button class="tool-button client-end" type="button" [attr.aria-label]="'End contract with ' + entry.client.name"
                                 (click)="rentalEnded.emit(entry.client.id)">End contract</button>

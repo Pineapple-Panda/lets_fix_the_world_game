@@ -30,6 +30,8 @@ export interface LaunchedGame {
   rentals: string[];
   /** Progress per world problem in percent (0–100). */
   worldProgress: Record<WorldProblem, number>;
+  /** Integrity of the platform in percent (0–100); starts at 50. Clients push it up or down. */
+  integrity: number;
 }
 
 /** The five problems the platform sets out to fix. */
@@ -42,8 +44,13 @@ export interface RentalClient {
   description: string;
   /** Budget per second while the slot is rented. */
   income: number;
-  /** Multipliers on the progress that finished epics add to these problems while the slot is rented. */
-  effects: Partial<Record<WorldProblem, number>>;
+  /** Solution progress (percentage points) added to these problems every second while rented; negative slows them. */
+  progress: Partial<Record<WorldProblem, number>>;
+  /** Integrity points added every second while rented (negative lowers it). */
+  integrity: number;
+  /** The client only signs a contract while integrity is within these bounds (inclusive). */
+  minIntegrity?: number;
+  maxIntegrity?: number;
 }
 
 /** A released product (e.g. Green World). Its version can be raised later. */

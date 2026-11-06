@@ -33,7 +33,8 @@ export function launch(game: Game): LaunchedGame | null {
     products: [],
     focus: 0,
     rentals: [],
-    worldProgress: noProgress()
+    worldProgress: noProgress(),
+    integrity: startIntegrity
   };
 }
 
@@ -54,7 +55,8 @@ export function skippedLevelTwo(): LaunchedGame {
     products: [],
     focus: 0,
     rentals: [],
-    worldProgress: noProgress()
+    worldProgress: noProgress(),
+    integrity: startIntegrity
   };
 }
 
@@ -65,6 +67,10 @@ export function noProgress(): Record<WorldProblem, number> {
 
 /** A complete epic chain fills this much of its problems' progress bars; the rest is left for later features. */
 export const chainProgress = 50;
+/** Integrity at the start of level 2. */
+export const startIntegrity = 50;
+
+const percent = (value: number) => Math.max(0, Math.min(100, value));
 
 const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
 
@@ -162,23 +168,27 @@ export function tickLaunched(
     next.budget = cap(next.budget + Math.round((next.actions - next.budgetActions) * budgetPerAction * budgetBoost(next)));
     next.budgetActions = next.actions;
   }
-  // Rented slots pay every second.
+  // Rented slots pay every second, nudge the solution progress a tiny bit and move integrity.
   next.budget = cap(next.budget + rentalIncome(next));
-  // Epics that just finished add world progress, scaled by the clients renting slots right now.
-  const finished = next.epics.filter(epic => epic.done && !state.epics.find(before => before.id === epic.id)?.done);
-  if (finished.length) {
-    const progress = { ...next.worldProgress };
-    for (const entry of finished) {
-      const epic = epicDefinition(entry.id);
-      const goal = epic && worldGoals.find(candidate => candidate.id === epic.goal);
-      if (!epic || !goal) continue;
-      const share = chainProgress / goalEpics(goal.id).length;
-      for (const problem of goal.problems) {
-        progress[problem] = Math.min(100, progress[problem] + share * progressMultiplier(next, problem));
-      }
+  const progress = { ...next.worldProgress };
+  for (const id of next.rentals) {
+    const client = rentalClient(id);
+    if (!client) continue;
+    for (const [problem, delta] of Object.entries(client.progress) as [WorldProblem, number][]) {
+      progress[problem] = percent(progress[problem] + delta);
     }
-    next.worldProgress = progress;
+    next.integrity = percent(next.integrity + client.integrity);
   }
+  // Epics that just finished add their share of the chain's progress.
+  const finished = next.epics.filter(epic => epic.done && !state.epics.find(before => before.id === epic.id)?.done);
+  for (const entry of finished) {
+    const epic = epicDefinition(entry.id);
+    const goal = epic && worldGoals.find(candidate => candidate.id === epic.goal);
+    if (!epic || !goal) continue;
+    const share = chainProgress / goalEpics(goal.id).length;
+    for (const problem of goal.problems) progress[problem] = percent(progress[problem] + share);
+  }
+  next.worldProgress = progress;
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
     .filter(definition => definition.goals.every(goal => goalComplete(next, goal)) && !product(next, definition.id))
@@ -294,14 +304,22 @@ export function rentalIncome(state: LaunchedGame): number {
   return state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0);
 }
 
-/** How much the current clients scale the progress finished epics add to a problem (1 = unchanged). */
-export function progressMultiplier(state: LaunchedGame, problem: WorldProblem): number {
-  return state.rentals.reduce((factor, id) => factor * (rentalClient(id)?.effects[problem] ?? 1), 1);
+/** Solution progress per second the current clients add to a problem (negative slows it down). */
+export function rentalProgress(state: LaunchedGame, problem: WorldProblem): number {
+  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.progress[problem] ?? 0), 0);
 }
 
-/** Renting needs Network & Financing and a free server slot; each client rents at most one slot. */
+/** Whether a client is willing to sign at the current integrity. Running contracts are not affected. */
+export function clientAvailable(state: LaunchedGame, id: string): boolean {
+  const client = rentalClient(id);
+  return !!client &&
+    (client.minIntegrity === undefined || state.integrity >= client.minIntegrity) &&
+    (client.maxIntegrity === undefined || state.integrity <= client.maxIntegrity);
+}
+
+/** Renting needs Network & Financing, a free server slot and a willing client; each client rents at most one slot. */
 export function canRentSlot(state: LaunchedGame, id: string): boolean {
-  return !!rentalClient(id) && networkOnline(state) && !state.rentals.includes(id) && usedSlots(state) < state.serverSlots;
+  return clientAvailable(state, id) && networkOnline(state) && !state.rentals.includes(id) && usedSlots(state) < state.serverSlots;
 }
 
 export function rentSlot(state: LaunchedGame, id: string): LaunchedGame | null {

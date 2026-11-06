@@ -38,8 +38,9 @@ export const worldGoals: WorldGoal[] = [
 ];
 
 /**
- * Clients that rent a server slot through Network & Financing. Each pays a steady income and changes how much
- * world progress finished epics bring (multipliers above 1 help, below 1 hurt) while its contract runs.
+ * Clients that rent a server slot through Network & Financing. While a contract runs, each client pays a steady
+ * income, adds (or removes) a tiny bit of solution progress every second and pushes integrity up or down.
+ * Some clients only sign while integrity is high (idealists) or low (people who ask no questions).
  */
 export const rentalClients: RentalClient[] = [
   {
@@ -47,28 +48,34 @@ export const rentalClients: RentalClient[] = [
     name: 'United Green-Left Federation of Europe',
     description: 'Seventeen committees, one shared spreadsheet, endless good intentions. Pays in fair-trade coffee vouchers, mostly.',
     income: 40,
-    effects: { climate: 1.5 }
+    progress: { climate: 0.005 },
+    integrity: 0.05,
+    minIntegrity: 70
   },
   {
     id: 'blue-helmets',
     name: 'Office for Extremely Polite Peacekeeping',
     description: 'Brings biscuits to every negotiation. Small budget, big patience.',
     income: 60,
-    effects: { war: 1.5 }
+    progress: { war: 0.005 },
+    integrity: 0.03
   },
   {
     id: 'ministry-digital',
     name: 'Ministry of Digital Transformation of Lower Bureaucratia',
     description: 'Wants a portal. Then another portal for the first portal. Pays reliably, eventually.',
     income: 150,
-    effects: { hunger: 1.25, poverty: 1.25 }
+    progress: { hunger: 0.003, poverty: 0.003 },
+    integrity: -0.05
   },
   {
     id: 'edisonx',
     name: 'EdisonX',
     description: 'A billionaire’s rocket-car-tunnel-AI conglomerate. Pays brilliantly. Asks no questions you would like to answer.',
     income: 400,
-    effects: { climate: 0.5, corruption: 0.5 }
+    progress: { climate: -0.005, corruption: -0.005 },
+    integrity: -0.1,
+    maxIntegrity: 20
   }
 ];
 

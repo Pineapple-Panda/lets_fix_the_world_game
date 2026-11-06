@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canStartEpic, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkUnlocked, networkOnline,
+  canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkUnlocked, networkOnline,
   openLaunchedPerks, previousEpic, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline
 } from '../../game/launched';
@@ -63,11 +63,16 @@ export class LevelTwoComponent {
         client,
         rented: state.rentals.includes(client.id),
         canRent: canRentSlot(state, client.id),
-        effects: Object.entries(client.effects).map(([problem, factor]) => ({
+        available: clientAvailable(state, client.id),
+        condition: client.minIntegrity !== undefined ? `Only signs at ${client.minIntegrity}% integrity or more`
+          : client.maxIntegrity !== undefined ? `Only signs at ${client.maxIntegrity}% integrity or less` : '',
+        effects: (Object.entries(client.progress) as [string, number][]).map(([problem, delta]) => ({
           name: worldProblems.find(entry => entry.id === problem)?.name ?? problem,
-          percent: Math.round((factor - 1) * 100)
-        }))
+          delta
+        })),
+        integrity: client.integrity
       })),
+      integrity: state.integrity,
       slots: state.serverSlots,
       // One block per world goal that has epics: finished epics, then the next one in the chain.
       goals: worldGoals.filter(goal => goalEpics(goal.id).length).map(goal => {
@@ -100,6 +105,12 @@ export class LevelTwoComponent {
       })
     };
   });
+
+  /** Per-second rates: 0.005 → "+0.005", -0.1 → "−0.1". */
+  protected rate(value: number): string {
+    const text = String(Math.abs(value));
+    return value > 0 ? `+${text}` : value < 0 ? `−${text}` : '±0';
+  }
 
   /** 50 → "+50", -50 → "−50", 0 → "±0". */
   protected signed(value: number): string {

@@ -752,6 +752,30 @@ app-level-two {
     font-size: 10px;
 }
 
+.integrity-fill {
+    background: var(--yellow);
+}
+
+.integrity-fill.low {
+    background: var(--red);
+}
+
+.integrity-fill.high {
+    background: var(--green);
+}
+
+.client.unavailable {
+    opacity: .55;
+}
+
+.client-condition {
+    color: var(--yellow) !important;
+}
+
+.client-condition.met {
+    color: var(--green) !important;
+}
+
 .client.rented {
     border-color: var(--green);
 }

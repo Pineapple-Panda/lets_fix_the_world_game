@@ -593,7 +593,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -623,14 +623,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -889,54 +889,88 @@ test('systems run in parallel, but within a system epics follow one order', () =
 
 test('rented slots pay every second and take a server slot', () => {
   const offline = liveState({ budget: 0 });
-  assert.equal(launched.rentSlot(offline, 'edisonx'), null, 'needs Network & Financing');
+  assert.equal(launched.rentSlot(offline, 'blue-helmets'), null, 'needs Network & Financing');
   let live = liveState({ budget: 0, perks: ['workflow-abstraction', 'network-financing'], serverSlots: 2 });
-  live = launched.rentSlot(live, 'edisonx');
-  assert.deepEqual(live.rentals, ['edisonx']);
-  assert.equal(launched.rentSlot(live, 'edisonx'), null, 'one slot per client');
+  live = launched.rentSlot(live, 'ministry-digital');
+  assert.deepEqual(live.rentals, ['ministry-digital']);
+  assert.equal(launched.rentSlot(live, 'ministry-digital'), null, 'one slot per client');
   assert.equal(launched.usedSlots(live), 1);
   assert.equal(launched.serverLoad(live), 0.5);
-  live = launched.rentSlot(live, 'green-left-union');
+  live = launched.rentSlot(live, 'blue-helmets');
   assert.equal(launched.serverLoad(live), 1);
-  assert.equal(launched.rentSlot(live, 'blue-helmets'), null, 'no free slot left');
   assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), false, 'rented slots block epics too');
-  assert.equal(launched.rentalIncome(live), 440);
-  assert.equal(launched.tickLaunched(live, () => 0).budget, 440);
-  live = launched.endRental(live, 'edisonx');
-  assert.deepEqual(live.rentals, ['green-left-union']);
-  assert.equal(launched.endRental(live, 'edisonx'), null);
+  assert.equal(launched.rentalIncome(live), 210);
+  assert.equal(launched.tickLaunched(live, () => 0).budget, 210);
+  live = launched.endRental(live, 'ministry-digital');
+  assert.deepEqual(live.rentals, ['blue-helmets']);
+  assert.equal(launched.endRental(live, 'ministry-digital'), null);
   assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), true);
 });
 
-test('finished epics fill the world progress bars, scaled by the clients', () => {
+test('integrity starts at 50% and decides which clients sign', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
+  const middle = liveState(online);
+  assert.equal(middle.integrity, 50);
+  assert.equal(launched.clientAvailable(middle, 'green-left-union'), false, 'idealists need more than 50%');
+  assert.equal(launched.clientAvailable(middle, 'edisonx'), false, 'EdisonX needs less than 20%');
+  assert.equal(launched.clientAvailable(middle, 'blue-helmets'), true);
+  assert.equal(launched.clientAvailable(middle, 'ministry-digital'), true);
+  assert.equal(launched.rentSlot(middle, 'edisonx'), null);
+
+  assert.equal(launched.clientAvailable(liveState({ integrity: 70 }), 'green-left-union'), true, '70% is enough');
+  assert.equal(launched.clientAvailable(liveState({ integrity: 69.9 }), 'green-left-union'), false);
+  assert.equal(launched.clientAvailable(liveState({ integrity: 20 }), 'edisonx'), true, '20% is low enough');
+  assert.equal(launched.clientAvailable(liveState({ integrity: 20.1 }), 'edisonx'), false);
+
+  // Clients move integrity every second; running contracts continue when it leaves a client's range.
+  let shady = launched.rentSlot(liveState({ ...online, integrity: 20 }), 'edisonx');
+  shady = launched.tickLaunched(shady, () => 0);
+  assert.ok(Math.abs(shady.integrity - 19.9) < 1e-9, 'EdisonX costs 0.1 integrity per second');
+  let honest = launched.rentSlot(liveState({ ...online, integrity: 19 }), 'blue-helmets');
+  for (let second = 0; second < 100; second++) honest = launched.tickLaunched(honest, () => 0);
+  assert.ok(Math.abs(honest.integrity - 22) < 1e-9, 'the peacekeepers add 0.03 per second');
+  assert.equal(launched.clientAvailable(honest, 'edisonx'), false);
+  let ministry = launched.rentSlot(liveState(online), 'ministry-digital');
+  ministry = launched.tickLaunched(ministry, () => 0);
+  assert.ok(Math.abs(ministry.integrity - 49.95) < 1e-9);
+  const floor = launched.tickLaunched(launched.rentSlot(liveState({ ...online, integrity: 0.05 }), 'edisonx'), () => 0);
+  assert.equal(floor.integrity, 0, 'integrity never drops below 0');
+});
+
+test('clients add or remove a tiny bit of solution progress every second', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
+  let green = launched.rentSlot(liveState({ ...online, integrity: 80 }), 'green-left-union');
+  for (let second = 0; second < 1000; second++) green = launched.tickLaunched(green, () => 0);
+  assert.ok(Math.abs(green.worldProgress.climate - 5) < 1e-6, '0.005% per second: 5% after 1000 seconds');
+  assert.equal(green.worldProgress.war, 0);
+  assert.equal(launched.rentalProgress(green, 'climate'), 0.005);
+
+  let edison = launched.rentSlot(liveState({ ...online, integrity: 10,
+    worldProgress: { climate: 1, war: 0, hunger: 0, poverty: 0, corruption: 0.002 } }), 'edisonx');
+  edison = launched.tickLaunched(edison, () => 0);
+  assert.ok(Math.abs(edison.worldProgress.climate - 0.995) < 1e-9, 'EdisonX slows climate');
+  assert.equal(edison.worldProgress.corruption, 0, 'never below 0');
+
+  let ministry = launched.rentSlot(liveState(online), 'ministry-digital');
+  ministry = launched.tickLaunched(ministry, () => 0);
+  assert.ok(Math.abs(ministry.worldProgress.hunger - 0.003) < 1e-9);
+  assert.equal(ministry.worldProgress.hunger, ministry.worldProgress.poverty);
+});
+
+test('finished epics fill the solution progress bars', () => {
   const ship = (state, id) => {
     let live = launched.startEpic({ ...state, budget: state.budget + 10000000, serverSlots: state.serverSlots + 1 }, id);
     for (let second = 0; second < launched.epicDefinition(id).duration; second++) live = launched.tickLaunched(live, () => 0);
     return live;
   };
-  const base = liveState({ perks: ['workflow-abstraction', 'network-financing'] });
+  const base = liveState({ perks: ['workflow-abstraction'] });
   const plain = ship(base, 'climate-algorithm');
   assert.ok(Math.abs(plain.worldProgress.climate - 50 / 6) < 1e-9, 'one of six climate epics: 1/6 of 50%');
   assert.equal(plain.worldProgress.war, 0);
-
-  const green = ship(launched.rentSlot({ ...base, serverSlots: 1 }, 'green-left-union'), 'climate-algorithm');
-  assert.ok(Math.abs(green.worldProgress.climate - 50 / 6 * 1.5) < 1e-9, 'the Green-Left Federation boosts climate');
-
-  const edison = launched.rentSlot({ ...base, serverSlots: 1 }, 'edisonx');
-  assert.equal(launched.progressMultiplier(edison, 'climate'), 0.5);
-  assert.equal(launched.progressMultiplier(edison, 'corruption'), 0.5);
-  assert.equal(launched.progressMultiplier(edison, 'war'), 1);
-  const slowed = ship(edison, 'climate-algorithm');
-  assert.ok(Math.abs(slowed.worldProgress.climate - 50 / 6 * 0.5) < 1e-9, 'EdisonX slows climate progress');
-
-  const both = launched.rentSlot(launched.rentSlot({ ...base, serverSlots: 2 }, 'edisonx'), 'green-left-union');
-  assert.equal(launched.progressMultiplier(both, 'climate'), 0.75, 'effects multiply');
-
   const hunger = ship(base, 'hunger-poverty-hotspots');
   assert.ok(Math.abs(hunger.worldProgress.hunger - 50 / 7) < 1e-9);
   assert.equal(hunger.worldProgress.hunger, hunger.worldProgress.poverty, 'hunger & poverty epics help both');
-
-  let full = liveState({ perks: ['workflow-abstraction'], serverSlots: 1 });
+  let full = base;
   for (const epic of launched.goalEpics('climate')) full = ship(full, epic.id);
   assert.ok(Math.abs(full.worldProgress.climate - 50) < 1e-9, 'a complete chain fills half the bar');
   const capped = launched.tickLaunched(liveState({ worldProgress: { ...liveState().worldProgress, climate: 100 } }), () => 0);
@@ -947,11 +981,13 @@ test('rental clients and world problems are defined', () => {
   const content = require('../src/app/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
   assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'edisonx']);
-  const green = content.rentalClients[0];
-  const edison = content.rentalClients[3];
+  const [green, , , edison] = content.rentalClients;
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
-  assert.ok(green.effects.climate > 1);
-  assert.ok(edison.effects.climate < 1 && edison.effects.corruption < 1);
+  assert.ok(green.progress.climate > 0 && green.integrity > 0 && green.minIntegrity === 70);
+  assert.ok(edison.progress.climate < 0 && edison.progress.corruption < 0 && edison.integrity < 0 && edison.maxIntegrity === 20);
+  for (const client of content.rentalClients) {
+    assert.ok(Object.values(client.progress).every(delta => Math.abs(delta) <= 0.01), client.id + ' progress is tiny');
+  }
 });
 
 test('level 2 dev mode: 5-second epics and a boost of 100,000 actions and 30,000 budget', () => {
