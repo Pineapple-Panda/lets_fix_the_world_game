@@ -659,7 +659,7 @@ test('every 5 seconds the budget grows by the new actions times 20', () => {
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction', 'add-server']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -667,8 +667,31 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active), []);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
+});
+
+test('Add Server comes back every 50,000 actions from 100,000 on and adds one slot', () => {
+  const offline = liveState({ actions: 100000 });
+  assert.equal(launched.activateLaunchedPerk(offline, 'add-server'), null, 'needs the server first');
+  let live = liveState({ actions: 99999, perks: ['workflow-abstraction'] });
+  assert.equal(launched.addServerPerk(live).actionsRequired, 100000);
+  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null);
+  live.actions = 100000;
+  live = launched.activateLaunchedPerk(live, 'add-server');
+  assert.equal(live.serverSlots, 2);
+  assert.equal(launched.addedServers(live), 1);
+  assert.equal(launched.addServerPerk(live).actionsRequired, 150000);
+  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null, 'not again before 150,000');
+  live.actions = 260000;
+  live = launched.activateLaunchedPerk(live, 'add-server');
+  live = launched.activateLaunchedPerk(live, 'add-server');
+  assert.equal(live.serverSlots, 4);
+  assert.equal(launched.addServerPerk(live).actionsRequired, 250000);
+  live = launched.activateLaunchedPerk(live, 'add-server');
+  assert.equal(launched.addServerPerk(live).actionsRequired, 300000);
+  assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null);
+  assert.deepEqual(live.perks, ['workflow-abstraction'], 'Add Server is not stored as a one-time perk');
 });
 
 test('epics cost budget, take server time and need a free server slot', () => {

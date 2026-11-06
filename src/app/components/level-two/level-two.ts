@@ -1,8 +1,8 @@
 import { Component, computed, input, output } from '@angular/core';
 import { epics } from '../../game/launched-content';
 import {
-  budgetInterval, budgetPerAction, canStartEpic, launchedPerkUnlocked, openLaunchedPerks, runningEpics, serverLoad,
-  serverOnline
+  addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, launchedPerkUnlocked,
+  openLaunchedPerks, runningEpics, serverLoad, serverOnline
 } from '../../game/launched';
 import { launchedPerks } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
@@ -22,8 +22,17 @@ export class LevelTwoComponent {
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: budgetPerAction,
-      activePerks: launchedPerks.filter(perk => state.perks.includes(perk.id)),
-      openPerks: openLaunchedPerks(state).map(perk => ({ perk, unlocked: launchedPerkUnlocked(state, perk) })),
+      activePerks: [
+        ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
+        // Add Server can be taken many times; show it once with its count.
+        ...(addedServers(state) > 0
+          ? [{ ...addServerPerk(state), name: `Add Server ×${addedServers(state)}`, description: `${state.serverSlots} server slots in total.` }]
+          : [])
+      ],
+      openPerks: openLaunchedPerks(state).map(perk => ({
+        perk,
+        unlocked: launchedPerkUnlocked(state, perk) && (perk.id !== addServerPerkId || serverOnline(state))
+      })),
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),

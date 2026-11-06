@@ -77,12 +77,38 @@ export function launchedPerkUnlocked(state: LaunchedGame, perk: LaunchedPerk): b
   return state.actions >= perk.actionsRequired;
 }
 
-/** Level 2 perks that are not activated yet, in unlock order. */
+/** The repeatable "Add Server" perk: first at 100,000 actions, then again every 50,000 actions. */
+export const addServerPerkId = 'add-server';
+export const addServerFirstAt = 100000;
+export const addServerEvery = 50000;
+
+/** Servers bought with the Add Server perk (the first slot comes with the workflow perk). */
+export function addedServers(state: LaunchedGame): number {
+  return Math.max(0, state.serverSlots - 1);
+}
+
+/** The next Add Server perk, with its threshold based on how many servers were already added. */
+export function addServerPerk(state: LaunchedGame): LaunchedPerk {
+  return {
+    id: addServerPerkId,
+    name: 'Add Server',
+    description: 'Rack another server: +1 slot, so one more epic can run at the same time. Comes back every 50,000 actions.',
+    icon: 'SV',
+    actionsRequired: addServerFirstAt + addServerEvery * addedServers(state)
+  };
+}
+
+/** Level 2 perks that are not activated yet, in unlock order. Add Server is always offered again. */
 export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
-  return launchedPerks.filter(perk => !state.perks.includes(perk.id));
+  return [...launchedPerks.filter(perk => !state.perks.includes(perk.id)), addServerPerk(state)];
 }
 
 export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (id === addServerPerkId) {
+    // Adding a server only makes sense once there is a server to extend.
+    if (!serverOnline(state) || !launchedPerkUnlocked(state, addServerPerk(state))) return null;
+    return { ...state, serverSlots: state.serverSlots + 1 };
+  }
   const perk = launchedPerks.find(entry => entry.id === id);
   if (!perk || state.perks.includes(id) || !launchedPerkUnlocked(state, perk)) return null;
   return { ...state, perks: [...state.perks, id] };

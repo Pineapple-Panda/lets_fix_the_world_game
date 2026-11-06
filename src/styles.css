@@ -763,8 +763,22 @@ app-level-two {
 
 .live-stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+}
+
+.live-perks .active-tools {
+    margin-top: 4px;
+}
+
+@media (max-width: 1200px) {
+    .live-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .live-perks {
+        grid-column: 1 / -1;
+    }
 }
 
 .live-stat {

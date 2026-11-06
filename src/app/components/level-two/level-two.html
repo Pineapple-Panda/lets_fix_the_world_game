@@ -34,17 +34,22 @@
                 <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
                 <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
             </div>
+            <div class="live-stat live-perks">
+                <span>Activated perks</span>
+                @if (v.activePerks.length) {
+                    <div class="active-tools">
+                        @for (perk of v.activePerks; track perk.id) {
+                            <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
+                                  [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
+                        }
+                    </div>
+                } @else {
+                    <small>None yet</small>
+                }
+            </div>
         </div>
 
         <h3 class="tool-heading ops-subheading">Perks</h3>
-        @if (v.activePerks.length) {
-            <div class="active-tools">
-                @for (perk of v.activePerks; track perk.id) {
-                    <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
-                          [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
-                }
-            </div>
-        }
         @for (entry of v.openPerks; track entry.perk.id) {
             <div class="tool" [class.available]="entry.unlocked">
                 <span class="tool-icon" aria-hidden="true">{{ entry.perk.icon }}</span>
@@ -52,6 +57,9 @@
                     <strong>{{ entry.perk.name }}</strong>
                     <small>{{ entry.perk.description }}</small>
                     <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    @if (entry.perk.id === 'add-server' && !v.serverOnline) {
+                        <small>Requires Abstract the Automation Workflow.</small>
+                    }
                     @if (entry.unlocked) {
                         <button class="tool-button" type="button" [attr.aria-label]="'Activate ' + entry.perk.name"
                                 (click)="perkActivated.emit(entry.perk.id)">Activate</button>
