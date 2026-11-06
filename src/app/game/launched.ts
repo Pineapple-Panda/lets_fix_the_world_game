@@ -133,8 +133,13 @@ export const devBoostActions = 1000000;
 export const devBoostBudget = 1000000;
 
 /** Seconds an epic needs; capped at 5 in dev mode. */
-export function epicDuration(epic: EpicDefinition, fastEpics = false): number {
-  return fastEpics ? Math.min(devEpicDuration, epic.duration) : epic.duration;
+/** Perk that halves every epic's server time. */
+export const dataCentersPerk = 'data-centers';
+
+/** Seconds an epic needs: halved (rounded up) after migrating to data centres, capped at 5 in dev mode. */
+export function epicDuration(epic: EpicDefinition, fastEpics = false, dataCenters = false): number {
+  const duration = dataCenters ? Math.ceil(epic.duration / 2) : epic.duration;
+  return fastEpics ? Math.min(devEpicDuration, duration) : duration;
 }
 
 /**
@@ -164,7 +169,7 @@ export function tickLaunched(
       if (epic.done) return epic;
       const progress = epic.progress + 1;
       const definition = epicDefinition(epic.id);
-      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, fastEpics) : 0) };
+      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, fastEpics, state.perks.includes(dataCentersPerk)) : 0) };
     })
   };
   if (next.seconds % budgetInterval === 0) {

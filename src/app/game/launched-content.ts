@@ -14,10 +14,10 @@ export const launchedPerks: LaunchedPerk[] = [
   {
     id: 'data-centers',
     name: 'Migrate to Data Centers',
-    description: 'Move the systems off the shared server into dedicated data centres. More room, more power, more cooling, and a much bigger electricity bill.',
+    description: 'Move the systems off the shared server into dedicated data centres. Every epic runs twice as fast, and the electricity bill grows accordingly.',
     icon: 'DC',
     actionsRequired: 80000,
-    cost: 200000
+    cost: 350000
   },
   {
     id: 'network-financing',

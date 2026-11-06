@@ -4,7 +4,7 @@ import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
   canBuyTegridy, canStartEpic, clientAvailable, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
   protestChance, resistanceGrowth, robotPerk, robotPower, robotsOnSite,
-  upgradeCost, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
+  upgradeCost, dataCentersPerk, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
 } from '../../game/launched';
@@ -36,6 +36,7 @@ export class LevelTwoComponent {
   protected readonly view = computed(() => {
     const state = this.state();
     const fast = this.fastEpics();
+    const halved = state.perks.includes(dataCentersPerk);
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
@@ -108,8 +109,8 @@ export class LevelTwoComponent {
             ? `Released: ${productTitle(released)}`
             : `Goal reached · ${target?.name ?? 'The product'} also needs ${missing.join(' and ')}`,
           next: next && {
-            epic: { ...next, duration: epicDuration(next, fast) },
-            progress: entry ? Math.min(entry.progress, epicDuration(next, fast)) : 0,
+            epic: { ...next, duration: epicDuration(next, fast, halved) },
+            progress: entry ? Math.min(entry.progress, epicDuration(next, fast, halved)) : 0,
             running: !!entry,
             canStart: canStartEpic(state, next.id),
             // Within a system epics run one after another (Peace & Integrity: war first, then corruption).

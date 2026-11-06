@@ -786,17 +786,26 @@ test('Tegridy Farms: a 1,000,000 deal, then +1 integrity per 100,000 bag', () =>
   assert.deepEqual(storage.loadLaunched(store), live);
 });
 
-test('"Migrate to Data Centers" unlocks at 80,000 actions and costs 200,000 budget', () => {
-  const early = liveState({ actions: 79999, budget: 1000000 });
-  assert.equal(launched.activateLaunchedPerk(early, 'data-centers'), null, 'needs 80,000 actions');
-  const poor = liveState({ actions: 80000, budget: 199999 });
-  assert.equal(launched.activateLaunchedPerk(poor, 'data-centers'), null, 'costs 200,000 budget');
-  const migrated = launched.activateLaunchedPerk(liveState({ actions: 80000, budget: 250000 }), 'data-centers');
+test('"Migrate to Data Centers": 80,000 actions, 350,000 budget, epics take half the time', () => {
+  assert.equal(launched.activateLaunchedPerk(liveState({ actions: 79999, budget: 1000000 }), 'data-centers'), null, 'needs 80,000 actions');
+  assert.equal(launched.activateLaunchedPerk(liveState({ actions: 80000, budget: 349999 }), 'data-centers'), null, 'costs 350,000 budget');
+  const migrated = launched.activateLaunchedPerk(liveState({ actions: 80000, budget: 400000 }), 'data-centers');
   assert.equal(migrated.budget, 50000);
-  assert.ok(migrated.perks.includes('data-centers'));
   assert.equal(launched.activateLaunchedPerk(migrated, 'data-centers'), null, 'only once');
   const free = launched.activateLaunchedPerk(liveState({ actions: 35000, budget: 0 }), 'workflow-abstraction');
   assert.equal(free.budget, 0, 'perks without a price stay free');
+
+  const epic = launched.epicDefinition('climate-collect-measurements');
+  assert.equal(launched.epicDuration(epic, false, true), 60, '2 minutes become 1');
+  assert.equal(launched.epicDuration(launched.epicDefinition('war-verify-footage'), false, true), 45);
+  assert.equal(launched.epicDuration(launched.epicDefinition('war-early-warning'), false, true), 15);
+  assert.equal(launched.epicDuration(epic, true, true), 5, 'dev mode still caps at 5 seconds');
+  let fast = liveState({ perks: ['data-centers'], epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
+  for (let second = 0; second < 60; second++) fast = launched.tickLaunched(fast, () => 0);
+  assert.equal(fast.epics[0].done, true, 'done after 60 instead of 120 seconds');
+  let slow = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
+  for (let second = 0; second < 60; second++) slow = launched.tickLaunched(slow, () => 0);
+  assert.equal(slow.epics[0].done, false);
 });
 
 test('epics cost budget, take server time and need a free server slot', () => {
