@@ -250,15 +250,11 @@ export function perkUnlocked(game: Game, perk: Perk): boolean {
 }
 
 export function openPerks(game: Game): Perk[] {
+  // Up to three perks: the next ones in unlock order. Unlocked testing perks are always kept in the list.
   const priorityIds = ['earl', 'testing-skills', 'auto-testing'];
-  const available = perks.filter(perk => !game.activatedPerks.includes(perk.id) &&
-    (perk.id !== 'earl' || perkUnlocked(game, perk)));
+  const available = perks.filter(perk => !game.activatedPerks.includes(perk.id));
   const promoted = available.filter(perk => priorityIds.includes(perk.id) && perkUnlocked(game, perk));
-  // Locked testing perks are previewed in unlock order once Earl is reachable; before that they stay hidden.
-  const earlUnlocked = perks.some(perk => perk.id === 'earl' && perkUnlocked(game, perk));
-  const result = available
-    .filter(perk => !promoted.includes(perk) && (!priorityIds.includes(perk.id) || earlUnlocked))
-    .slice(0, 3 - promoted.length);
+  const result = available.filter(perk => !promoted.includes(perk)).slice(0, 3 - promoted.length);
   return [...result, ...promoted];
 }
 

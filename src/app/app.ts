@@ -23,6 +23,9 @@ import type { LaunchedGame } from './models/launched.model';
 import type { PerkId } from './models/perk.model';
 import { formatVersion, nextVersion } from './models/version.model';
 
+/** Actions per click while dev mode is on. */
+const devModeActions = 30;
+
 @Component({
   selector: 'app-root',
   imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, PerksComponent, StatsComponent],
@@ -38,6 +41,8 @@ export class AppComponent {
 
   readonly saveWarning = signal('');
   readonly showIntro = signal(false);
+  /** Dev mode: every Write code / Fix bug click counts as `devModeActions` actions. Not saved. */
+  readonly devMode = signal(false);
   /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
   readonly launched = signal<LaunchedGame | null>(null);
   readonly game = signal(this.restoreGame());
@@ -173,7 +178,17 @@ export class AppComponent {
 
   code(): void {
     if (!this.view().selected) return;
-    this.update(game => { work(game, game.selected, 1); });
+    if (!this.devMode()) {
+      this.update(game => { work(game, game.selected, 1); });
+      return;
+    }
+    // Dev mode: the click always counts as 30 actions, even when the item needs less to finish.
+    this.update(game => {
+      const before = game.actions;
+      if (work(game, game.selected, devModeActions)) {
+        game.actions = Math.min(Number.MAX_SAFE_INTEGER, before + devModeActions);
+      }
+    });
   }
 
   activate(id: PerkId): void {
@@ -236,6 +251,10 @@ export class AppComponent {
       this.launched.set(null);
       this.update(() => newGame());
     }
+  }
+
+  toggleDevMode(): void {
+    this.devMode.update(on => !on);
   }
 
   /** Leaves level 1 for good: the save is reduced to actions and budget. */
