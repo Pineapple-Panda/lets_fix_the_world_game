@@ -713,7 +713,7 @@ test('every Add Server adds one step to the focus effect (x2, x3, x4, ...)', () 
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction', 'add-server', 'network-financing']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction', 'data-centers', 'add-server', 'network-financing']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -721,7 +721,7 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'network-financing']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['data-centers', 'add-server', 'network-financing']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
@@ -757,7 +757,7 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['network-financing', 'add-server'],
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['data-centers', 'network-financing', 'add-server'],
     'perks are listed by unlock threshold (Add Server now at 300,000)');
 });
 
@@ -787,6 +787,19 @@ test('Tegridy Farms: a 1,000,000 deal, then +1 integrity per 100,000 bag', () =>
   const store = memoryStorage();
   storage.saveLaunched(store, live);
   assert.deepEqual(storage.loadLaunched(store), live);
+});
+
+test('"Migrate to Data Centers" unlocks at 80,000 actions and costs 200,000 budget', () => {
+  const early = liveState({ actions: 79999, budget: 1000000 });
+  assert.equal(launched.activateLaunchedPerk(early, 'data-centers'), null, 'needs 80,000 actions');
+  const poor = liveState({ actions: 80000, budget: 199999 });
+  assert.equal(launched.activateLaunchedPerk(poor, 'data-centers'), null, 'costs 200,000 budget');
+  const migrated = launched.activateLaunchedPerk(liveState({ actions: 80000, budget: 250000 }), 'data-centers');
+  assert.equal(migrated.budget, 50000);
+  assert.ok(migrated.perks.includes('data-centers'));
+  assert.equal(launched.activateLaunchedPerk(migrated, 'data-centers'), null, 'only once');
+  const free = launched.activateLaunchedPerk(liveState({ actions: 35000, budget: 0 }), 'workflow-abstraction');
+  assert.equal(free.budget, 0, 'perks without a price stay free');
 });
 
 test('epics cost budget, take server time and need a free server slot', () => {

@@ -12,6 +12,14 @@ export const launchedPerks: LaunchedPerk[] = [
     actionsRequired: 35000
   },
   {
+    id: 'data-centers',
+    name: 'Migrate to Data Centers',
+    description: 'Move the systems off the shared server into dedicated data centres. More room, more power, more cooling, and a much bigger electricity bill.',
+    icon: 'DC',
+    actionsRequired: 80000,
+    cost: 200000
+  },
+  {
     id: 'network-financing',
     name: 'Who Pays for All This?',
     description: 'Lovely platform. Shame about the invoice. Opens the Network & Financing desk to find partners and money.',

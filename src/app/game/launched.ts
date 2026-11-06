@@ -304,7 +304,8 @@ export function launchedPerkAvailable(state: LaunchedGame, perk: LaunchedPerk): 
       launchedPerkUnlocked(state, perk) && state.budget >= (perk.cost ?? 0);
   }
   if (perk.id === tegridyPerk.id) return networkOnline(state) && !tegridyActive(state) && state.budget >= (perk.cost ?? 0);
-  return launchedPerkUnlocked(state, perk);
+  // Regular perks unlock by actions; some also have a budget price.
+  return launchedPerkUnlocked(state, perk) && state.budget >= (perk.cost ?? 0);
 }
 
 /** Perk that opens the Network & Financing card. */
@@ -330,8 +331,8 @@ export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedG
     return { ...state, serverSlots: state.serverSlots + 1 };
   }
   const perk = launchedPerks.find(entry => entry.id === id);
-  if (!perk || state.perks.includes(id) || !launchedPerkUnlocked(state, perk)) return null;
-  return { ...state, perks: [...state.perks, id] };
+  if (!perk || state.perks.includes(id) || !launchedPerkAvailable(state, perk)) return null;
+  return { ...state, budget: state.budget - (perk.cost ?? 0), perks: [...state.perks, id] };
 }
 
 /** The server and its epics appear once the workflow is abstracted. */
