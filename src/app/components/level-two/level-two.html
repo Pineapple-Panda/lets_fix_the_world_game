@@ -30,18 +30,26 @@
                                 <small>{{ lawsuit.plaintiff }} {{ lawsuit.accusation }}</small>
                                 <small class="panel-warning">A court injunction freezes all {{ panel.productName }} programs.</small>
                                 @if (lawsuit.courtSeconds !== null) {
-                                    <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. The accusations are flimsy, you will win.</small>
+                                    <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. {{ panel.winChance }}% chance to win; a loss costs {{ format(panel.courtDamages) }} in damages.</small>
                                 } @else {
                                     <div class="lawsuit-actions">
                                         <button class="tool-button" type="button" [disabled]="!lawsuit.canSettle"
                                                 [attr.aria-label]="'Settle out of court for ' + panel.settlementCost + ' budget'"
                                                 (click)="lawsuitSettled.emit()">Settle ({{ format(panel.settlementCost) }})</button>
                                         <button class="tool-button court-button" type="button"
-                                                [attr.aria-label]="'Fight in court for ' + panel.courtDuration + ' seconds'"
+                                                [attr.aria-label]="'Fight in court for ' + panel.courtDuration + ' seconds, ' + panel.winChance + ' percent chance to win'"
                                                 (click)="lawsuitFought.emit()">Fight in court ({{ panel.courtDuration }}s)</button>
                                     </div>
+                                    <small>Court: {{ panel.winChance }}% chance to win. If you lose, you pay {{ format(panel.courtDamages) }} in damages.</small>
                                 }
                             </div>
+                        }
+                        @if (panel.verdict; as verdict) {
+                            @if (verdict.won) {
+                                <small class="epic-done">⚖️ Won in court against {{ verdict.plaintiff }}.</small>
+                            } @else {
+                                <small class="panel-warning">⚖️ Lost in court against {{ verdict.plaintiff }}: {{ format(verdict.damages) }} paid in damages.</small>
+                            }
                         }
                         @if (panel.frozen) {
                             <small class="panel-alert">Integrity is 0%. Nobody cooperates, every program is frozen.</small>

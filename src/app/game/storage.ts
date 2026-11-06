@@ -88,6 +88,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
   const game = readSnapshot(storage, 2);
   // Saves from before completed programs existed simply have none.
   if (game && game.completedPrograms === undefined) game.completedPrograms = [];
+  if (game && game.verdict === undefined) game.verdict = null;
   if (
     !game ||
     !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
@@ -100,6 +101,8 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.programs) ||
     !Array.isArray(game.completedPrograms) || !game.completedPrograms.every(id => typeof id === 'string') ||
     !isCount(game.lawsuitsFiled) ||
+    !(game.verdict === null || (isObject(game.verdict) && typeof game.verdict.product === 'string' &&
+      typeof game.verdict.plaintiff === 'string' && typeof game.verdict.won === 'boolean' && isCount(game.verdict.damages))) ||
     !(game.lawsuit === null || (isObject(game.lawsuit) && isCount(game.lawsuit.caseId) &&
       (game.lawsuit.courtSeconds === null || isCount(game.lawsuit.courtSeconds)))) ||
     !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0 &&

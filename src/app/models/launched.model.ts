@@ -40,6 +40,18 @@ export interface LaunchedGame {
   lawsuit: Lawsuit | null;
   /** Lawsuits filed so far; every new one costs and takes 20% more. */
   lawsuitsFiled: number;
+  /** Outcome of the last court case, shown on the product card until the next lawsuit; null if there is none. */
+  verdict: Verdict | null;
+}
+
+/** How a fought lawsuit ended. */
+export interface Verdict {
+  /** Product that was sued. */
+  product: string;
+  plaintiff: string;
+  won: boolean;
+  /** Budget paid as damages (0 when won). */
+  damages: number;
 }
 
 /** Someone drags you to court with a flimsy accusation. */

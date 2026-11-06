@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
-  canStartEpic, clientAvailable, clientFactor, courtDuration, dataCentersActive, epicDefinition, epicDone, epicDuration,
+  canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, courtWinChance, dataCentersActive, epicDefinition, epicDone, epicDuration,
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
@@ -167,6 +167,9 @@ export class LevelTwoComponent {
         canSettle: state.budget >= settlementCost(state)
       } : null,
       settlementCost: settlementCost(state),
+      courtDamages: courtDamages(state),
+      winChance: Math.round(courtWinChance * 100),
+      verdict: !state.lawsuit && state.verdict?.product === productId ? state.verdict : null,
       courtDuration: courtDuration(state),
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
       robots: robotsOnSite(state),

@@ -51,7 +51,8 @@ function newLaunchedState(actions: number, budget: number): LaunchedGame {
     programs: [],
     completedPrograms: [],
     lawsuit: null,
-    lawsuitsFiled: 0
+    lawsuitsFiled: 0,
+    verdict: null
   };
 }
 
@@ -704,8 +705,12 @@ export const lawsuitIntegrity = 80;
 export const lawsuitChance = 0.003;
 /** Budget to settle the first lawsuit out of court. */
 export const baseSettlementCost = 500000;
-/** Seconds in court for the first lawsuit when you fight (and always win, the accusations are flimsy). */
+/** Seconds in court for the first lawsuit when you fight. */
 export const baseCourtDuration = 90;
+/** Chance to win in court. */
+export const courtWinChance = 0.65;
+/** A lost case costs this many times the settlement as damages. */
+export const damagesFactor = 2;
 /** Every further lawsuit costs and takes this much more. */
 export const lawsuitEscalation = 1.2;
 
@@ -724,6 +729,11 @@ export function courtDuration(state: LaunchedGame): number {
   return Math.round(baseCourtDuration * escalation(state));
 }
 
+/** Damages for losing the current lawsuit in court: twice the settlement. */
+export function courtDamages(state: LaunchedGame): number {
+  return settlementCost(state) * damagesFactor;
+}
+
 /** The world problem a product's programs work on (Green World: climate, Fair Share: hunger). */
 export function productProblem(productId: string): WorldProblem | undefined {
   return programs.find(program => program.product === productId)?.problem;
@@ -740,12 +750,24 @@ export function lawsuitRisk(state: LaunchedGame, productId?: string): boolean {
     state.worldProgress[problem] >= lawsuitProgress && state.integrity > lawsuitIntegrity;
 }
 
-/** One second of lawsuit logic (mutates `next`): a new case may be filed, a fought case counts down. */
+/**
+ * One second of lawsuit logic (mutates `next`): a new case may be filed, a fought case counts down. When the
+ * verdict comes, the case is won with 65%; a loss costs damages (the budget does not drop below 0).
+ */
 function runLawsuit(next: LaunchedGame, random: () => number): void {
   if (next.lawsuit) {
     if (next.lawsuit.courtSeconds === null) return;
     const courtSeconds = next.lawsuit.courtSeconds - 1;
-    next.lawsuit = courtSeconds <= 0 ? null : { ...next.lawsuit, courtSeconds };
+    if (courtSeconds > 0) {
+      next.lawsuit = { ...next.lawsuit, courtSeconds };
+      return;
+    }
+    const sued = lawsuitCase(next);
+    const won = random() < courtWinChance;
+    const damages = won ? 0 : courtDamages(next);
+    next.budget = Math.max(0, next.budget - damages);
+    next.verdict = { product: sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };
+    next.lawsuit = null;
     return;
   }
   // Only one lawsuit at a time; the case is drawn from those against the products at risk.
@@ -753,6 +775,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
   if (open.length && random() < lawsuitChance) {
     next.lawsuit = { caseId: open[Math.min(open.length - 1, Math.floor(random() * open.length))]!.caseId, courtSeconds: null };
     next.lawsuitsFiled = next.lawsuitsFiled + 1;
+    next.verdict = null;
   }
 }
 
@@ -767,7 +790,7 @@ export function settleLawsuit(state: LaunchedGame): LaunchedGame | null {
   return { ...state, budget: state.budget - cost, lawsuit: null };
 }
 
-/** Go to court: free, but the programs stay frozen until the case is won. */
+/** Go to court: free, but the programs stay frozen until the verdict, and a loss costs damages. */
 export function fightLawsuit(state: LaunchedGame): LaunchedGame | null {
   if (!state.lawsuit || state.lawsuit.courtSeconds !== null) return null;
   return { ...state, lawsuit: { ...state.lawsuit, courtSeconds: courtDuration(state) } };
