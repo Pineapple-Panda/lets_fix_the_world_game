@@ -441,6 +441,28 @@ export const programs: ProgramDefinition[] = [
     minVersion: 2,
     minProgress: 30,
     requiresPrograms: ['mealora-delivery', 'hunger-relief-pricing']
+  },
+  {
+    id: 'fair-wage-optimizer',
+    product: 'fair-share',
+    problem: 'poverty',
+    name: 'Fair Wage Business Optimizer',
+    detail: 'A platform that scans how employers work and automatically suggests business optimisations, so they can afford to raise wages significantly. The savings go to the payroll, not the yacht.',
+    cost: 1200000,
+    upkeep: 600,
+    rate: 0.006,
+    slots: 1
+  },
+  {
+    id: 'essentials-tax-relief',
+    product: 'fair-share',
+    problem: 'poverty',
+    name: 'Tax Relief on Food and Rent',
+    detail: 'Models the budget impact down to the last loaf of bread and makes the case to governments for cutting taxes on food and rent. Turns out spreadsheets can be very persuasive.',
+    cost: 2000000,
+    upkeep: 0,
+    rate: 0.008,
+    minIntegrity: 60
   }
 ];
 

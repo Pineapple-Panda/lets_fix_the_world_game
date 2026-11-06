@@ -5,7 +5,7 @@ import {
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, courtWinChance, dataCentersActive, epicDefinition, epicDone, epicDuration,
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
-  productDefinition, productForGoal, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
+  productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
@@ -151,14 +151,12 @@ export class LevelTwoComponent {
     const released = product(state, productId);
     const productPrograms = programs.filter(program => program.product === productId);
     if (!released?.active || !productPrograms.length) return null;
-    const problem = productPrograms[0]!.problem;
     const boost = programBoost(state, productId);
     const cost = upgradeCost(state, productId);
     const cardPrograms = productPrograms.filter(program => !state.completedPrograms.includes(program.id));
     return {
       productName: productDefinition(productId)?.name ?? productId,
-      problemName: problemName(problem),
-      progress: state.worldProgress[problem],
+      problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id] })),
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
       lawsuit: state.lawsuit && lawsuitCase(state)?.product === productId ? {
@@ -181,6 +179,7 @@ export class LevelTwoComponent {
         const running = state.programs.find(entry => entry.id === program.id);
         return {
           program,
+          problemName: problemName(program.problem),
           rate: small(program.rate * boost),
           running: !!running,
           protest: !!running && inProtest(running),

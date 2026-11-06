@@ -9,14 +9,16 @@
                 <h2 class="product-title" [id]="'product-' + released.id">{{ card.title }}</h2>
                 @if (card.panel; as panel) {
                     <div class="panel-body">
-                        <div class="world-row">
-                            <span>{{ panel.problemName }}</span>
-                            <div class="world-track" role="progressbar" [attr.aria-label]="panel.problemName + ' solution progress'"
-                                 aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="panel.progress | number: '1.0-0'">
-                                <div class="world-fill world-climate" [style.width.%]="panel.progress"></div>
+                        @for (problem of panel.problems; track problem.id) {
+                            <div class="world-row">
+                                <span>{{ problem.name }}</span>
+                                <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' solution progress'"
+                                     aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="problem.progress | number: '1.0-0'">
+                                    <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.progress"></div>
+                                </div>
+                                <b>{{ problem.progress | number: '1.3-3' }}%</b>
                             </div>
-                            <b>{{ panel.progress | number: '1.3-3' }}%</b>
-                        </div>
+                        }
                         <div class="upgrade-row">
                             <span>Programs +{{ panel.boostPercent }}%</span>
                             <button class="tool-button" type="button" [disabled]="!panel.canUpgrade"
@@ -66,7 +68,7 @@
                                     @if (entry.program.cost) { {{ format(entry.program.cost) }} to start · }
                                     @if (entry.program.upkeep > 0) { −{{ format(entry.program.upkeep) }} budget/sec · }
                                     @if (entry.program.upkeep < 0) { <span class="good">+{{ format(-entry.program.upkeep) }} budget/sec</span> · }
-                                    <span class="good">{{ panel.problemName }} +{{ entry.rate }}%/sec</span>
+                                    <span class="good">{{ entry.problemName }} +{{ entry.rate }}%/sec</span>
                                     @if (entry.program.integrity) { · <span class="bad">Integrity {{ rate(entry.program.integrity) }}/sec</span> }
                                     @if (entry.program.slots) { · {{ entry.program.slots }} server slot }
                                 </small>

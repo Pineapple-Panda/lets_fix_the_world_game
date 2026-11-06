@@ -756,20 +756,19 @@ export function courtDamages(state: LaunchedGame): number {
   return settlementCost(state) * damagesFactor;
 }
 
-/** The world problem a product's programs work on (Green World: climate, Fair Share: hunger). */
-export function productProblem(productId: string): WorldProblem | undefined {
-  return programs.find(program => program.product === productId)?.problem;
+/** The world problems a product's programs work on, in program order (Green World: climate; Fair Share: hunger, poverty). */
+export function productProblems(productId: string): WorldProblem[] {
+  return [...new Set(programs.filter(program => program.product === productId).map(program => program.problem))];
 }
 
 /**
- * Whether companies feel threatened enough to sue a product: it is active, its problem is solved to 30% or more
- * and integrity is above 80%. Without a product: whether any product is at risk.
+ * Whether companies feel threatened enough to sue a product: it is active, one of its problems is solved to 30%
+ * or more and integrity is above 80%. Without a product: whether any product is at risk.
  */
 export function lawsuitRisk(state: LaunchedGame, productId?: string): boolean {
   if (productId === undefined) return products.some(definition => lawsuitRisk(state, definition.id));
-  const problem = productProblem(productId);
-  return !!problem && productActive(state, productId) &&
-    state.worldProgress[problem] >= lawsuitProgress && state.integrity > lawsuitIntegrity;
+  return productActive(state, productId) && state.integrity > lawsuitIntegrity &&
+    productProblems(productId).some(problem => state.worldProgress[problem] >= lawsuitProgress);
 }
 
 /**

@@ -1390,6 +1390,20 @@ test('the free meal service needs v2.0, 30% hunger and both other Fair Share pro
   assert.deepEqual(launched.missingPrograms(protest, 'free-meal-service'), ['Mealora Worldwide Food Delivery'], 'a protest pauses it too');
 });
 
+test('Fair Share fights poverty with fair wages and tax relief on food and rent', () => {
+  assert.deepEqual(launched.productProblems('fair-share'), ['hunger', 'poverty']);
+  assert.deepEqual(launched.productProblems('green-world'), ['climate']);
+  let live = launched.startProgram(fairShareActive({ serverSlots: 3 }), 'fair-wage-optimizer');
+  assert.equal(live.budget, 10000000 - 1200000);
+  live = climateAfter(live, 100);
+  assert.ok(Math.abs(live.worldProgress.poverty - 0.6) < 1e-9, 'fair wages: +0.006% poverty per second');
+  assert.equal(launched.programBlocker(fairShareActive({ integrity: 59 }), 'essentials-tax-relief'), 'Needs 60% integrity');
+  const relief = climateAfter(launched.startProgram(fairShareActive({ integrity: 60 }), 'essentials-tax-relief'), 100);
+  assert.ok(Math.abs(relief.worldProgress.poverty - 0.8) < 1e-6, 'tax relief: +0.008% poverty per second');
+  const poverty = { ...liveState().worldProgress, poverty: 30 };
+  assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: poverty }), 'fair-share'), true, '30% poverty also draws lawsuits');
+});
+
 test('Fair Share gets sued under the same conditions, and only its programs are frozen', () => {
   const hunger = value => ({ ...liveState().worldProgress, hunger: value });
   assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: hunger(29.9) }), 'fair-share'), false);
