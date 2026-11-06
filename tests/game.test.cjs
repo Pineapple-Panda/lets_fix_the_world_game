@@ -1626,6 +1626,7 @@ test('pitching to investors adds budget per click and grows with the income', ()
   const rich = liveState({ rentals: ['edisonx', 'nsa'], perks: ['network-financing'] });
   assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.2), '20% of the income per second');
   assert.equal(launched.pitchValue(liveState({ focus: -100 })), 100, 'no budget payout while shipping features');
+  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 400, 'three added servers: ×4');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {

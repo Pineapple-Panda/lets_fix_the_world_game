@@ -99,9 +99,12 @@ export function budgetPerSecond(state: LaunchedGame): number {
   return averageActions * budgetPerAction * budgetBoost(state) + rentalIncome(state) + programIncome;
 }
 
-/** Budget for one "Pitch to investors" click: 20% of the income per second, at least 100. Grows with the platform. */
+/**
+ * Budget for one "Pitch to investors" click: 20% of the income per second (at least 100), times the server
+ * multiplier (1 + servers added with Add Server). Grows with the platform.
+ */
 export function pitchValue(state: LaunchedGame): number {
-  return Math.max(pitchBase, Math.round(budgetPerSecond(state) * pitchShare));
+  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * focusPower(state));
 }
 
 /** One click on "Pitch to investors" (needs the Pitch Deck Generator). */
