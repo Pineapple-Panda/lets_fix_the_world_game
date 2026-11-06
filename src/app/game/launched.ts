@@ -54,30 +54,43 @@ export function skippedLevelTwo(): LaunchedGame {
 
 const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
 
-/**
- * One second in level 2: actions grow by 50–300, running epics advance by one second of server time,
- * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction`).
+/*
+ * Focus slider: a trade-off between shipping features (left) and monetising (right).
+ *   fully left:  actions +50% × focus power, budget per new action drops to 0
+ *   centre:      no effect
+ *   fully right: budget per new action +100% × focus power, actions -50%
+ * In between the effects change linearly. Only the bonuses grow with focus power (Add Server);
+ * the penalties stay at their fixed limits.
  */
-/** Slider range and the strongest effect at each end. */
 export const focusLimit = 100;
 export const maxActionBoost = 0.5;
 export const maxBudgetBoost = 1;
+/** Actions lost with the slider fully on "monetise". */
+export const maxActionPenalty = 0.5;
+/** Budget lost with the slider fully on "ship features" (all of it). */
+export const maxBudgetPenalty = 1;
 
 const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
 
-/** How strong the focus slider works: doubled by every server added with the Add Server perk. */
+/** How strong the slider's bonuses are: doubled by every server added with the Add Server perk. */
 export function focusPower(state: LaunchedGame): number {
   return 2 ** addedServers(state);
 }
 
-/** Multiplier for actions per second: up to ×1.5 with the slider fully on "ship features" (before Add Server). */
+/** Multiplier for actions per second: ×1.5 fully left (more with Add Server), ×0.5 fully right. */
 export function actionBoost(state: LaunchedGame): number {
-  return 1 + maxActionBoost * focusPower(state) * Math.max(0, -clampFocus(state.focus)) / focusLimit;
+  const focus = clampFocus(state.focus) / focusLimit;
+  return focus <= 0
+    ? 1 + maxActionBoost * focusPower(state) * -focus
+    : 1 - maxActionPenalty * focus;
 }
 
-/** Multiplier for the budget payout: up to ×2 with the slider fully on "monetise" (before Add Server). */
+/** Multiplier for the budget payout: ×2 fully right (more with Add Server), ×0 fully left. */
 export function budgetBoost(state: LaunchedGame): number {
-  return 1 + maxBudgetBoost * focusPower(state) * Math.max(0, clampFocus(state.focus)) / focusLimit;
+  const focus = clampFocus(state.focus) / focusLimit;
+  return focus >= 0
+    ? 1 + maxBudgetBoost * focusPower(state) * focus
+    : 1 - maxBudgetPenalty * -focus;
 }
 
 /** Moves the focus slider; values are clamped to -100…100. */
@@ -87,6 +100,10 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
   return next === state.focus ? null : { ...state, focus: next };
 }
 
+/**
+ * One second in level 2: actions grow by 50–300 (scaled by the focus slider), running epics advance by one second of server time,
+ * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
+ */
 export function tickLaunched(state: LaunchedGame, random: () => number = Math.random): LaunchedGame {
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
   const gained = Math.round(base * actionBoost(state));

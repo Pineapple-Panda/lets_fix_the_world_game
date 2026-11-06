@@ -81,6 +81,11 @@ export class LevelTwoComponent {
     };
   });
 
+  /** 50 → "+50", -50 → "−50", 0 → "±0". */
+  protected signed(value: number): string {
+    return value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '±0';
+  }
+
   protected format(value: number): string {
     return value.toLocaleString('en-US');
   }

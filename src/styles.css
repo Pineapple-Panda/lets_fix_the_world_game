@@ -812,6 +812,14 @@ app-level-two {
     color: var(--green);
 }
 
+.focus-labels .down {
+    color: var(--ink);
+}
+
+.focus-labels .down b {
+    color: var(--red);
+}
+
 .focus-title {
     color: var(--muted);
     font: 600 11px var(--sans);

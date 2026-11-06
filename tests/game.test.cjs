@@ -658,22 +658,28 @@ test('every 5 seconds the budget grows by the new actions (1 budget per action)'
   assert.equal(live.budget, 7 + 5 * 50 + 5 * 300);
 });
 
-test('the focus slider boosts either actions or the budget payout', () => {
+test('the focus slider trades actions against budget', () => {
   const neutral = liveState();
   assert.equal(launched.actionBoost(neutral), 1);
   assert.equal(launched.budgetBoost(neutral), 1);
   const features = launched.setFocus(neutral, -100);
   assert.equal(launched.actionBoost(features), 1.5, 'full "ship features": +50% actions');
-  assert.equal(launched.budgetBoost(features), 1, 'no budget bonus on that side');
+  assert.equal(launched.budgetBoost(features), 0, 'fully left: no budget from new actions');
   assert.equal(launched.tickLaunched(features, () => 0).actions, neutral.actions + 75);
   const money = launched.setFocus(neutral, 100);
-  assert.equal(launched.actionBoost(money), 1);
+  assert.equal(launched.actionBoost(money), 0.5, 'fully right: -50% actions');
   assert.equal(launched.budgetBoost(money), 2, 'full "monetise": double budget per new action');
   let live = money;
   for (let second = 0; second < 5; second++) live = launched.tickLaunched(live, () => 0);
-  assert.equal(live.budget, 5 * 50 * 2);
+  assert.equal(live.actions, money.actions + 5 * 25);
+  assert.equal(live.budget, 5 * 25 * 2);
+  let starved = features;
+  for (let second = 0; second < 5; second++) starved = launched.tickLaunched(starved, () => 0);
+  assert.equal(starved.budget, 0, 'shipping features only earns no budget');
   const half = launched.setFocus(neutral, -50);
   assert.equal(launched.actionBoost(half), 1.25);
+  assert.equal(launched.budgetBoost(half), 0.5, 'half left: half the budget');
+  assert.equal(launched.actionBoost(launched.setFocus(neutral, 50)), 0.75);
   assert.equal(launched.setFocus(neutral, 500).focus, 100, 'clamped');
   assert.equal(launched.setFocus(neutral, -37.4).focus, -37);
   assert.equal(launched.setFocus(neutral, 0), null, 'no change');
@@ -693,7 +699,8 @@ test('every Add Server doubles the focus effect', () => {
   const twoServers = liveState({ serverSlots: 3, focus: 100 });
   assert.equal(launched.focusPower(twoServers), 4);
   assert.equal(launched.budgetBoost(twoServers), 5, '+400% budget with two extra servers');
-  assert.equal(launched.actionBoost(twoServers), 1, 'only the chosen side is boosted');
+  assert.equal(launched.actionBoost(twoServers), 0.5, 'the penalty does not grow with servers');
+  assert.equal(launched.budgetBoost(liveState({ serverSlots: 3, focus: -100 })), 0, 'budget never goes below 0');
   const half = liveState({ serverSlots: 2, focus: 50 });
   assert.equal(launched.budgetBoost(half), 2);
   let live = launched.activateLaunchedPerk(liveState({ actions: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');

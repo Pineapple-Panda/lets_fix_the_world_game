@@ -59,13 +59,13 @@
 
         <div class="focus" role="group" aria-labelledby="focus-title">
             <div class="focus-labels">
-                <span [class.on]="v.actionBoost > 0">Ship features <b>+{{ v.actionBoost }}% actions</b></span>
+                <span [class.on]="v.actionBoost > 0" [class.down]="v.actionBoost < 0">Ship features <b>{{ signed(v.actionBoost) }}% actions</b></span>
                 <span class="focus-title" id="focus-title">Focus @if (v.focusPower > 1) {<b>×{{ v.focusPower }}</b>}</span>
-                <span [class.on]="v.budgetBoost > 0">Monetise <b>+{{ v.budgetBoost }}% budget</b></span>
+                <span [class.on]="v.budgetBoost > 0" [class.down]="v.budgetBoost < 0">Monetise <b>{{ signed(v.budgetBoost) }}% budget</b></span>
             </div>
             <input class="focus-slider" type="range" min="-100" max="100" step="10" [value]="s.focus"
                    aria-label="Focus between shipping features (more actions) and monetising (more budget)"
-                   [attr.aria-valuetext]="s.focus < 0 ? '+' + v.actionBoost + '% actions' : s.focus > 0 ? '+' + v.budgetBoost + '% budget' : 'Balanced'"
+                   [attr.aria-valuetext]="s.focus === 0 ? 'Balanced' : signed(v.actionBoost) + '% actions, ' + signed(v.budgetBoost) + '% budget'"
                    (input)="focusChanged.emit(+$any($event.target).value)" />
         </div>
 
