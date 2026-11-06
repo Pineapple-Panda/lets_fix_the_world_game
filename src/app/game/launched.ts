@@ -217,6 +217,8 @@ export function tickLaunched(
   next.worldProgress = progress;
   runPrograms(next, random);
   runLawsuit(next, random);
+  // A citizens assembly keeps integrity at 40% or more.
+  if (citizensAssembly(next)) next.integrity = Math.max(assemblyIntegrity, next.integrity);
   if (shadyDeals(next)) next.stats = { ...next.stats, dirtySeconds: next.stats.dirtySeconds + 1 };
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
@@ -224,6 +226,14 @@ export function tickLaunched(
     .map((definition): LaunchedProduct => ({ id: definition.id, major: 1, minor: 0, active: false }));
   if (released.length) next.products = [...next.products, ...released];
   return next;
+}
+
+/** Perk: integrity never drops below 40% and no new protests break out. */
+export const assemblyPerk = 'citizens-assembly';
+export const assemblyIntegrity = 40;
+
+export function citizensAssembly(state: LaunchedGame): boolean {
+  return state.perks.includes(assemblyPerk);
 }
 
 /** A client or running program that costs integrity or makes a problem worse (NSA, EdisonX, greenwashing, weapons). */
@@ -568,10 +578,18 @@ function lowerResistance(resistance: number, by: number): number {
   return rest < 1e-9 ? 0 : rest;
 }
 
+/** Perk that halves the upkeep of every program. */
+export const grantPerk = 'grant-proposals';
+
+/** Budget per second a program costs (negative: income). Grant proposals halve costs, not income. */
+export function programUpkeep(state: LaunchedGame, program: ProgramDefinition): number {
+  return program.upkeep > 0 && state.perks.includes(grantPerk) ? program.upkeep / 2 : program.upkeep;
+}
+
 /** Whether a running program can pay this second's upkeep (income programs always can). */
 export function programFunded(state: LaunchedGame, id: string): boolean {
   const program = programDefinition(id);
-  return !!program && (program.upkeep <= 0 || state.budget >= program.upkeep);
+  return !!program && (program.upkeep <= 0 || state.budget >= programUpkeep(state, program));
 }
 
 /**
@@ -584,8 +602,9 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
   if (!next.programs.length || integrityBlocked(next)) return;
   // A court injunction freezes the programs of the sued product while the lawsuit is open.
   const sued = lawsuitCase(next)?.product;
-  const chance = protestChance(next);
   const growth = resistanceGrowth(next);
+  // With a citizens assembly nobody needs to protest any more.
+  const chance = citizensAssembly(next) ? 0 : protestChance(next);
   const robots = calmingPower(next);
   const progress = { ...next.worldProgress };
   // Required programs are checked against the start of the second.
@@ -599,7 +618,7 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
     }
     if (chance > 0 && random() < chance) return { ...entry, resistance: protestResistance };
     if (missingPrograms(before, entry.id).length || !programFunded(next, entry.id)) return entry;
-    next.budget = cap(Math.max(0, next.budget - program.upkeep));
+    next.budget = cap(Math.max(0, next.budget - programUpkeep(next, program)));
     progress[program.problem] = percent(progress[program.problem] + program.rate * programBoost(next, program.product));
     if (program.integrity) next.integrity = percent(next.integrity + program.integrity);
     // Some programs work towards a milestone that unlocks an epic.
@@ -831,6 +850,25 @@ export const baseSettlementCost = 500000;
 export const baseCourtDuration = 90;
 /** Chance to win in court. */
 export const courtWinChance = 0.65;
+/** Perk: lawsuits go to court automatically. */
+export const decentLawyerPerk = 'decent-lawyer';
+/** Perk: +20 percentage points in court. */
+export const goodLawyerPerk = 'good-lawyer';
+export const goodLawyerBonus = 0.2;
+/** Perk: court cases are won with a fixed 95%. */
+export const chewbaccaPerk = 'chewbacca-defense';
+export const chewbaccaChance = 0.95;
+
+/** Chance to win the current court case: 65%, 85% with a good lawyer, a fixed 95% with the Chewbacca defense. */
+export function winChance(state: LaunchedGame): number {
+  if (state.perks.includes(chewbaccaPerk)) return chewbaccaChance;
+  return courtWinChance + (state.perks.includes(goodLawyerPerk) ? goodLawyerBonus : 0);
+}
+
+/** A decent lawyer takes every lawsuit to court on their own. */
+export function lawyerOnCase(state: LaunchedGame): boolean {
+  return state.perks.includes(decentLawyerPerk);
+}
 /** A lost case costs this many times the settlement as damages. */
 export const damagesFactor = 2;
 /** Every further lawsuit costs and takes this much more. */
@@ -887,14 +925,17 @@ export function currentLawsuitChance(state: LaunchedGame): number {
  */
 function runLawsuit(next: LaunchedGame, random: () => number): void {
   if (next.lawsuit) {
-    if (next.lawsuit.courtSeconds === null) return;
+    if (next.lawsuit.courtSeconds === null) {
+      if (lawyerOnCase(next)) next.lawsuit = { ...next.lawsuit, courtSeconds: courtDuration(next) };
+      return;
+    }
     const courtSeconds = next.lawsuit.courtSeconds - 1;
     if (courtSeconds > 0) {
       next.lawsuit = { ...next.lawsuit, courtSeconds };
       return;
     }
     const sued = lawsuitCase(next);
-    const won = random() < courtWinChance;
+    const won = random() < winChance(next);
     const damages = won ? 0 : courtDamages(next);
     next.budget = Math.max(0, next.budget - damages);
     next.verdict = { product: sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };

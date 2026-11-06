@@ -33,7 +33,7 @@
                                 <small>{{ lawsuit.plaintiff }} {{ lawsuit.accusation }}</small>
                                 <small class="panel-warning">A court injunction freezes all {{ panel.productName }} programs.</small>
                                 @if (lawsuit.courtSeconds !== null) {
-                                    <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. {{ panel.winChance }}% chance to win; if you lose, you pay up to {{ format(panel.courtDamages) }} in damages.</small>
+                                    <small>@if (panel.lawyer) {Your lawyer took the case to court. }In court: verdict in {{ clock(lawsuit.courtSeconds) }}. {{ panel.winChance }}% chance to win; if you lose, you pay up to {{ format(panel.courtDamages) }} in damages.</small>
                                 } @else {
                                     <div class="lawsuit-actions">
                                         <button class="tool-button" type="button" [disabled]="!lawsuit.canSettle"

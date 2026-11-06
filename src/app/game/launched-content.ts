@@ -33,6 +33,46 @@ export const launchedPerks: LaunchedPerk[] = [
     icon: 'MA',
     actionsRequired: 3000000,
     cost: 1500000
+  },
+  {
+    id: 'grant-proposals',
+    name: 'Self-Writing Grant Proposals',
+    description: 'An AI that writes grant applications in every language, format and level of desperation. Programs cost 50% less upkeep.',
+    icon: 'GP',
+    actionsRequired: 25000000,
+    cost: 3000000
+  },
+  {
+    id: 'decent-lawyer',
+    name: 'Decent Lawyer',
+    description: 'Takes every lawsuit to court the moment it is filed. You no longer have to deal with it yourself.',
+    icon: 'DL',
+    actionsRequired: 35000000,
+    cost: 4000000
+  },
+  {
+    id: 'good-lawyer',
+    name: 'Good Lawyer',
+    description: 'Reads the files before the hearing. Court cases are won 20 percentage points more often.',
+    icon: 'GL',
+    actionsRequired: 45000000,
+    cost: 5000000
+  },
+  {
+    id: 'chewbacca-defense',
+    name: 'Chewbacca Defense',
+    description: 'Ladies and gentlemen of the jury, this does not make sense. Court cases are won with a fixed 95%.',
+    icon: 'CD',
+    actionsRequired: 60000000,
+    cost: 6000000
+  },
+  {
+    id: 'citizens-assembly',
+    name: 'Global Citizens Assembly',
+    description: 'Randomly drawn citizens from every country get a real say. Integrity never drops below 40% and nobody needs to protest any more.',
+    icon: 'CA',
+    actionsRequired: 100000000,
+    cost: 10000000
   }
 ];
 

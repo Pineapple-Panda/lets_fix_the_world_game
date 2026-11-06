@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
-  canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, courtWinChance, dataCentersActive, epicDefinition, epicDone, epicDuration,
+  canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, winChance, lawyerOnCase, programUpkeep, dataCentersActive, epicDefinition, epicDone, epicDuration,
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
@@ -173,7 +173,8 @@ export class LevelTwoComponent {
       } : null,
       settlementCost: settlementCost(state),
       courtDamages: courtDamages(state),
-      winChance: Math.round(courtWinChance * 100),
+      winChance: Math.round(winChance(state) * 100),
+      lawyer: lawyerOnCase(state),
       verdict: !state.lawsuit && state.verdict?.product === productId ? state.verdict : null,
       courtDuration: courtDuration(state),
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
@@ -192,7 +193,7 @@ export class LevelTwoComponent {
           program,
           problemName: problemName(program.problem),
           rate: small(program.rate * boost),
-          terms: this.programTerms(program, small(program.rate * boost)),
+          terms: this.programTerms(program, small(program.rate * boost), programUpkeep(state, program)),
           running: !!running,
           protest: !!running && inProtest(running),
           clicksLeft: running ? Math.ceil(running.resistance) : 0,
@@ -208,11 +209,11 @@ export class LevelTwoComponent {
   }
 
   /** The cost line of a program: start price, upkeep or income, effect, integrity, slots. */
-  private programTerms(program: ProgramDefinition, rate: number): { text: string; tone: string }[] {
+  private programTerms(program: ProgramDefinition, rate: number, upkeep: number): { text: string; tone: string }[] {
     return [
       program.cost ? { text: `${this.format(program.cost)} to start`, tone: '' } : null,
-      program.upkeep > 0 ? { text: `−${this.format(program.upkeep)} budget/sec`, tone: '' } : null,
-      program.upkeep < 0 ? { text: `+${this.format(-program.upkeep)} budget/sec`, tone: 'good' } : null,
+      upkeep > 0 ? { text: `−${this.format(upkeep)} budget/sec`, tone: '' } : null,
+      upkeep < 0 ? { text: `+${this.format(-upkeep)} budget/sec`, tone: 'good' } : null,
       rate ? { text: `${problemName(program.problem)} ${this.rate(rate)}%/sec`, tone: rate > 0 ? 'good' : 'bad' } : null,
       program.integrity ? { text: `Integrity ${this.rate(program.integrity)}/sec`, tone: program.integrity > 0 ? 'good' : 'bad' } : null,
       program.slots ? { text: `${program.slots} server ${program.slots === 1 ? 'slot' : 'slots'}`, tone: '' } : null,

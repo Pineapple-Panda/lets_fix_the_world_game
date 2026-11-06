@@ -713,7 +713,7 @@ test('every Add Server adds one step to the focus effect (x2, x3, x4, ...)', () 
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing', 'mediation-academy']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing', 'mediation-academy', 'grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -721,7 +721,7 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'mediation-academy']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'mediation-academy', 'grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
@@ -754,7 +754,7 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'mediation-academy'],
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'mediation-academy', 'grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'],
     'perks are listed by unlock threshold; Add Server needs no actions');
 });
 
@@ -1566,6 +1566,42 @@ test('Peace & Integrity has three corruption programs', () => {
   assert.equal(launched.programBlocker(peaceActive(), 'whistleblower-harbor'), 'Needs v1.1');
   const ledger = climateAfter(launched.startProgram(peaceActive(), 'open-budget-ledger'), 100);
   assert.ok(Math.abs(ledger.worldProgress.corruption - 0.6) < 1e-9);
+});
+
+test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens assembly', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  const perk = id => content.launchedPerks.find(entry => entry.id === id);
+  assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
+    [25000000, 35000000, 45000000, 60000000, 100000000]);
+
+  // Grant proposals halve the upkeep, not the income.
+  const running = { programs: [{ id: 'methane-leak-watch', resistance: 0, milestone: 0 }] };
+  const plain = launched.tickLaunched(greenWorldActive({ ...running, seconds: 1 }), () => 0.99);
+  const granted = launched.tickLaunched(greenWorldActive({ ...running, seconds: 1, perks: ['workflow-abstraction', 'network-financing', 'grant-proposals'] }), () => 0.99);
+  assert.equal(granted.budget - plain.budget, 100, '200 upkeep becomes 100');
+  const program = content.programs.find(entry => entry.id === 'greenwashing-campaign');
+  assert.equal(launched.programUpkeep(liveState({ perks: ['grant-proposals'] }), program), -500, 'income stays');
+
+  // A decent lawyer goes to court right away.
+  const sued = greenWorldActive({ lawsuit: { caseId: 0, courtSeconds: null }, lawsuitsFiled: 1 });
+  assert.equal(launched.tickLaunched(sued, () => 0.99).lawsuit.courtSeconds, null, 'without a lawyer you decide');
+  const lawyer = launched.tickLaunched({ ...sued, perks: [...sued.perks, 'decent-lawyer'] }, () => 0.99);
+  assert.equal(lawyer.lawsuit.courtSeconds, 90, 'the lawyer takes it to court');
+
+  // Win chances.
+  assert.equal(launched.winChance(liveState()), 0.65);
+  assert.ok(Math.abs(launched.winChance(liveState({ perks: ['good-lawyer'] })) - 0.85) < 1e-12);
+  assert.equal(launched.winChance(liveState({ perks: ['good-lawyer', 'chewbacca-defense'] })), 0.95);
+  const verdict = launched.tickLaunched({ ...sued, seconds: 1, lawsuit: { caseId: 0, courtSeconds: 1 },
+    perks: [...sued.perks, 'chewbacca-defense'] }, () => 0.9);
+  assert.equal(verdict.verdict.won, true, '0.9 wins with the Chewbacca defense');
+
+  // The assembly keeps integrity at 40% and stops new protests.
+  const assembly = greenWorldActive({ integrity: 40, rentals: ['nsa'], perks: ['workflow-abstraction', 'network-financing', 'citizens-assembly'],
+    programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }] });
+  const calm = launched.tickLaunched(assembly, () => 0);
+  assert.equal(calm.integrity, 40, 'never below 40%');
+  assert.equal(calm.programs[0].resistance, 0, 'no new protests');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {
