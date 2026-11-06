@@ -81,8 +81,8 @@ export class LevelTwoComponent {
         rented: state.rentals.includes(client.id),
         canRent: canRentSlot(state, client.id),
         available: clientAvailable(state, client.id),
-        condition: client.minIntegrity !== undefined ? `Only signs at ${client.minIntegrity}% integrity or more`
-          : client.maxIntegrity !== undefined ? `Only signs at ${client.maxIntegrity}% integrity or less` : '',
+        condition: client.minIntegrity !== undefined ? `Only works with you at ${client.minIntegrity}% integrity or more`
+          : client.maxIntegrity !== undefined ? `Only works with you at ${client.maxIntegrity}% integrity or less` : '',
         income: Math.round(client.income * factor),
         effects: (Object.entries(client.progress) as [WorldProblem, number][]).map(([problem, delta]) => ({
           name: problemName(problem),

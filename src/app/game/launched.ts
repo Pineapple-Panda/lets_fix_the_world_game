@@ -256,6 +256,9 @@ export function tickLaunched(
   runLawsuit(next, random);
   // A citizens assembly keeps integrity at 40% or more.
   if (citizensAssembly(next)) next.integrity = Math.max(assemblyIntegrity, next.integrity);
+  // Clients walk out once integrity leaves their range (Green-Left below 70%, EdisonX above 20%).
+  const leaving = next.rentals.filter(id => !clientAvailable(next, id));
+  if (leaving.length) next.rentals = next.rentals.filter(id => !leaving.includes(id));
   if (shadyDeals(next)) next.stats = { ...next.stats, dirtySeconds: next.stats.dirtySeconds + 1 };
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
@@ -765,7 +768,7 @@ export function rentalProgress(state: LaunchedGame, problem: WorldProblem): numb
   return state.rentals.reduce((total, id) => total + (rentalClient(id)?.progress[problem] ?? 0), 0) * clientFactor(state);
 }
 
-/** Whether a client is willing to sign at the current integrity. Running contracts are not affected. */
+/** Whether a client works with you at the current integrity. Clients outside their range end the contract on the next tick. */
 export function clientAvailable(state: LaunchedGame, id: string): boolean {
   const client = rentalClient(id);
   return !!client &&

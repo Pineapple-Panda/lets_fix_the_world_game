@@ -983,7 +983,7 @@ test('integrity starts at 50% and decides which clients sign', () => {
   assert.equal(launched.clientAvailable(liveState({ integrity: 20 }), 'edisonx'), true, '20% is low enough');
   assert.equal(launched.clientAvailable(liveState({ integrity: 20.1 }), 'edisonx'), false);
 
-  // Clients move integrity every second; running contracts continue when it leaves a client's range.
+  // Clients move integrity every second; clients walk out when it leaves their range.
   let shady = launched.rentSlot(liveState({ ...online, integrity: 20 }), 'edisonx');
   shady = launched.tickLaunched(shady, () => 0);
   assert.ok(Math.abs(shady.integrity - 19.9) < 1e-9, 'EdisonX costs 0.1 integrity per second');
@@ -1264,18 +1264,28 @@ test('EdisonX robots: a perk only for EdisonX clients that works only while Edis
   assert.equal(launched.robotsOnSite(launched.rentSlot(buyer(), 'edisonx')), false, 'EdisonX alone brings no robots');
 });
 
+test('clients walk out when integrity leaves their range', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
+  const green = launched.tickLaunched(liveState({ ...online, integrity: 69.5, rentals: ['green-left-union', 'blue-helmets'] }), () => 0.99);
+  assert.deepEqual(green.rentals, ['blue-helmets'], 'Green-Left leaves below 70%');
+  const stays = launched.tickLaunched(liveState({ ...online, integrity: 75, rentals: ['green-left-union'] }), () => 0.99);
+  assert.deepEqual(stays.rentals, ['green-left-union']);
+  const edison = launched.tickLaunched(liveState({ ...online, integrity: 25, rentals: ['edisonx'] }), () => 0.99);
+  assert.deepEqual(edison.rentals, [], 'EdisonX leaves above 20%');
+});
+
 test('EdisonX robots resolve protests automatically', () => {
-  const protest = (perks, rentals) => greenWorldActive({ integrity: 25, rentals, serverSlots: 3,
+  const protest = (perks, rentals) => greenWorldActive({ integrity: 15, rentals, serverSlots: 3,
     perks: ['workflow-abstraction', 'network-financing', ...perks],
     programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }] });
   assert.equal(launched.tickLaunched(protest([], ['edisonx']), () => 0.99).programs[0].resistance > 20, true, 'no robots without the perk');
   let live = protest(['edisonx-robots'], ['edisonx']);
   live = launched.tickLaunched(live, () => 0.99);
-  assert.ok(Math.abs(live.programs[0].resistance - 16) < 0.01, 'about +1 distrust, -5 robots');
+  assert.ok(Math.abs(live.programs[0].resistance - 16.4) < 0.01, '+1.4 distrust at 15%, -5 robots');
   let seconds = 1;
   while (live.programs[0].resistance > 0 && seconds < 10) { live = launched.tickLaunched(live, () => 0.99); seconds++; }
   assert.equal(live.programs[0].resistance, 0, 'the robots clear the protest');
-  assert.ok(seconds <= 6, 'within about five to six seconds (20 resistance, net -4 per second)');
+  assert.ok(seconds <= 6, 'within about five to six seconds (20 resistance, net -3.6 per second)');
   const climate = live.worldProgress.climate;
   live = launched.tickLaunched(live, () => 0.99);
   assert.ok(live.worldProgress.climate > climate, 'the program runs again');
