@@ -965,6 +965,26 @@ test('integrity starts at 50% and decides which clients sign', () => {
   assert.equal(floor.integrity, 0, 'integrity never drops below 0');
 });
 
+test('the NSA rents five slots at once, always signs and costs integrity', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'] };
+  for (const integrity of [0, 50, 100]) {
+    assert.equal(launched.clientAvailable(liveState({ ...online, integrity }), 'nsa'), true, 'available at ' + integrity + '%');
+  }
+  assert.equal(launched.canRentSlot(liveState({ ...online, serverSlots: 4 }), 'nsa'), false, 'needs five free slots');
+  const busy = liveState({ ...online, serverSlots: 5, epics: [{ id: 'climate-algorithm', progress: 0, done: false }] });
+  assert.equal(launched.canRentSlot(busy, 'nsa'), false, 'a running epic takes one of the five');
+  let live = launched.rentSlot(liveState({ ...online, serverSlots: 6 }), 'nsa');
+  assert.equal(launched.rentedSlots(live), 5);
+  assert.equal(launched.usedSlots(live), 5);
+  assert.equal(launched.rentSlot(live, 'blue-helmets').rentals.length, 2, 'one slot left for a normal client');
+  assert.equal(launched.canRentSlot(launched.rentSlot(live, 'blue-helmets'), 'ministry-digital'), false);
+  live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.budget, 1000);
+  assert.ok(Math.abs(live.integrity - 49.9) < 1e-9, '-0.1 integrity per second');
+  assert.deepEqual(live.worldProgress, liveState().worldProgress, 'no solution progress');
+  assert.equal(launched.usedSlots(launched.endRental(live, 'nsa')), 0, 'ending the contract frees all five');
+});
+
 test('clients add or remove a tiny bit of solution progress every second', () => {
   const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
   let green = launched.rentSlot(liveState({ ...online, integrity: 80 }), 'green-left-union');
@@ -1009,7 +1029,7 @@ test('finished epics fill the solution progress bars', () => {
 test('rental clients and world problems are defined', () => {
   const content = require('../src/app/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
-  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'edisonx']);
+  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'edisonx', 'nsa']);
   const [green, , , edison] = content.rentalClients;
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
   assert.ok(edison.income >= 10 * content.rentalClients[2].income, 'EdisonX pays far more than anyone else');

@@ -3,7 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
   canBuyTegridy, canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
-  openLaunchedPerks, previousEpic, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
+  openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
 } from '../../game/launched';
 import { launchedPerks, products, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -50,7 +50,7 @@ export class LevelTwoComponent {
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
-      rented: state.rentals.length,
+      rented: rentedSlots(state),
       rentalIncome: rentalIncome(state),
       worldProgress: worldProblems.map(problem => ({ ...problem, value: state.worldProgress[problem.id] })),
       clients: rentalClients.map(client => ({

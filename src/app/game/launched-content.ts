@@ -76,6 +76,15 @@ export const rentalClients: RentalClient[] = [
     progress: { climate: -0.005, corruption: -0.005 },
     integrity: -0.1,
     maxIntegrity: 20
+  },
+  {
+    id: 'nsa',
+    name: 'NSA',
+    description: 'Needs five servers for “metadata research”. Pays generously, signs anytime and already knows you said yes.',
+    income: 1000,
+    progress: {},
+    integrity: -0.1,
+    slots: 5
   }
 ];
 

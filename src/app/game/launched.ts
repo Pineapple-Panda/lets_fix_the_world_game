@@ -335,7 +335,12 @@ export function runningEpics(state: LaunchedGame): number {
 
 /** Server slots taken by running epics and rented clients. */
 export function usedSlots(state: LaunchedGame): number {
-  return runningEpics(state) + state.rentals.length;
+  return runningEpics(state) + rentedSlots(state);
+}
+
+/** Server slots taken by rental contracts (some clients rent several at once). */
+export function rentedSlots(state: LaunchedGame): number {
+  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.slots ?? 1), 0);
 }
 
 /** Share of server slots in use, 0–1. */
@@ -367,7 +372,9 @@ export function clientAvailable(state: LaunchedGame, id: string): boolean {
 
 /** Renting needs Network & Financing, a free server slot and a willing client; each client rents at most one slot. */
 export function canRentSlot(state: LaunchedGame, id: string): boolean {
-  return clientAvailable(state, id) && networkOnline(state) && !state.rentals.includes(id) && usedSlots(state) < state.serverSlots;
+  const slots = rentalClient(id)?.slots ?? 1;
+  return clientAvailable(state, id) && networkOnline(state) && !state.rentals.includes(id) &&
+    usedSlots(state) + slots <= state.serverSlots;
 }
 
 export function rentSlot(state: LaunchedGame, id: string): LaunchedGame | null {

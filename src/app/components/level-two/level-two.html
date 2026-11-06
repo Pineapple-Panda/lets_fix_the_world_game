@@ -79,8 +79,8 @@
                                 (click)="rentalEnded.emit(entry.client.id)">End contract</button>
                     } @else {
                         <button class="tool-button" type="button" [disabled]="!entry.canRent"
-                                [attr.aria-label]="'Rent a server slot to ' + entry.client.name"
-                                (click)="slotRented.emit(entry.client.id)">Rent a slot</button>
+                                [attr.aria-label]="'Rent ' + ((entry.client.slots ?? 1) === 1 ? 'a server slot' : (entry.client.slots + ' server slots')) + ' to ' + entry.client.name"
+                                (click)="slotRented.emit(entry.client.id)">{{ (entry.client.slots ?? 1) === 1 ? 'Rent a slot' : 'Rent ' + entry.client.slots + ' slots' }}</button>
                     }
                 </div>
             }

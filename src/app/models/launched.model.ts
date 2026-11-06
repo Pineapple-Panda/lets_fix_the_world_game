@@ -51,6 +51,8 @@ export interface RentalClient {
   /** The client only signs a contract while integrity is within these bounds (inclusive). */
   minIntegrity?: number;
   maxIntegrity?: number;
+  /** Server slots the client rents at once (default 1). */
+  slots?: number;
 }
 
 /** A released product (e.g. Green World). Its version can be raised later. */
