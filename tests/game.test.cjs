@@ -960,8 +960,8 @@ test('rented slots pay every second and take a server slot', () => {
   live = launched.rentSlot(live, 'blue-helmets');
   assert.equal(launched.serverLoad(live), 1);
   assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), false, 'rented slots block epics too');
-  assert.equal(launched.rentalIncome(live), 210);
-  assert.equal(launched.tickLaunched(live, () => 0).budget, 210);
+  assert.equal(launched.rentalIncome(live), 1100);
+  assert.equal(launched.tickLaunched(live, () => 0).budget, 1100);
   live = launched.endRental(live, 'ministry-digital');
   assert.deepEqual(live.rentals, ['blue-helmets']);
   assert.equal(launched.endRental(live, 'ministry-digital'), null);
@@ -1066,7 +1066,7 @@ test('rental clients and world problems are defined', () => {
   const green = content.rentalClients[0];
   const edison = content.rentalClients.find(client => client.id === 'edisonx');
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
-  assert.ok(edison.income >= 10 * content.rentalClients[2].income, 'EdisonX pays far more than anyone else');
+  assert.ok(content.rentalClients.every(client => client === edison || client.income < edison.income), 'EdisonX pays more than anyone else');
   assert.ok(green.progress.climate > 0 && green.integrity > 0 && green.minIntegrity === 70);
   assert.ok(edison.progress.climate < 0 && edison.progress.corruption < 0 && edison.integrity < 0 && edison.maxIntegrity === 20);
   for (const client of content.rentalClients) {

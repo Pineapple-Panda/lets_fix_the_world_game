@@ -64,7 +64,7 @@ export const rentalClients: RentalClient[] = [
     id: 'blue-helmets',
     name: 'Office for Extremely Polite Peacekeeping',
     description: 'Brings biscuits to every negotiation. Small budget, big patience.',
-    income: 60,
+    income: 500,
     progress: { war: 0.005 },
     integrity: 0.03
   },
@@ -72,7 +72,7 @@ export const rentalClients: RentalClient[] = [
     id: 'ministry-digital',
     name: 'Ministry of Digital Transformation of Lower Bureaucratia',
     description: 'Wants a portal. Then another portal for the first portal. Pays reliably, eventually.',
-    income: 150,
+    income: 600,
     progress: { hunger: 0.003, poverty: 0.003 },
     integrity: -0.05
   },
