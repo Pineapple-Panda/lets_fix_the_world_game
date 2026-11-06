@@ -694,21 +694,21 @@ test('the focus slider trades actions against budget', () => {
   assert.equal(storage.loadLaunched(store), null, 'focus out of range');
 });
 
-test('every Add Server adds one step to the focus effect (x2, x3, x4, ...)', () => {
+test('every Add Server makes the focus effect stronger, a little faster than linear', () => {
   assert.equal(launched.focusPower(liveState()), 1);
   const oneServer = liveState({ serverSlots: 2, focus: -100 });
-  assert.equal(launched.focusPower(oneServer), 2);
-  assert.equal(launched.actionBoost(oneServer), 2, '+100% actions with one extra server');
+  assert.equal(launched.focusPower(oneServer), 2.1);
+  assert.equal(launched.actionBoost(oneServer), 2.05, '+105% actions with one extra server');
   const twoServers = liveState({ serverSlots: 3, focus: 100 });
-  assert.equal(launched.focusPower(twoServers), 3);
-  assert.equal(launched.budgetBoost(twoServers), 4, '+300% budget with two extra servers');
-  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 11, 'ten extra servers: x11, not x1024');
+  assert.equal(launched.focusPower(twoServers), 3.31);
+  assert.ok(Math.abs(launched.budgetBoost(twoServers) - 4.31) < 1e-9, '+331% budget with two extra servers');
+  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 17.92, 'ten extra servers: x17.92, not x1024');
   assert.equal(launched.actionBoost(twoServers), 0.5, 'the penalty does not grow with servers');
   assert.equal(launched.budgetBoost(liveState({ serverSlots: 3, focus: -100 })), 0, 'budget never goes below 0');
   const half = liveState({ serverSlots: 2, focus: 50 });
-  assert.equal(launched.budgetBoost(half), 2);
+  assert.equal(launched.budgetBoost(half), 2.05, 'half way: +105%');
   let live = launched.activateLaunchedPerk(liveState({ budget: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');
-  assert.equal(launched.actionBoost(live), 2, 'activating Add Server doubles it right away');
+  assert.equal(launched.actionBoost(live), 2.05, 'activating Add Server boosts it right away');
 });
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
@@ -960,8 +960,8 @@ test('rented slots pay every second and take a server slot', () => {
   live = launched.rentSlot(live, 'blue-helmets');
   assert.equal(launched.serverLoad(live), 1);
   assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), false, 'rented slots block epics too');
-  assert.equal(launched.rentalIncome(live), 1100);
-  assert.equal(launched.tickLaunched(live, () => 0).budget, 1100);
+  assert.equal(launched.rentalIncome(live), 1133, '1,100 plus 3% for the added server');
+  assert.equal(launched.tickLaunched(live, () => 0).budget, 1133);
   live = launched.endRental(live, 'ministry-digital');
   assert.deepEqual(live.rentals, ['blue-helmets']);
   assert.equal(launched.endRental(live, 'ministry-digital'), null);
@@ -1012,7 +1012,7 @@ test('the NSA rents five slots at once, always signs and costs integrity', () =>
   assert.equal(launched.rentSlot(live, 'blue-helmets').rentals.length, 2, 'one slot left for a normal client');
   assert.equal(launched.canRentSlot(launched.rentSlot(live, 'blue-helmets'), 'ministry-digital'), false);
   live = launched.tickLaunched(live, () => 0);
-  assert.equal(live.budget, 1000);
+  assert.equal(live.budget, 1150, '1,000 plus 3% for each of the five added servers');
   assert.ok(Math.abs(live.integrity - 49.9) < 1e-9, '-0.1 integrity per second');
   assert.deepEqual(live.worldProgress, liveState().worldProgress, 'no solution progress');
   assert.equal(launched.usedSlots(launched.endRental(live, 'nsa')), 0, 'ending the contract frees all five');
@@ -1626,7 +1626,7 @@ test('pitching to investors adds budget per click and grows with the income', ()
   const rich = liveState({ rentals: ['edisonx', 'nsa'], perks: ['network-financing'] });
   assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.2), '20% of the income per second');
   assert.equal(launched.pitchValue(liveState({ focus: -100 })), 100, 'no budget payout while shipping features');
-  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 400, 'three added servers: ×4');
+  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 463, 'three added servers: ×4.63');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {

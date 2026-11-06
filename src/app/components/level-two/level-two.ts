@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -83,7 +83,7 @@ export class LevelTwoComponent {
         available: clientAvailable(state, client.id),
         condition: client.minIntegrity !== undefined ? `Only works with you at ${client.minIntegrity}% integrity or more`
           : client.maxIntegrity !== undefined ? `Only works with you at ${client.maxIntegrity}% integrity or less` : '',
-        income: Math.round(client.income * factor),
+        income: clientIncome(state, client),
         effects: (Object.entries(client.progress) as [WorldProblem, number][]).map(([problem, delta]) => ({
           name: problemName(problem),
           delta: small(delta * factor)

@@ -149,9 +149,16 @@ export const maxBudgetPenalty = 1;
 
 const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
 
-/** How strong the slider's bonuses are: every server added with Add Server adds one step (×2, ×3, ×4, …). */
+/** Focus power grows by this factor per added server on top of the linear step. */
+export const focusGrowth = 1.05;
+
+/**
+ * How strong the slider's bonuses are: (1 + added servers) × 1.05 per added server, rounded to 2 decimals.
+ * 1 server ×2.1, 3 servers ×4.63, 10 servers ×17.92: a little faster than linear, far from doubling.
+ */
 export function focusPower(state: LaunchedGame): number {
-  return 1 + addedServers(state);
+  const servers = addedServers(state);
+  return Math.round((1 + servers) * focusGrowth ** servers * 100) / 100;
 }
 
 /** Multiplier for actions per second: ×1.5 fully left (more with Add Server), ×0.5 fully right. */
@@ -762,8 +769,22 @@ export function clientFactor(state: LaunchedGame): number {
 }
 
 /** Budget per second from all rented slots. */
+/** Every server added with Add Server raises client rent by 3%. */
+export const serverRentBonus = 0.03;
+
+/** Multiplier on client rent from added servers: 1 + 3% per added server. */
+export function serverRentFactor(state: LaunchedGame): number {
+  return 1 + serverRentBonus * addedServers(state);
+}
+
+/** Budget per second a client pays right now (data centres and added servers included). */
+export function clientIncome(state: LaunchedGame, client: RentalClient): number {
+  return Math.round(client.income * clientFactor(state) * serverRentFactor(state));
+}
+
 export function rentalIncome(state: LaunchedGame): number {
-  return Math.round(state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0) * clientFactor(state));
+  return Math.round(state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0) *
+    clientFactor(state) * serverRentFactor(state));
 }
 
 /** Solution progress per second the current clients add to a problem (negative slows it down). */
