@@ -181,12 +181,9 @@ export class AppComponent {
     const devMode = this.devMode();
     this.update(game => {
       // Each performance upgrade adds one extra click; in dev mode every click is worth 30 actions.
+      // Only the work the item still needs is counted: surplus clicks are lost, not credited as actions.
       const amount = clicksPerPress(game) * (devMode ? devModeActions : 1);
-      const before = game.actions;
-      // Dev mode always credits the full amount, even when the item needs less to finish.
-      if (work(game, game.selected, amount) && devMode) {
-        game.actions = Math.min(Number.MAX_SAFE_INTEGER, before + amount);
-      }
+      work(game, game.selected, amount);
     });
   }
 
