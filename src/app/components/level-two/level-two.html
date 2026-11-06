@@ -23,6 +23,7 @@
                             <small class="panel-warning">Integrity below 50%: people distrust you. Protest risk {{ panel.protestRisk }}% per program and second.</small>
                         }
 
+                        <div class="program-grid">
                         @for (entry of panel.programs; track entry.program.id) {
                             <div class="program" [class.running]="entry.running" [class.protest]="entry.protest">
                                 <strong>{{ entry.program.name }}</strong>
@@ -59,6 +60,7 @@
                                 }
                             </div>
                         }
+                        </div>
 
                         <div class="upgrade-row">
                             <span>Programs +{{ panel.boostPercent }}%</span>

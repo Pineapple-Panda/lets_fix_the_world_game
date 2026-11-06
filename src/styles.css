@@ -1095,23 +1095,52 @@ app-level-two {
     font-size: 10px;
 }
 
+.program-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
 .program {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 8px;
+    gap: 2px;
+    min-width: 0;
+    padding: 6px 7px;
     border: 1px solid var(--line);
     border-radius: 5px;
     background: var(--bg);
 }
 
 .program strong {
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.3;
 }
 
 .program small {
     color: var(--muted);
+    font-size: 9.5px;
+    line-height: 1.35;
+}
+
+/* Keep the flavour text short so two cards fit side by side. */
+.program > small:nth-of-type(1) {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.program .tool-button {
+    margin-top: 3px;
+    padding: 3px 8px;
     font-size: 10px;
+}
+
+@media (max-width: 600px) {
+    .program-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .program.running {
