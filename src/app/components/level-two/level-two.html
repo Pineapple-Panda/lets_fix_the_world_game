@@ -1,25 +1,25 @@
 @let s = state();
 @let v = view();
 <section class="ops-grid" aria-label="Operations">
-    <!-- Top left, top centre and bottom left: reserved for later features. -->
-    <div class="ops-card ops-locked ops-slot-1" aria-hidden="true"><span>Locked</span></div>
-    <div class="ops-card ops-locked ops-slot-2" aria-hidden="true"><span>Locked</span></div>
-
-    <!-- Top right: the product released by the climate goal. -->
-    @if (v.greenWorld; as greenWorld) {
-        <article class="ops-card ops-product" [class.active]="greenWorld.active" aria-labelledby="green-world-title">
-            <h2 class="product-title" id="green-world-title">{{ v.greenWorldTitle }}</h2>
-            @if (greenWorld.active) {
-                <span class="product-status">Active</span>
-            } @else {
-                <button class="tool-button product-button" type="button" (click)="productActivated.emit(greenWorld.goal)">Activate</button>
-            }
-        </article>
-    } @else {
-        <div class="ops-card ops-locked ops-slot-3" aria-hidden="true"><span>Locked</span></div>
+    <!-- Top row: Peace & Integrity, Fair Share, Green World. Each card unlocks once its product is released. -->
+    @for (card of v.productCards; track card.definition.id) {
+        @if (card.released; as released) {
+            <article class="ops-card ops-product" [class.active]="released.active" [attr.aria-labelledby]="'product-' + released.id">
+                <h2 class="product-title" [id]="'product-' + released.id">{{ card.title }}</h2>
+                @if (released.active) {
+                    <span class="product-status">Active</span>
+                } @else {
+                    <button class="tool-button product-button" type="button" [attr.aria-label]="'Activate ' + card.title"
+                            (click)="productActivated.emit(released.id)">Activate</button>
+                }
+            </article>
+        } @else {
+            <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
+        }
     }
 
-    <div class="ops-card ops-locked ops-slot-4" aria-hidden="true"><span>Locked</span></div>
+    <!-- Bottom left: kept free for later. -->
+    <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
 
     <!-- Bottom centre: development keeps running on its own. -->
     <article class="ops-card ops-dev" aria-labelledby="dev-title">
@@ -124,7 +124,7 @@
                             }
                         </div>
                     } @else {
-                        <div class="goal-feature">Feature unlocked: {{ entry.goal.feature }}</div>
+                        <div class="goal-feature">{{ entry.outcome }}</div>
                     }
                 </section>
             }

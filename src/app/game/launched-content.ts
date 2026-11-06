@@ -1,4 +1,4 @@
-import type { EpicDefinition, LaunchedPerk, WorldGoal } from '../models/launched.model.ts';
+import type { EpicDefinition, LaunchedPerk, ProductDefinition, WorldGoal } from '../models/launched.model.ts';
 
 /** Perks of level 2. Level 1 perks that were never activated are gone after the launch. */
 export const launchedPerks: LaunchedPerk[] = [
@@ -11,13 +11,22 @@ export const launchedPerks: LaunchedPerk[] = [
   }
 ];
 
-/** The problems the platform sets out to fix. Goals without epics are not shown yet. */
+/** The problems the platform sets out to fix. Hunger and poverty are tackled together. */
 export const worldGoals: WorldGoal[] = [
-  { id: 'climate', name: 'Climate Change', feature: 'Green World' },
-  { id: 'war', name: 'War', feature: 'Conflict Early Warning' },
-  { id: 'hunger', name: 'Hunger', feature: 'Food Supply Tracker' },
-  { id: 'poverty', name: 'Poverty', feature: 'Aid Distribution Network' },
-  { id: 'corruption', name: 'Corruption', feature: 'Public Spending Watchdog' }
+  { id: 'climate', name: 'Climate Change' },
+  { id: 'war', name: 'War' },
+  { id: 'corruption', name: 'Corruption' },
+  { id: 'hunger-poverty', name: 'Hunger & Poverty' }
+];
+
+/**
+ * Products appear as cards in the level 2 grid once all of their goals are reached.
+ * War and corruption share one product, so their card needs both chains.
+ */
+export const products: ProductDefinition[] = [
+  { id: 'peace-integrity', name: 'Peace & Integrity', goals: ['war', 'corruption'] },
+  { id: 'fair-share', name: 'Fair Share', goals: ['hunger-poverty'] },
+  { id: 'green-world', name: 'Green World', goals: ['climate'] }
 ];
 
 /**
@@ -73,5 +82,163 @@ export const epics: EpicDefinition[] = [
     detail: 'Wrap the model in its own versioned, rate-limited API so governments can call it without calling us.',
     cost: 700000,
     duration: 300
+  },
+
+  // War
+  {
+    id: 'war-early-warning',
+    goal: 'war',
+    title: 'Conflict Early Warning Model',
+    detail: 'Score escalation risk from news, social media and local reports, before it trends on X.',
+    cost: 8000,
+    duration: 30
+  },
+  {
+    id: 'war-satellite-imagery',
+    goal: 'war',
+    title: 'Ingest Satellite Imagery',
+    detail: 'Detect troop movements and destroyed infrastructure from orbit.',
+    cost: 15000,
+    duration: 120
+  },
+  {
+    id: 'war-verify-footage',
+    goal: 'war',
+    title: 'Verify Footage at Scale',
+    detail: 'Geolocate videos and flag deepfakes. That “breaking” clip is from a 2014 video game.',
+    cost: 20000,
+    duration: 90
+  },
+  {
+    id: 'war-safe-corridors',
+    goal: 'war',
+    title: 'Map Safe Corridors',
+    detail: 'Live routing for evacuations and aid convoys, updated as front lines move.',
+    cost: 30000,
+    duration: 120
+  },
+  {
+    id: 'war-mediation-channel',
+    goal: 'war',
+    title: 'Build a Secure Mediation Channel',
+    detail: 'End-to-end encrypted negotiation rooms. No “reply all”. Ever.',
+    cost: 40000,
+    duration: 180
+  },
+  {
+    id: 'war-ceasefire-api',
+    goal: 'war',
+    title: 'Ship the Ceasefire Monitoring API',
+    detail: 'Real-time violation reports for observers and both sides of the table.',
+    cost: 900000,
+    duration: 360
+  },
+
+  // Corruption
+  {
+    id: 'corruption-procurement-data',
+    goal: 'corruption',
+    title: 'Scrape Public Procurement Data',
+    detail: 'Collect tenders from 50 portals in 50 different PDF layouts.',
+    cost: 8000,
+    duration: 45
+  },
+  {
+    id: 'corruption-ownership-graph',
+    goal: 'corruption',
+    title: 'Build the Beneficial Ownership Graph',
+    detail: 'Find out who really owns Shell Company #4711 Ltd. (Spoiler: another shell company.)',
+    cost: 15000,
+    duration: 120
+  },
+  {
+    id: 'corruption-bid-rigging',
+    goal: 'corruption',
+    title: 'Detect Bid-Rigging Patterns',
+    detail: 'Flag tenders where the same three companies take turns winning.',
+    cost: 20000,
+    duration: 90
+  },
+  {
+    id: 'corruption-money-trail',
+    goal: 'corruption',
+    title: 'Follow the Money Across Borders',
+    detail: 'Link leaks, company registries and sanctions lists into one money trail.',
+    cost: 30000,
+    duration: 180
+  },
+  {
+    id: 'corruption-whistleblower-drops',
+    goal: 'corruption',
+    title: 'Protect Whistleblower Drops',
+    detail: 'Anonymous, Tor-friendly submissions with automatic metadata stripping.',
+    cost: 35000,
+    duration: 120
+  },
+  {
+    id: 'corruption-watchdog-api',
+    goal: 'corruption',
+    title: 'Ship the Public Spending Watchdog API',
+    detail: 'Real-time alerts for journalists and auditors when budgets go missing.',
+    cost: 800000,
+    duration: 300
+  },
+
+  // Hunger & Poverty
+  {
+    id: 'hunger-poverty-hotspots',
+    goal: 'hunger-poverty',
+    title: 'Map Food Insecurity Hotspots',
+    detail: 'Combine harvest, price and weather data into one risk map.',
+    cost: 6000,
+    duration: 30
+  },
+  {
+    id: 'hunger-poverty-crop-yields',
+    goal: 'hunger-poverty',
+    title: 'Predict Crop Yields',
+    detail: 'Train a model on soil, rain and satellite vegetation data. Farmers already know, but now it has a dashboard.',
+    cost: 12000,
+    duration: 120
+  },
+  {
+    id: 'hunger-poverty-distribution-routes',
+    goal: 'hunger-poverty',
+    title: 'Optimise Food Distribution Routes',
+    detail: 'Solve the vehicle routing problem so trucks stop driving in circles.',
+    cost: 18000,
+    duration: 90
+  },
+  {
+    id: 'hunger-poverty-market-prices',
+    goal: 'hunger-poverty',
+    title: 'Track Market Prices via SMS',
+    detail: 'Farmers text local prices; no smartphone, no app store, no problem.',
+    cost: 22000,
+    duration: 60
+  },
+  {
+    id: 'hunger-poverty-cash-transfers',
+    goal: 'hunger-poverty',
+    title: 'Launch Mobile Cash Transfers',
+    detail: 'Send aid straight to phones, with fraud checks instead of middlemen.',
+    cost: 35000,
+    duration: 180
+  },
+  {
+    id: 'hunger-poverty-microloans',
+    goal: 'hunger-poverty',
+    title: 'Score Microloans Without Bias',
+    detail: 'Credit scoring based on repayment behaviour, not on postcode or surname.',
+    cost: 45000,
+    duration: 180
+  },
+  {
+    id: 'hunger-poverty-fair-share-api',
+    goal: 'hunger-poverty',
+    title: 'Ship the Fair Share Platform API',
+    detail: 'One API for food, cash and credit that any NGO can plug into.',
+    cost: 1000000,
+    duration: 420
   }
 ];

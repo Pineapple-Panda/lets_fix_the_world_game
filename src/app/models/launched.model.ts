@@ -23,13 +23,21 @@ export interface LaunchedGame {
   products: LaunchedProduct[];
 }
 
-/** A product that a completed world goal releases. Its version can be raised later. */
+/** A released product (e.g. Green World). Its version can be raised later. */
 export interface LaunchedProduct {
-  /** World goal that released the product. */
-  goal: string;
+  /** Id of the product definition. */
+  id: string;
   major: number;
   minor: number;
   active: boolean;
+}
+
+/** A product the platform releases once all of its world goals are reached. */
+export interface ProductDefinition {
+  id: string;
+  name: string;
+  /** World goals that must all be reached. */
+  goals: string[];
 }
 
 export interface LaunchedPerk {
@@ -44,8 +52,6 @@ export interface LaunchedPerk {
 export interface WorldGoal {
   id: string;
   name: string;
-  /** What the platform gains once every epic of the goal is shipped. */
-  feature: string;
 }
 
 export interface EpicDefinition {

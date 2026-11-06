@@ -1,9 +1,10 @@
 import { Component, computed, input, output } from '@angular/core';
 import {
   addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, epicDone, goalComplete,
-  goalEpics, launchedPerkUnlocked, openLaunchedPerks, product, productTitle, runningEpics, serverLoad, serverOnline
+  goalEpics, launchedPerkUnlocked, openLaunchedPerks, product, productForGoal, productTitle, runningEpics, serverLoad,
+  serverOnline
 } from '../../game/launched';
-import { launchedPerks, worldGoals } from '../../game/launched-content';
+import { launchedPerks, products, worldGoals } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
 
 /** Level 2: a 3×2 grid of cards. The development card sits bottom centre; the others unlock over time. */
@@ -33,8 +34,11 @@ export class LevelTwoComponent {
         perk,
         unlocked: launchedPerkUnlocked(state, perk) && (perk.id !== addServerPerkId || serverOnline(state))
       })),
-      greenWorld: product(state, 'climate'),
-      greenWorldTitle: product(state, 'climate') ? productTitle(product(state, 'climate')!) : '',
+      // Top row of the grid, left to right. Each card stays locked until its product is released.
+      productCards: products.map(definition => {
+        const released = product(state, definition.id);
+        return { definition, released, title: released ? productTitle(released) : '' };
+      }),
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
@@ -44,11 +48,20 @@ export class LevelTwoComponent {
         const chain = goalEpics(goal.id);
         const next = chain.find(epic => !epicDone(state, epic.id));
         const entry = next && state.epics.find(candidate => candidate.id === next.id);
+        const target = productForGoal(goal.id);
+        const released = target && product(state, target.id);
+        // Goals that share a product (war + corruption) wait for each other.
+        const missing = target?.goals
+          .filter(other => !goalComplete(state, other))
+          .map(other => worldGoals.find(candidate => candidate.id === other)?.name ?? other) ?? [];
         return {
           goal,
           total: chain.length,
           shipped: chain.filter(epic => epicDone(state, epic.id)),
           complete: goalComplete(state, goal.id),
+          outcome: released
+            ? `Released: ${productTitle(released)}`
+            : `Goal reached · ${target?.name ?? 'The product'} also needs ${missing.join(' and ')}`,
           next: next && {
             epic: next,
             progress: entry ? Math.min(entry.progress, next.duration) : 0,

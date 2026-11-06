@@ -77,7 +77,7 @@ export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedG
 }
 
 const isProduct = (value: unknown): boolean =>
-  isObject(value) && typeof value.goal === 'string' && isCount(value.major) && isCount(value.minor) &&
+  isObject(value) && typeof value.id === 'string' && isCount(value.major) && isCount(value.minor) &&
   typeof value.active === 'boolean';
 
 const isEpic = (value: unknown): boolean =>

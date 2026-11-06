@@ -742,23 +742,68 @@ test('climate epics build on each other and unlock the feature at the end', () =
     assert.equal(launched.epicDone(live, epic.id), true, epic.id);
   }
   assert.equal(launched.goalComplete(live, 'climate'), true);
-  assert.deepEqual(live.products, [{ goal: 'climate', major: 1, minor: 0, active: false }], 'the goal releases its product');
+  assert.deepEqual(live.products, [{ id: 'green-world', major: 1, minor: 0, active: false }], 'the goal releases its product');
   assert.equal(launched.productTitle(live.products[0]), 'Green World v1.0');
   const ticked = launched.tickLaunched(live, () => 0);
   assert.equal(ticked.products.length, 1, 'a product is released only once');
-  assert.equal(launched.goalComplete(live, 'war'), false, 'goals without epics are never complete');
+  assert.equal(launched.goalComplete(live, 'war'), false, 'other goals are untouched');
+  assert.equal(launched.goalComplete(live, 'unknown'), false, 'goals without epics are never complete');
 });
 
 test('Green World can be activated once and its version can change', () => {
-  const live = liveState({ products: [{ goal: 'climate', major: 1, minor: 0, active: false }] });
-  assert.equal(launched.activateProduct(liveState(), 'climate'), null, 'nothing to activate before release');
-  const active = launched.activateProduct(live, 'climate');
+  const live = liveState({ products: [{ id: 'green-world', major: 1, minor: 0, active: false }] });
+  assert.equal(launched.activateProduct(liveState(), 'green-world'), null, 'nothing to activate before release');
+  const active = launched.activateProduct(live, 'green-world');
   assert.equal(active.products[0].active, true);
-  assert.equal(launched.activateProduct(active, 'climate'), null, 'already active');
-  assert.equal(launched.productTitle({ goal: 'climate', major: 2, minor: 3, active: true }), 'Green World v2.3');
+  assert.equal(launched.activateProduct(active, 'green-world'), null, 'already active');
+  assert.equal(launched.productTitle({ id: 'green-world', major: 2, minor: 3, active: true }), 'Green World v2.3');
   const store = memoryStorage();
   storage.saveLaunched(store, active);
   assert.deepEqual(storage.loadLaunched(store), active);
+});
+
+/** Ships every epic of a goal, one after another, on a big server. */
+function shipGoal(live, goal) {
+  for (const epic of launched.goalEpics(goal)) {
+    live = launched.startEpic({ ...live, budget: live.budget + epic.cost }, epic.id);
+    assert.ok(live, epic.id);
+    for (let second = 0; second < epic.duration; second++) live = launched.tickLaunched(live, () => 0);
+  }
+  return live;
+}
+
+test('every world goal has a chain of epics ending in a big API epic', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  assert.deepEqual(content.worldGoals.map(goal => goal.id), ['climate', 'war', 'corruption', 'hunger-poverty']);
+  assert.deepEqual(content.worldGoals.map(goal => launched.goalEpics(goal.id).length), [6, 6, 6, 7]);
+  for (const goal of content.worldGoals) {
+    const chain = launched.goalEpics(goal.id);
+    const last = chain[chain.length - 1];
+    assert.ok(last.cost >= 700000, goal.id + ' ends with an expensive epic');
+    assert.ok(chain.slice(0, -1).every(epic => epic.cost < last.cost && epic.duration > 0), goal.id);
+  }
+  const ids = content.epics.map(epic => epic.id);
+  assert.equal(new Set(ids).size, ids.length, 'epic ids are unique');
+  assert.deepEqual(content.products.map(entry => [entry.id, entry.goals]), [
+    ['peace-integrity', ['war', 'corruption']],
+    ['fair-share', ['hunger-poverty']],
+    ['green-world', ['climate']]
+  ]);
+});
+
+test('Peace & Integrity needs both war and corruption, Fair Share needs hunger & poverty', () => {
+  let live = liveState({ perks: ['workflow-abstraction'], serverSlots: 3 });
+  live = shipGoal(live, 'war');
+  assert.equal(launched.goalComplete(live, 'war'), true);
+  assert.equal(launched.product(live, 'peace-integrity'), undefined, 'war alone is not enough');
+  live = shipGoal(live, 'corruption');
+  assert.deepEqual(launched.product(live, 'peace-integrity'), { id: 'peace-integrity', major: 1, minor: 0, active: false });
+  assert.equal(launched.productTitle(launched.product(live, 'peace-integrity')), 'Peace & Integrity v1.0');
+  assert.equal(launched.product(live, 'fair-share'), undefined);
+  live = shipGoal(live, 'hunger-poverty');
+  assert.equal(launched.productTitle(launched.product(live, 'fair-share')), 'Fair Share v1.0');
+  assert.equal(launched.product(live, 'green-world'), undefined, 'climate was not touched');
+  assert.equal(launched.productForGoal('corruption').id, 'peace-integrity');
 });
 
 test('more server slots allow more epics at the same time', () => {
