@@ -8,6 +8,13 @@ export const launchedPerks: LaunchedPerk[] = [
     description: 'Wrap scripts, bots and pipelines into one orchestration layer. The board runs itself, so the server is free for epics.',
     icon: 'WF',
     actionsRequired: 35000
+  },
+  {
+    id: 'network-financing',
+    name: 'Who Pays for All This?',
+    description: 'Lovely platform. Shame about the invoice. Opens the Network & Financing desk to find partners and money.',
+    icon: 'NF',
+    actionsRequired: 250000
   }
 ];
 

@@ -2,7 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
   goalComplete, goalEpics, launchedPerkUnlocked, openLaunchedPerks, previousEpic, product, productForGoal, productTitle,
-  runningEpics, serverLoad, serverOnline
+  networkOnline, runningEpics, serverLoad, serverOnline
 } from '../../game/launched';
 import { launchedPerks, products, worldGoals } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
@@ -39,6 +39,7 @@ export class LevelTwoComponent {
         const released = product(state, definition.id);
         return { definition, released, title: released ? productTitle(released) : '' };
       }),
+      networkOnline: networkOnline(state),
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),

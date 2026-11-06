@@ -132,7 +132,16 @@ export function addServerPerk(state: LaunchedGame): LaunchedPerk {
 
 /** Level 2 perks that are not activated yet, in unlock order. Add Server is always offered again. */
 export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
-  return [...launchedPerks.filter(perk => !state.perks.includes(perk.id)), addServerPerk(state)];
+  return [...launchedPerks.filter(perk => !state.perks.includes(perk.id)), addServerPerk(state)]
+    .sort((a, b) => a.actionsRequired - b.actionsRequired);
+}
+
+/** Perk that opens the Network & Financing card. */
+export const networkPerk = 'network-financing';
+
+/** The Network & Financing desk (bottom left of the grid) opens with the "Who Pays for All This?" perk. */
+export function networkOnline(state: LaunchedGame): boolean {
+  return state.perks.includes(networkPerk);
 }
 
 export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedGame | null {

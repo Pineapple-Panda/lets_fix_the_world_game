@@ -18,8 +18,16 @@
         }
     }
 
-    <!-- Bottom left: kept free for later. -->
-    <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
+    <!-- Bottom left: the economic network that pays for the systems. Opened by "Who Pays for All This?". -->
+    @if (v.networkOnline) {
+        <article class="ops-card ops-network" aria-labelledby="network-title">
+            <h2 class="tool-heading" id="network-title">Network &amp; Financing</h2>
+            <p class="network-intro">Partners, sponsors and financing to keep the systems running. Power and data centres are not cheap.</p>
+            <small class="upgrade-hint">More is on the way: partners, funding and data centres.</small>
+        </article>
+    } @else {
+        <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
+    }
 
     <!-- Bottom centre: development keeps running on its own. -->
     <article class="ops-card ops-dev" aria-labelledby="dev-title">

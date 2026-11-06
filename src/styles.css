@@ -699,6 +699,12 @@ app-level-two {
     text-transform: uppercase;
 }
 
+.network-intro {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .ops-subheading {
     margin-top: 12px;
 }
