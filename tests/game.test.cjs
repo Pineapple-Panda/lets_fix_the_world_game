@@ -1425,6 +1425,20 @@ test('Peace & Integrity: diplomacy chatbot, tax the rich and high-tech weapons',
   assert.ok(later.budget > armed.budget + 290000, 'but pay 3,000 budget per second');
 });
 
+test('Tax the Rich triples the lawsuit chance and brings billionaire lawsuits', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  assert.equal(launched.currentLawsuitChance(peaceActive()), 0.003);
+  const taxing = launched.startProgram(peaceActive(), 'tax-the-rich');
+  assert.ok(Math.abs(launched.currentLawsuitChance(taxing) - 0.009) < 1e-12, '×3 while Tax the Rich runs');
+  assert.equal(launched.lawsuitRisk(taxing), false, 'the usual conditions do not hold');
+  const sued = launched.tickLaunched({ ...taxing, integrity: 50 }, () => 0.005);
+  const lawsuit = launched.lawsuitCase(sued);
+  assert.equal(lawsuit.product, 'peace-integrity');
+  assert.equal(lawsuit.program, 'tax-the-rich', 'the billionaires sue regardless of progress and integrity');
+  assert.equal(launched.tickLaunched({ ...peaceActive(), integrity: 50 }, () => 0.005).lawsuit, null, 'no lawsuit without the program');
+  assert.ok(content.lawsuits.filter(entry => entry.program === 'tax-the-rich').length >= 3);
+});
+
 test('weapons lobbying reveals the kill switch virus, which reveals Destroy All Weapons', () => {
   assert.equal(launched.programBlocker(peaceActive(), 'weapons-lobbying'), 'Needs Build High-Tech Weapons running');
   assert.equal(launched.programBlocker(peaceActive(), 'destroy-all-weapons'), 'Not available yet');

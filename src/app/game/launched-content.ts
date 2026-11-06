@@ -507,7 +507,8 @@ export const programs: ProgramDefinition[] = [
     cost: 1000000,
     upkeep: 0,
     rate: 0.008,
-    minIntegrity: 50
+    minIntegrity: 50,
+    lawsuitMultiplier: 3
   },
   {
     id: 'high-tech-weapons',
@@ -565,5 +566,13 @@ export const lawsuits: LawsuitCase[] = [
   { product: 'fair-share', plaintiff: 'Bananas Inc.', accusation: 'alleges that full stomachs reduce the demand for its “emergency bananas”.' },
   { product: 'fair-share', plaintiff: 'Bananas Inc.', accusation: 'sues because your pricing system rounds its banana prices to the nearest honest number.' },
   { product: 'fair-share', plaintiff: 'EdisonX', accusation: 'claims to have invented lunch, and wants royalties.' },
-  { product: 'fair-share', plaintiff: 'EdisonX', accusation: 'demands damages because your e-bike couriers are faster than its delivery rockets.' }
+  { product: 'fair-share', plaintiff: 'EdisonX', accusation: 'demands damages because your e-bike couriers are faster than its delivery rockets.' },
+  // Peace & Integrity
+  { product: 'peace-integrity', plaintiff: 'EdisonX', accusation: 'says your de-escalation chatbot cancelled three of its rocket launch parties.' },
+  { product: 'peace-integrity', plaintiff: 'Bananas Inc.', accusation: 'claims peace talks without bananas violate a 1952 catering agreement.' },
+  // Only while Tax the Rich runs: the billionaires strike back.
+  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'claims its 400 shell companies are “a hobby” and taxing hobbies is unconstitutional.' },
+  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'Mississippi Corp', accusation: 'argues that its offshore accounts are technically a boat and boats are tax-free.' },
+  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'Bananas Inc.', accusation: 'sues because your tax evidence called its yacht “suspiciously cheap”, which hurt its feelings.' },
+  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'demands its taxes back because it “basically owns the planet anyway”.' }
 ];

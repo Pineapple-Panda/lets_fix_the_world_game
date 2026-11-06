@@ -205,7 +205,8 @@ export class LevelTwoComponent {
       program.upkeep < 0 ? { text: `+${this.format(-program.upkeep)} budget/sec`, tone: 'good' } : null,
       rate ? { text: `${problemName(program.problem)} ${this.rate(rate)}%/sec`, tone: rate > 0 ? 'good' : 'bad' } : null,
       program.integrity ? { text: `Integrity ${this.rate(program.integrity)}/sec`, tone: program.integrity > 0 ? 'good' : 'bad' } : null,
-      program.slots ? { text: `${program.slots} server ${program.slots === 1 ? 'slot' : 'slots'}`, tone: '' } : null
+      program.slots ? { text: `${program.slots} server ${program.slots === 1 ? 'slot' : 'slots'}`, tone: '' } : null,
+      program.lawsuitMultiplier ? { text: `Lawsuits ×${program.lawsuitMultiplier}`, tone: 'bad' } : null
     ].filter(term => term !== null);
   }
 

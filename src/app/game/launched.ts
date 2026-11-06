@@ -778,6 +778,11 @@ export function lawsuitRisk(state: LaunchedGame, productId?: string): boolean {
     productProblems(productId).some(problem => state.worldProgress[problem] >= lawsuitProgress);
 }
 
+/** Chance per second of a new lawsuit: 0.3%, multiplied by running programs that provoke lawsuits (Tax the Rich ×3). */
+export function currentLawsuitChance(state: LaunchedGame): number {
+  return state.programs.reduce((chance, entry) => chance * (programDefinition(entry.id)?.lawsuitMultiplier ?? 1), lawsuitChance);
+}
+
 /**
  * One second of lawsuit logic (mutates `next`): a new case may be filed, a fought case counts down. When the
  * verdict comes, the case is won with 65%; a loss costs damages (the budget does not drop below 0).
@@ -798,9 +803,12 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
     next.lawsuit = null;
     return;
   }
-  // Only one lawsuit at a time; the case is drawn from those against the products at risk.
-  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => lawsuitRisk(next, entry.product));
-  if (open.length && random() < lawsuitChance) {
+  // Only one lawsuit at a time; the case is drawn from those against the products at risk. Cases tied to a
+  // program are filed while that program runs.
+  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.program
+    ? next.programs.some(running => running.id === entry.program) && productActive(next, entry.product)
+    : lawsuitRisk(next, entry.product));
+  if (open.length && random() < currentLawsuitChance(next)) {
     next.lawsuit = { caseId: open[Math.min(open.length - 1, Math.floor(random() * open.length))]!.caseId, courtSeconds: null };
     next.lawsuitsFiled = next.lawsuitsFiled + 1;
     next.verdict = null;

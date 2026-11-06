@@ -108,6 +108,8 @@ export interface ProgramDefinition {
   milestoneLabel?: string;
   /** Hidden until this epic is done. */
   requiresEpic?: string;
+  /** While the program runs, lawsuits are this many times as likely. */
+  lawsuitMultiplier?: number;
 }
 
 /** The five problems the platform sets out to fix. */
@@ -147,6 +149,8 @@ export interface LawsuitCase {
   product: string;
   plaintiff: string;
   accusation: string;
+  /** Only filed while this program runs, and then regardless of progress and integrity. */
+  program?: string;
 }
 
 export interface ProductDefinition {
