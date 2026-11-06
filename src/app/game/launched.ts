@@ -37,7 +37,8 @@ export function launch(game: Game): LaunchedGame | null {
     worldProgress: noProgress(),
     integrity: startIntegrity,
     programs: [],
-    lawsuit: null
+    lawsuit: null,
+    lawsuitsFiled: 0
   };
 }
 
@@ -61,7 +62,8 @@ export function skippedLevelTwo(): LaunchedGame {
     worldProgress: noProgress(),
     integrity: startIntegrity,
     programs: [],
-    lawsuit: null
+    lawsuit: null,
+    lawsuitsFiled: 0
   };
 }
 
@@ -675,10 +677,27 @@ export const lawsuitClimate = 30;
 export const lawsuitIntegrity = 80;
 /** Chance per second of a lawsuit while both conditions hold. */
 export const lawsuitChance = 0.003;
-/** Budget to settle out of court. */
-export const settlementCost = 500000;
-/** Seconds in court when you fight (and always win, the accusations are flimsy). */
-export const courtDuration = 90;
+/** Budget to settle the first lawsuit out of court. */
+export const baseSettlementCost = 500000;
+/** Seconds in court for the first lawsuit when you fight (and always win, the accusations are flimsy). */
+export const baseCourtDuration = 90;
+/** Every further lawsuit costs and takes this much more. */
+export const lawsuitEscalation = 1.2;
+
+/** Factor for the current lawsuit: the n-th lawsuit is 1.2^(n-1) times as expensive and long. */
+function escalation(state: LaunchedGame): number {
+  return lawsuitEscalation ** Math.max(0, state.lawsuitsFiled - 1);
+}
+
+/** Budget to settle the current lawsuit. */
+export function settlementCost(state: LaunchedGame): number {
+  return Math.round(baseSettlementCost * escalation(state));
+}
+
+/** Seconds in court for the current lawsuit. */
+export function courtDuration(state: LaunchedGame): number {
+  return Math.round(baseCourtDuration * escalation(state));
+}
 
 /** Whether companies feel threatened enough to sue. */
 export function lawsuitRisk(state: LaunchedGame): boolean {
@@ -696,6 +715,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
   }
   if (lawsuitRisk(next) && random() < lawsuitChance) {
     next.lawsuit = { caseId: Math.min(lawsuits.length - 1, Math.floor(random() * lawsuits.length)), courtSeconds: null };
+    next.lawsuitsFiled = next.lawsuitsFiled + 1;
   }
 }
 
@@ -705,12 +725,13 @@ export function lawsuitCase(state: LaunchedGame): { plaintiff: string; accusatio
 
 /** Pay to make it go away. */
 export function settleLawsuit(state: LaunchedGame): LaunchedGame | null {
-  if (!state.lawsuit || state.lawsuit.courtSeconds !== null || state.budget < settlementCost) return null;
-  return { ...state, budget: state.budget - settlementCost, lawsuit: null };
+  const cost = settlementCost(state);
+  if (!state.lawsuit || state.lawsuit.courtSeconds !== null || state.budget < cost) return null;
+  return { ...state, budget: state.budget - cost, lawsuit: null };
 }
 
 /** Go to court: free, but the programs stay frozen until the case is won. */
 export function fightLawsuit(state: LaunchedGame): LaunchedGame | null {
   if (!state.lawsuit || state.lawsuit.courtSeconds !== null) return null;
-  return { ...state, lawsuit: { ...state.lawsuit, courtSeconds: courtDuration } };
+  return { ...state, lawsuit: { ...state.lawsuit, courtSeconds: courtDuration(state) } };
 }

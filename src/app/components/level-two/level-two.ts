@@ -142,10 +142,10 @@ export class LevelTwoComponent {
       lawsuit: productId === 'green-world' && state.lawsuit ? {
         ...lawsuitCase(state)!,
         courtSeconds: state.lawsuit.courtSeconds,
-        canSettle: state.budget >= settlementCost
+        canSettle: state.budget >= settlementCost(state)
       } : null,
-      settlementCost,
-      courtDuration,
+      settlementCost: settlementCost(state),
+      courtDuration: courtDuration(state),
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
       robots: robotsOnSite(state),
       robotPower,

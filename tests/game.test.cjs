@@ -593,7 +593,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, lawsuitsFiled: 0, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -623,14 +623,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, lawsuitsFiled: 0
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, lawsuitsFiled: 0
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -1245,6 +1245,7 @@ test('flimsy lawsuits: only at 30% climate solution and more than 80% integrity'
   assert.equal(launched.lawsuitRisk(greenWorldActive({ integrity: 80.1, worldProgress: climate(30) })), true);
   const sued = launched.tickLaunched(greenWorldActive({ integrity: 90, worldProgress: climate(30) }), () => 0);
   assert.deepEqual(sued.lawsuit, { caseId: 0, courtSeconds: null }, 'a lawsuit is filed');
+  assert.equal(sued.lawsuitsFiled, 1, 'and counted');
   assert.equal(launched.lawsuitCase(sued).plaintiff, 'Mississippi Corp');
   const calm = launched.tickLaunched(greenWorldActive({ integrity: 70, worldProgress: climate(50) }), () => 0);
   assert.equal(calm.lawsuit, null, 'no lawsuits at 70% integrity');
@@ -1274,6 +1275,22 @@ test('a lawsuit freezes the programs until it is settled or won in court', () =>
   assert.equal(court.lawsuit, null, 'won after 90 seconds');
   court = launched.tickLaunched(court, () => 0.99);
   assert.ok(court.worldProgress.climate > 30, 'programs run again');
+});
+
+test('every lawsuit costs and takes 20% more than the one before', () => {
+  const nth = n => greenWorldActive({ lawsuit: { caseId: 0, courtSeconds: null }, lawsuitsFiled: n });
+  assert.equal(launched.settlementCost(nth(1)), 500000);
+  assert.equal(launched.courtDuration(nth(1)), 90);
+  assert.equal(launched.settlementCost(nth(2)), 600000);
+  assert.equal(launched.courtDuration(nth(2)), 108);
+  assert.equal(launched.settlementCost(nth(3)), 720000);
+  assert.equal(launched.courtDuration(nth(3)), 130);
+  assert.equal(launched.settleLawsuit(nth(3)).budget, 10000000 - 720000);
+  assert.equal(launched.fightLawsuit(nth(3)).lawsuit.courtSeconds, 130);
+  const climate = { ...liveState().worldProgress, climate: 30 };
+  const again = launched.tickLaunched(greenWorldActive({ integrity: 90, worldProgress: climate, lawsuitsFiled: 2 }), () => 0);
+  assert.equal(again.lawsuitsFiled, 3);
+  assert.equal(launched.settlementCost(again), 720000, 'the third lawsuit is 1.2² as expensive');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {

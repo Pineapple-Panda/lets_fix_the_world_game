@@ -36,6 +36,8 @@ export interface LaunchedGame {
   programs: ProgramState[];
   /** A lawsuit against the platform, or null. While it runs, the Green World programs are frozen. */
   lawsuit: Lawsuit | null;
+  /** Lawsuits filed so far; every new one costs and takes 20% more. */
+  lawsuitsFiled: number;
 }
 
 /** Someone drags you to court with a flimsy accusation. */
