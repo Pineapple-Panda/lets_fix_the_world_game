@@ -1400,6 +1400,11 @@ test('Fair Share fights poverty with fair wages and tax relief on food and rent'
   assert.equal(launched.programBlocker(fairShareActive({ integrity: 59 }), 'essentials-tax-relief'), 'Needs 60% integrity');
   const relief = climateAfter(launched.startProgram(fairShareActive({ integrity: 60 }), 'essentials-tax-relief'), 100);
   assert.ok(Math.abs(relief.worldProgress.poverty - 0.8) < 1e-6, 'tax relief: +0.008% poverty per second');
+  assert.equal(launched.programBlocker(fairShareActive(), 'housing-market-stabilizer'), 'Needs v1.1');
+  const housing = launched.startProgram(launched.upgradeProduct(fairShareActive(), 'fair-share'), 'housing-market-stabilizer');
+  assert.equal(housing.budget, 10000000 - 500000 - 2500000);
+  const stable = climateAfter(housing, 100);
+  assert.ok(Math.abs(stable.worldProgress.poverty - 1.5) < 1e-6, 'housing: +0.012% ×1.25 (v1.1) poverty per second');
   const poverty = { ...liveState().worldProgress, poverty: 30 };
   assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: poverty }), 'fair-share'), true, '30% poverty also draws lawsuits');
 });

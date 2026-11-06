@@ -463,6 +463,17 @@ export const programs: ProgramDefinition[] = [
     upkeep: 0,
     rate: 0.008,
     minIntegrity: 60
+  },
+  {
+    id: 'housing-market-stabilizer',
+    product: 'fair-share',
+    problem: 'poverty',
+    name: 'Stabilize the Housing Market',
+    detail: 'Matches empty flats with the people who need them, flags speculative vacancy and shows cities where to build next. Rents stop climbing faster than EdisonX rockets.',
+    cost: 2500000,
+    upkeep: 1000,
+    rate: 0.012,
+    minVersion: 1.1
   }
 ];
 
