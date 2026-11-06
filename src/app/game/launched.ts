@@ -65,14 +65,19 @@ export const maxBudgetBoost = 1;
 
 const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
 
-/** Multiplier for actions per second: up to ×1.5 with the slider fully on "ship features". */
-export function actionBoost(state: LaunchedGame): number {
-  return 1 + maxActionBoost * Math.max(0, -clampFocus(state.focus)) / focusLimit;
+/** How strong the focus slider works: doubled by every server added with the Add Server perk. */
+export function focusPower(state: LaunchedGame): number {
+  return 2 ** addedServers(state);
 }
 
-/** Multiplier for the budget payout: up to ×2 with the slider fully on "monetise". */
+/** Multiplier for actions per second: up to ×1.5 with the slider fully on "ship features" (before Add Server). */
+export function actionBoost(state: LaunchedGame): number {
+  return 1 + maxActionBoost * focusPower(state) * Math.max(0, -clampFocus(state.focus)) / focusLimit;
+}
+
+/** Multiplier for the budget payout: up to ×2 with the slider fully on "monetise" (before Add Server). */
 export function budgetBoost(state: LaunchedGame): number {
-  return 1 + maxBudgetBoost * Math.max(0, clampFocus(state.focus)) / focusLimit;
+  return 1 + maxBudgetBoost * focusPower(state) * Math.max(0, clampFocus(state.focus)) / focusLimit;
 }
 
 /** Moves the focus slider; values are clamped to -100…100. */

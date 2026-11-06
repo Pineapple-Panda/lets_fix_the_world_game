@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
+  actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, focusPower, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
   goalComplete, goalEpics, launchedPerkUnlocked, openLaunchedPerks, previousEpic, product, productForGoal, productTitle,
   networkOnline, runningEpics, serverLoad, serverOnline
 } from '../../game/launched';
@@ -42,6 +42,8 @@ export class LevelTwoComponent {
       }),
       actionBoost: Math.round((actionBoost(state) - 1) * 100),
       budgetBoost: Math.round((budgetBoost(state) - 1) * 100),
+      // Every Add Server doubles the slider effect.
+      focusPower: focusPower(state),
       networkOnline: networkOnline(state),
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),

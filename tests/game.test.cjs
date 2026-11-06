@@ -685,6 +685,21 @@ test('the focus slider boosts either actions or the budget payout', () => {
   assert.equal(storage.loadLaunched(store), null, 'focus out of range');
 });
 
+test('every Add Server doubles the focus effect', () => {
+  assert.equal(launched.focusPower(liveState()), 1);
+  const oneServer = liveState({ serverSlots: 2, focus: -100 });
+  assert.equal(launched.focusPower(oneServer), 2);
+  assert.equal(launched.actionBoost(oneServer), 2, '+100% actions with one extra server');
+  const twoServers = liveState({ serverSlots: 3, focus: 100 });
+  assert.equal(launched.focusPower(twoServers), 4);
+  assert.equal(launched.budgetBoost(twoServers), 5, '+400% budget with two extra servers');
+  assert.equal(launched.actionBoost(twoServers), 1, 'only the chosen side is boosted');
+  const half = liveState({ serverSlots: 2, focus: 50 });
+  assert.equal(launched.budgetBoost(half), 2);
+  let live = launched.activateLaunchedPerk(liveState({ actions: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');
+  assert.equal(launched.actionBoost(live), 2, 'activating Add Server doubles it right away');
+});
+
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
   assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction', 'add-server', 'network-financing']);

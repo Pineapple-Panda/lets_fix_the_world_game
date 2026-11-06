@@ -819,6 +819,11 @@ app-level-two {
     text-transform: uppercase;
 }
 
+.focus-title b {
+    margin-left: 4px;
+    color: var(--yellow);
+}
+
 .focus-slider {
     width: 100%;
     margin: 6px 0 0;

@@ -60,7 +60,7 @@
         <div class="focus" role="group" aria-labelledby="focus-title">
             <div class="focus-labels">
                 <span [class.on]="v.actionBoost > 0">Ship features <b>+{{ v.actionBoost }}% actions</b></span>
-                <span class="focus-title" id="focus-title">Focus</span>
+                <span class="focus-title" id="focus-title">Focus @if (v.focusPower > 1) {<b>×{{ v.focusPower }}</b>}</span>
                 <span [class.on]="v.budgetBoost > 0">Monetise <b>+{{ v.budgetBoost }}% budget</b></span>
             </div>
             <input class="focus-slider" type="range" min="-100" max="100" step="10" [value]="s.focus"
