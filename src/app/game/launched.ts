@@ -65,8 +65,8 @@ export function noProgress(): Record<WorldProblem, number> {
   return { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 };
 }
 
-/** A complete epic chain fills this much of its problems' progress bars; the rest is left for later features. */
-export const chainProgress = 50;
+/** Solution progress (percentage points) each finished epic adds to its problems. */
+export const epicProgress = 1.5;
 /** Integrity at the start of level 2. */
 export const startIntegrity = 50;
 
@@ -179,13 +179,13 @@ export function tickLaunched(
     }
     next.integrity = percent(next.integrity + client.integrity);
   }
-  // Epics that just finished add their share of the chain's progress.
+  // Epics that just finished add a fixed amount of solution progress to each of their problems.
   const finished = next.epics.filter(epic => epic.done && !state.epics.find(before => before.id === epic.id)?.done);
   for (const entry of finished) {
     const epic = epicDefinition(entry.id);
     const goal = epic && worldGoals.find(candidate => candidate.id === epic.goal);
     if (!epic || !goal) continue;
-    const share = chainProgress / goalEpics(goal.id).length;
+    const share = epicProgress;
     for (const problem of goal.problems) progress[problem] = percent(progress[problem] + share);
   }
   next.worldProgress = progress;

@@ -993,14 +993,15 @@ test('finished epics fill the solution progress bars', () => {
   };
   const base = liveState({ perks: ['workflow-abstraction'] });
   const plain = ship(base, 'climate-algorithm');
-  assert.ok(Math.abs(plain.worldProgress.climate - 50 / 6) < 1e-9, 'one of six climate epics: 1/6 of 50%');
+  assert.equal(launched.epicProgress, 1.5);
+  assert.ok(Math.abs(plain.worldProgress.climate - 1.5) < 1e-9, 'each finished epic adds 1.5%');
   assert.equal(plain.worldProgress.war, 0);
   const hunger = ship(base, 'hunger-poverty-hotspots');
-  assert.ok(Math.abs(hunger.worldProgress.hunger - 50 / 7) < 1e-9);
+  assert.ok(Math.abs(hunger.worldProgress.hunger - 1.5) < 1e-9);
   assert.equal(hunger.worldProgress.hunger, hunger.worldProgress.poverty, 'hunger & poverty epics help both');
   let full = base;
   for (const epic of launched.goalEpics('climate')) full = ship(full, epic.id);
-  assert.ok(Math.abs(full.worldProgress.climate - 50) < 1e-9, 'a complete chain fills half the bar');
+  assert.ok(Math.abs(full.worldProgress.climate - 9) < 1e-9, 'six climate epics: 9%');
   const capped = launched.tickLaunched(liveState({ worldProgress: { ...liveState().worldProgress, climate: 100 } }), () => 0);
   assert.equal(capped.worldProgress.climate, 100);
 });
