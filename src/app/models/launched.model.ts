@@ -60,6 +60,8 @@ export interface LaunchedStats {
   dirtySeconds: number;
   /** Bags of Tegridy bought. */
   tegridyBags: number;
+  /** Clicks on "Pitch to investors". */
+  pitches: number;
 }
 
 /** How a fought lawsuit ended. */

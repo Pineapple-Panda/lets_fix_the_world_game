@@ -92,6 +92,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
   if (game && game.stats === undefined) game.stats = { lawsuits: game.lawsuitsFiled ?? 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0,
     protestClicks: 0, dirtySeconds: 0, tegridyBags: 0 };
   if (game && game.victorySeen === undefined) game.victorySeen = false;
+  if (game && isObject(game.stats) && game.stats.pitches === undefined) game.stats = { ...game.stats, pitches: 0 };
   if (
     !game ||
     !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
@@ -105,7 +106,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.completedPrograms) || !game.completedPrograms.every(id => typeof id === 'string') ||
     !isCount(game.lawsuitsFiled) ||
     typeof game.victorySeen !== 'boolean' ||
-    !isObject(game.stats) || !['lawsuits', 'lawsuitsWon', 'lawsuitsLost', 'lawsuitsSettled', 'protestClicks', 'dirtySeconds', 'tegridyBags']
+    !isObject(game.stats) || !['lawsuits', 'lawsuitsWon', 'lawsuitsLost', 'lawsuitsSettled', 'protestClicks', 'dirtySeconds', 'tegridyBags', 'pitches']
       .every(key => isCount((game.stats as Snapshot)[key])) ||
     !(game.verdict === null || (isObject(game.verdict) && typeof game.verdict.product === 'string' &&
       typeof game.verdict.plaintiff === 'string' && typeof game.verdict.won === 'boolean' && isCount(game.verdict.damages))) ||

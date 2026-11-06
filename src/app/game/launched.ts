@@ -74,7 +74,36 @@ export function skippedLevelTwo(): LaunchedGame {
 
 /** All end-of-level counters at 0. */
 export function noStats(): LaunchedStats {
-  return { lawsuits: 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0, protestClicks: 0, dirtySeconds: 0, tegridyBags: 0 };
+  return { lawsuits: 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0, protestClicks: 0, dirtySeconds: 0, tegridyBags: 0, pitches: 0 };
+}
+
+/** A pitch is worth at least this much budget. */
+export const pitchBase = 100;
+/** A pitch is worth this share of the current budget income per second. */
+export const pitchShare = 0.2;
+
+/** Budget per second right now on average: the payout for new actions (with focus) plus client rent and program income. */
+export function budgetPerSecond(state: LaunchedGame): number {
+  const averageActions = (minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state);
+  const programIncome = state.programs.reduce((total, entry) => {
+    const program = programDefinition(entry.id);
+    return total + (program && program.upkeep < 0 ? -program.upkeep : 0);
+  }, 0);
+  return averageActions * budgetPerAction * budgetBoost(state) + rentalIncome(state) + programIncome;
+}
+
+/** Budget for one "Pitch to investors" click: 20% of the income per second, at least 100. Grows with the platform. */
+export function pitchValue(state: LaunchedGame): number {
+  return Math.max(pitchBase, Math.round(budgetPerSecond(state) * pitchShare));
+}
+
+/** One click on "Pitch to investors". */
+export function pitch(state: LaunchedGame): LaunchedGame {
+  return {
+    ...state,
+    budget: cap(state.budget + pitchValue(state)),
+    stats: { ...state.stats, pitches: state.stats.pitches + 1 }
+  };
 }
 
 /** Every problem at 0%. */
@@ -991,6 +1020,7 @@ export function victorySummary(state: LaunchedGame): { facts: { label: string; v
     { label: 'Time to fix the world', value: playTime(state.seconds) },
     { label: 'Lawsuits', value: stats.lawsuits ? `${stats.lawsuits} (${stats.lawsuitsWon} won, ${stats.lawsuitsLost} lost, ${stats.lawsuitsSettled} settled)` : 'None. Suspicious.' },
     { label: 'Talks with protesters', value: stats.protestClicks.toLocaleString('en-US') },
+    { label: 'Investor pitches', value: stats.pitches.toLocaleString('en-US') },
     { label: 'Time with shady deals', value: `${shady}%` },
     { label: 'Integrity at the end', value: `${Math.round(state.integrity)}%` },
     ...(stats.tegridyBags ? [{ label: 'Bags of Tegridy', value: stats.tegridyBags.toLocaleString('en-US') }] : [])

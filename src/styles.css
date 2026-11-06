@@ -1511,3 +1511,19 @@ footer {
     text-align: right;
     white-space: nowrap;
 }
+
+/* Level 2 clicker: pitch to investors for budget. */
+.pitch-button {
+    width: 100%;
+    margin-top: 8px;
+    background: var(--green);
+    color: #1e1f22;
+}
+
+.code-button.pitch-button:hover {
+    background: #7fd88f;
+}
+
+.pitch-button:active {
+    transform: translateY(1px);
+}

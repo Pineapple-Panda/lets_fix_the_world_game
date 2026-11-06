@@ -1604,6 +1604,17 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
   assert.equal(calm.programs[0].resistance, 0, 'no new protests');
 });
 
+test('pitching to investors adds budget per click and grows with the income', () => {
+  const start = liveState({ budget: 1000 });
+  assert.equal(launched.pitchValue(start), 100, 'at least 100: 175 actions per second only make 35');
+  const pitched = launched.pitch(start);
+  assert.equal(pitched.budget, 1100);
+  assert.equal(pitched.stats.pitches, 1);
+  const rich = liveState({ rentals: ['edisonx', 'nsa'], perks: ['network-financing'] });
+  assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.2), '20% of the income per second');
+  assert.equal(launched.pitchValue(liveState({ focus: -100 })), 100, 'no budget payout while shipping features');
+});
+
 test('Green World upgrades raise the version and make programs stronger', () => {
   let live = greenWorldActive();
   assert.equal(launched.upgradeCost(live, 'green-world'), 500000);
