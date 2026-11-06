@@ -1122,6 +1122,19 @@ test('Green World programs need the active product and follow their start rules'
   assert.deepEqual(launched.stopProgram(started, 'reforestation-network').programs, []);
 });
 
+test('the renewables optimisation program needs 1,500,000 TCA and costs 1,000 budget per second', () => {
+  const early = greenWorldActive({ actions: 1499999 });
+  assert.match(launched.programBlocker(early, 'renewables-optimization'), /1,500,000/);
+  const ready = greenWorldActive({ actions: 1500000 });
+  assert.equal(launched.programBlocker(ready, 'renewables-optimization'), null);
+  const start = launched.startProgram(ready, 'renewables-optimization');
+  assert.equal(start.budget, ready.budget, 'no start cost');
+  const live = climateAfter(start, 100);
+  const without = climateAfter({ ...start, programs: [] }, 100);
+  assert.ok(Math.abs(live.worldProgress.climate - 1) < 1e-9, '0.01% per second');
+  assert.equal(without.budget - live.budget, 1000 * 100, '1,000 budget per second');
+});
+
 test('running programs cost upkeep and add climate progress every second', () => {
   const start = launched.startProgram(greenWorldActive(), 'reforestation-network');
   const live = climateAfter(start, 100);

@@ -66,6 +66,8 @@ export interface ProgramDefinition {
   minIntegrity?: number;
   /** Only startable from this product minor version on (e.g. 1 = v1.1). */
   minMinor?: number;
+  /** Only startable once total coding actions reach this value. */
+  minActions?: number;
 }
 
 /** The five problems the platform sets out to fix. */

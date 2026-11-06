@@ -378,5 +378,16 @@ export const programs: ProgramDefinition[] = [
     upkeep: -500,
     rate: 0.001,
     integrity: -0.05
+  },
+  {
+    id: 'renewables-optimization',
+    product: 'green-world',
+    problem: 'climate',
+    name: 'Solar Panel and Wind Turbine Efficiency Optimization',
+    detail: 'Tilts every panel a few degrees and teaches turbines to face the wind. Engineers call it a breakthrough; the wind calls it Tuesday.',
+    cost: 0,
+    upkeep: 1000,
+    rate: 0.01,
+    minActions: 1500000
   }
 ];

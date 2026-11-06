@@ -453,6 +453,9 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
   if (!productActive(state, program.product)) return 'Activate the product first';
   if (state.programs.some(entry => entry.id === id)) return 'Already running';
   if (integrityBlocked(state)) return 'Integrity is 0%: nobody cooperates';
+  if (program.minActions !== undefined && state.actions < program.minActions) {
+    return `Needs ${program.minActions.toLocaleString('en-US')} total coding actions`;
+  }
   if (program.minIntegrity !== undefined && state.integrity < program.minIntegrity) {
     return `Needs ${program.minIntegrity}% integrity`;
   }
