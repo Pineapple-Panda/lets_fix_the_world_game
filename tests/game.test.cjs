@@ -643,7 +643,7 @@ test('level 2 adds 50 to 300 actions per second', () => {
   }
 });
 
-test('every 5 seconds the budget grows by the new actions times 20', () => {
+test('every 5 seconds the budget grows by the new actions (1 budget per action)', () => {
   let live = liveState({ budget: 7 });
   for (let second = 1; second <= 4; second++) {
     live = launched.tickLaunched(live, () => 0);
@@ -651,10 +651,11 @@ test('every 5 seconds the budget grows by the new actions times 20', () => {
   }
   live = launched.tickLaunched(live, () => 0);
   assert.equal(live.seconds, 5);
-  assert.equal(live.budget, 7 + 5 * 50 * 20);
+  assert.equal(launched.budgetPerAction, 1);
+  assert.equal(live.budget, 7 + 5 * 50);
   assert.equal(live.budgetActions, live.actions);
   for (let second = 1; second <= 5; second++) live = launched.tickLaunched(live, () => 0.999999);
-  assert.equal(live.budget, 7 + 5 * 50 * 20 + 5 * 300 * 20);
+  assert.equal(live.budget, 7 + 5 * 50 + 5 * 300);
 });
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {

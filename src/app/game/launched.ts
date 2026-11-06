@@ -8,7 +8,7 @@ export const minActionsPerSecond = 50;
 export const maxActionsPerSecond = 300;
 /** Every this many seconds the budget grows by the new actions times `budgetPerAction`. */
 export const budgetInterval = 5;
-export const budgetPerAction = 20;
+export const budgetPerAction = 1;
 /** Perk that brings the server (and with it the epics) into play. */
 export const serverPerk = 'workflow-abstraction';
 
@@ -54,7 +54,7 @@ const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
 
 /**
  * One second in level 2: actions grow by 50–300, running epics advance by one second of server time,
- * and every 5 seconds the budget grows by the actions gained since the last payout times 20.
+ * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction`).
  */
 export function tickLaunched(state: LaunchedGame, random: () => number = Math.random): LaunchedGame {
   const gained = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
