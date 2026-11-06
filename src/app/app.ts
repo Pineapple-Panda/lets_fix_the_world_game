@@ -15,7 +15,7 @@ import {
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { activateLaunchedPerk, canLaunch, launch, startEpic, tickLaunched } from './game/launched';
+import { activateLaunchedPerk, canLaunch, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -248,6 +248,15 @@ export class AppComponent {
       this.launched.set(null);
       this.update(() => newGame());
     }
+  }
+
+  /** Dev shortcut: jump to level 2 with 34,000 actions and 3,000 budget. Level 1 progress is dropped. */
+  skipLevel(): void {
+    if (!window.confirm('Skip to level 2? Your level 1 progress will be lost.')) return;
+    const state = skippedLevelTwo();
+    this.showIntro.set(false);
+    this.launched.set(state);
+    this.persistLaunched(state);
   }
 
   toggleDevMode(): void {

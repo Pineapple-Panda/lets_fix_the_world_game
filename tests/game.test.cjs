@@ -625,6 +625,13 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   }, 'level 1 perks do not carry over');
 });
 
+test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
+  assert.deepEqual(launched.skippedLevelTwo(), {
+    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: []
+  });
+  assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
+});
+
 test('level 2 adds 50 to 300 actions per second', () => {
   const live = liveState({ actions: 100, budgetActions: 100 });
   assert.equal(launched.tickLaunched(live, () => 0).actions, 150);

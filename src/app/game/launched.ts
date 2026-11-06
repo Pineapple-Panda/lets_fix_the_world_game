@@ -31,6 +31,23 @@ export function launch(game: Game): LaunchedGame | null {
   };
 }
 
+/** Starting values when level 1 is skipped with the dev button. */
+export const skipLevelActions = 34000;
+export const skipLevelBudget = 3000;
+
+/** Dev shortcut: a fresh level 2 state without playing level 1. */
+export function skippedLevelTwo(): LaunchedGame {
+  return {
+    actions: skipLevelActions,
+    budget: skipLevelBudget,
+    seconds: 0,
+    budgetActions: skipLevelActions,
+    perks: [],
+    serverSlots: 1,
+    epics: []
+  };
+}
+
 const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
 
 /**
