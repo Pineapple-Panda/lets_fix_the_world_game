@@ -173,12 +173,27 @@ export function epicDone(state: LaunchedGame, id: string): boolean {
   return state.epics.some(entry => entry.id === id && entry.done);
 }
 
-/** An epic becomes available once the previous epic of its goal is done (the first one right away). */
+/**
+ * All epics of a system (product) in the order they have to be done: goal by goal, e.g. war then corruption
+ * for Peace & Integrity. Different systems can run in parallel; within a system it is one epic after another.
+ */
+export function systemEpics(epicId: string): EpicDefinition[] {
+  const epic = epicDefinition(epicId);
+  if (!epic) return [];
+  const goals = productForGoal(epic.goal)?.goals ?? [epic.goal];
+  return goals.flatMap(goal => goalEpics(goal));
+}
+
+/** The epic that has to be done before this one (the previous one in its system), if any. */
+export function previousEpic(id: string): EpicDefinition | undefined {
+  const chain = systemEpics(id);
+  return chain[chain.findIndex(epic => epic.id === id) - 1];
+}
+
+/** An epic becomes available once the previous epic of its system is done (the first one right away). */
 export function epicUnlocked(state: LaunchedGame, id: string): boolean {
-  const epic = epicDefinition(id);
-  if (!epic) return false;
-  const chain = goalEpics(epic.goal);
-  const previous = chain[chain.indexOf(epic) - 1];
+  if (!epicDefinition(id)) return false;
+  const previous = previousEpic(id);
   return !previous || epicDone(state, previous.id);
 }
 

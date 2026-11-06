@@ -806,6 +806,20 @@ test('Peace & Integrity needs both war and corruption, Fair Share needs hunger &
   assert.equal(launched.productForGoal('corruption').id, 'peace-integrity');
 });
 
+test('systems run in parallel, but within a system epics follow one order', () => {
+  const live = liveState({ budget: 1000000, perks: ['workflow-abstraction'], serverSlots: 3 });
+  assert.equal(launched.canStartEpic(live, 'corruption-procurement-data'), false, 'corruption waits for the war chain');
+  assert.equal(launched.previousEpic('corruption-procurement-data').id, 'war-ceasefire-api');
+  assert.equal(launched.previousEpic('war-early-warning'), undefined);
+  assert.equal(launched.systemEpics('corruption-bid-rigging').length, 12, 'Peace & Integrity is one system of 12 epics');
+  let running = launched.startEpic(live, 'climate-algorithm');
+  running = launched.startEpic(running, 'war-early-warning');
+  running = launched.startEpic(running, 'hunger-poverty-hotspots');
+  assert.ok(running, 'one epic per system at the same time');
+  assert.equal(launched.runningEpics(running), 3);
+  assert.equal(launched.serverLoad(running), 1);
+});
+
 test('more server slots allow more epics at the same time', () => {
   const twoSlots = liveState({ budget: 100000, perks: ['workflow-abstraction'], serverSlots: 2,
     epics: [{ id: 'other-epic', progress: 0, done: false }] });

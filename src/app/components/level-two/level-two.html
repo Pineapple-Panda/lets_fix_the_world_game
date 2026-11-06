@@ -117,6 +117,8 @@
                             @if (next.running) {
                                 <div class="progress-track"><div class="progress-fill" [style.width.%]="next.progress / next.epic.duration * 100"></div></div>
                                 <small>Running · {{ clock(next.progress) }} / {{ clock(next.epic.duration) }}</small>
+                            } @else if (next.waitingFor) {
+                                <small class="epic-waiting">Starts after “{{ next.waitingFor }}”</small>
                             } @else {
                                 <button class="tool-button" type="button" [disabled]="!next.canStart"
                                         [attr.aria-label]="'Start epic ' + next.epic.title + ' for ' + next.epic.cost + ' budget'"

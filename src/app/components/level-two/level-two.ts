@@ -1,8 +1,8 @@
 import { Component, computed, input, output } from '@angular/core';
 import {
-  addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, epicDone, goalComplete,
-  goalEpics, launchedPerkUnlocked, openLaunchedPerks, product, productForGoal, productTitle, runningEpics, serverLoad,
-  serverOnline
+  addedServers, addServerPerk, addServerPerkId, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
+  goalComplete, goalEpics, launchedPerkUnlocked, openLaunchedPerks, previousEpic, product, productForGoal, productTitle,
+  runningEpics, serverLoad, serverOnline
 } from '../../game/launched';
 import { launchedPerks, products, worldGoals } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
@@ -66,7 +66,9 @@ export class LevelTwoComponent {
             epic: next,
             progress: entry ? Math.min(entry.progress, next.duration) : 0,
             running: !!entry,
-            canStart: canStartEpic(state, next.id)
+            canStart: canStartEpic(state, next.id),
+            // Within a system epics run one after another (Peace & Integrity: war first, then corruption).
+            waitingFor: epicUnlocked(state, next.id) ? undefined : previousEpic(next.id)?.title
           }
         };
       })

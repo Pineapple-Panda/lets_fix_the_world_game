@@ -916,6 +916,10 @@ app-level-two {
     background: var(--blue);
 }
 
+.epic-waiting {
+    color: var(--yellow) !important;
+}
+
 .epic-shipped {
     display: block;
     margin-bottom: 3px;
