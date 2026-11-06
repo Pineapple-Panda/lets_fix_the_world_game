@@ -1091,6 +1091,26 @@ app-level-two {
     align-self: flex-start;
 }
 
+.protest-status {
+    color: var(--ink) !important;
+}
+
+.protest-status .good { color: var(--green); }
+.protest-status .bad { color: var(--red); }
+
+.protest-track {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--surface-2);
+}
+
+.protest-fill {
+    height: 100%;
+    background: var(--red);
+    transition: width .15s;
+}
+
 .protest-button {
     background: var(--red) !important;
     color: #fff !important;

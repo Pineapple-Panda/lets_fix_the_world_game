@@ -1041,13 +1041,13 @@ test('rental clients and world problems are defined', () => {
   }
 });
 
-test('level 2 dev mode: 5-second epics and a boost of 100,000 actions and 30,000 budget', () => {
+test('level 2 dev mode: 5-second epics and a boost of 1,000,000 actions and budget', () => {
   const boosted = launched.devBoost(liveState({ actions: 40000, budget: 10, budgetActions: 40000 }));
-  assert.equal(boosted.actions, 140000);
-  assert.equal(boosted.budget, 30010);
+  assert.equal(boosted.actions, 1040000);
+  assert.equal(boosted.budget, 1000010);
   let paid = boosted;
   for (let second = 0; second < 5; second++) paid = launched.tickLaunched(paid, () => 0);
-  assert.equal(paid.budget, 30010 + 5 * 50, 'the boosted actions are not paid out as budget again');
+  assert.equal(paid.budget, 1000010 + 5 * 50, 'the boosted actions are not paid out as budget again');
 
   const epic = launched.epicDefinition('climate-collect-measurements');
   assert.equal(launched.epicDuration(epic), 120);
@@ -1082,7 +1082,7 @@ test('Green World programs need the active product and follow their start rules'
   assert.match(launched.programBlocker(greenWorldActive({ serverSlots: 1, rentals: ['blue-helmets'] }), 'methane-leak-watch'), /server slot/);
   const started = launched.startProgram(live, 'reforestation-network');
   assert.equal(started.budget, 10000000 - 200000);
-  assert.deepEqual(started.programs, [{ id: 'reforestation-network', protest: false }]);
+  assert.deepEqual(started.programs, [{ id: 'reforestation-network', resistance: 0 }]);
   assert.equal(launched.startProgram(started, 'reforestation-network'), null, 'runs only once');
   const watch = launched.startProgram(live, 'methane-leak-watch');
   assert.equal(launched.usedSlots(watch), 1, 'Methane Leak Watch takes a server slot');
@@ -1109,7 +1109,7 @@ test('at 0% integrity nothing works in the problem solving cards', () => {
   const frozen = greenWorldActive({ integrity: 0 });
   assert.match(launched.programBlocker(frozen, 'reforestation-network'), /0%/);
   assert.equal(launched.upgradeProduct(frozen, 'green-world'), null);
-  let running = greenWorldActive({ integrity: 0, programs: [{ id: 'reforestation-network', protest: false }] });
+  let running = greenWorldActive({ integrity: 0, programs: [{ id: 'reforestation-network', resistance: 0 }] });
   const budget = running.budget;
   running = climateAfter(running, 10);
   assert.equal(running.worldProgress.climate, 0, 'no progress');
@@ -1122,19 +1122,52 @@ test('below 50% integrity protests break out and stop a program until resolved',
   assert.equal(launched.protestChance(greenWorldActive({ integrity: 0 })), 0.02);
   let live = launched.startProgram(greenWorldActive({ integrity: 25 }), 'reforestation-network');
   live = launched.tickLaunched(live, () => 0);
-  assert.equal(live.programs[0].protest, true, 'a protest breaks out');
+  assert.equal(live.programs[0].resistance, 20, 'a protest needs 20 clicks');
   assert.equal(live.worldProgress.climate, 0);
-  live = climateAfter(live, 20);
-  assert.equal(live.worldProgress.climate, 0, 'no progress while protested');
   assert.equal(launched.resolveProtest(launched.startProgram(greenWorldActive(), 'reforestation-network'), 'reforestation-network'), null,
     'nothing to resolve without a protest');
-  live = launched.resolveProtest(live, 'reforestation-network');
-  assert.equal(live.programs[0].protest, false);
-  live = climateAfter(live, 1);
-  assert.ok(live.worldProgress.climate > 0, 'runs again after talking to the protesters');
   let calm = launched.startProgram(greenWorldActive({ integrity: 50 }), 'reforestation-network');
   calm = launched.tickLaunched(calm, () => 0);
-  assert.equal(calm.programs[0].protest, false, 'no protests at 50% or more');
+  assert.equal(calm.programs[0].resistance, 0, 'no protests at 50% or more');
+});
+
+test('a protest takes 20 clicks, and low integrity adds resistance every second', () => {
+  assert.equal(launched.resistanceGrowth(greenWorldActive({ integrity: 50 })), 0);
+  assert.equal(launched.resistanceGrowth(greenWorldActive({ integrity: 25 })), 1);
+  assert.ok(Math.abs(launched.resistanceGrowth(greenWorldActive({ integrity: 1 })) - 1.96) < 1e-12);
+
+  const protest = resistance => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance }] });
+  let live = protest(20);
+  for (let click = 0; click < 19; click++) live = launched.resolveProtest(live, 'reforestation-network');
+  assert.equal(live.programs[0].resistance, 1, '19 clicks are not enough');
+  live = launched.resolveProtest(live, 'reforestation-network');
+  assert.equal(live.programs[0].resistance, 0, 'the 20th click ends the protest');
+  assert.equal(launched.resolveProtest(live, 'reforestation-network'), null);
+
+  let growing = launched.tickLaunched(protest(20), () => 0.99);
+  assert.equal(growing.programs[0].resistance, 21, '+1 per second at 25% integrity');
+  growing = launched.tickLaunched(growing, () => 0.99);
+  assert.equal(growing.programs[0].resistance, 22);
+  assert.equal(growing.worldProgress.climate, 0, 'no progress while protested');
+  const steady = launched.tickLaunched(greenWorldActive({ integrity: 60, programs: [{ id: 'reforestation-network', resistance: 20 }] }), () => 0.99);
+  assert.equal(steady.programs[0].resistance, 20, 'an old protest does not grow above 50% integrity');
+});
+
+test('EdisonX sends robots that resolve protests automatically', () => {
+  const protest = rentals => greenWorldActive({ integrity: 25, rentals, serverSlots: 3,
+    programs: [{ id: 'reforestation-network', resistance: 20 }] });
+  assert.equal(launched.robotsOnSite(protest([])), false);
+  let live = protest(['edisonx']);
+  assert.equal(launched.robotsOnSite(live), true);
+  live = launched.tickLaunched(live, () => 0.99);
+  assert.ok(Math.abs(live.programs[0].resistance - 16) < 0.01, 'about +1 distrust, -5 robots');
+  let seconds = 1;
+  while (live.programs[0].resistance > 0 && seconds < 10) { live = launched.tickLaunched(live, () => 0.99); seconds++; }
+  assert.equal(live.programs[0].resistance, 0, 'the robots clear the protest');
+  assert.ok(seconds <= 6, 'within about five to six seconds (20 resistance, net -4 per second)');
+  const climate = live.worldProgress.climate;
+  live = launched.tickLaunched(live, () => 0.99);
+  assert.ok(live.worldProgress.climate > climate, 'the program runs again');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {

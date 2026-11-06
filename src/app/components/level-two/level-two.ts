@@ -2,7 +2,8 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canBuyTegridy, canStartEpic, clientAvailable, integrityBlocked, programBlocker, programBoost, programFunded, protestChance,
+  canBuyTegridy, canStartEpic, clientAvailable, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
+  protestChance, resistanceGrowth, robotPower, robotsOnSite,
   upgradeCost, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
@@ -128,6 +129,9 @@ export class LevelTwoComponent {
       progress: state.worldProgress[problem],
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
+      resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
+      robots: robotsOnSite(state),
+      robotPower,
       boostPercent: Math.round((boost - 1) * 100),
       upgradeCost: upgradeCost(state, productId),
       canUpgrade: !integrityBlocked(state) && state.budget >= upgradeCost(state, productId),
@@ -137,8 +141,9 @@ export class LevelTwoComponent {
           program,
           rate: Math.round(program.rate * boost * 100000) / 100000,
           running: !!running,
-          protest: !!running?.protest,
-          unfunded: !!running && !running.protest && !programFunded(state, program.id),
+          protest: !!running && inProtest(running),
+          clicksLeft: running ? Math.ceil(running.resistance) : 0,
+          unfunded: !!running && !inProtest(running) && !programFunded(state, program.id),
           blocker: running ? null : programBlocker(state, program.id)
         };
       })

@@ -37,8 +37,14 @@
                                 </small>
                                 @if (entry.protest) {
                                     <small class="panel-alert">✊ Protest! People are blocking this program.</small>
-                                    <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name"
-                                            (click)="protestResolved.emit(entry.program.id)">Talk to the protesters</button>
+                                    <small class="protest-status">
+                                        Resistance: {{ entry.clicksLeft }} {{ entry.clicksLeft === 1 ? 'click' : 'clicks' }} left
+                                        @if (panel.resistanceGrowth > 0) { · <span class="bad">+{{ panel.resistanceGrowth }}/sec from distrust</span> }
+                                        @if (panel.robots) { · <span class="good">EdisonX robots −{{ panel.robotPower }}/sec</span> }
+                                    </small>
+                                    <div class="protest-track"><div class="protest-fill" [style.width.%]="(entry.clicksLeft / 20) * 100 > 100 ? 100 : (entry.clicksLeft / 20) * 100"></div></div>
+                                    <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
+                                            (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
                                 } @else if (entry.running) {
                                     <small [class.panel-warning]="entry.unfunded" [class.epic-done]="!entry.unfunded && !panel.frozen">
                                         {{ panel.frozen ? 'Frozen' : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}

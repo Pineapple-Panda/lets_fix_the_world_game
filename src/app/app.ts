@@ -263,7 +263,7 @@ export class AppComponent {
 
   toggleDevMode(): void {
     this.devMode.update(on => !on);
-    // In level 2, switching dev mode on also grants +100,000 actions and +30,000 budget.
+    // In level 2, switching dev mode on also grants +1,000,000 actions and +1,000,000 budget.
     if (this.devMode()) this.updateLaunched(state => devBoost(state));
   }
 

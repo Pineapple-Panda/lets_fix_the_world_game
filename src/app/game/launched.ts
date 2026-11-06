@@ -1,7 +1,7 @@
 import type { Game } from '../models/game.model.ts';
 import type {
-  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, ProgramDefinition, RentalClient,
-  WorldProblem
+  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, ProgramDefinition, ProgramState,
+  RentalClient, WorldProblem
 } from '../models/launched.model.ts';
 import { epics, launchedPerks, products, programs, rentalClients, worldGoals } from './launched-content.ts';
 
@@ -129,8 +129,8 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
  */
 /** Dev mode: epics take at most this many seconds. */
 export const devEpicDuration = 5;
-export const devBoostActions = 100000;
-export const devBoostBudget = 30000;
+export const devBoostActions = 1000000;
+export const devBoostBudget = 1000000;
 
 /** Seconds an epic needs; capped at 5 in dev mode. */
 export function epicDuration(epic: EpicDefinition, fastEpics = false): number {
@@ -138,7 +138,7 @@ export function epicDuration(epic: EpicDefinition, fastEpics = false): number {
 }
 
 /**
- * Dev shortcut: +100,000 actions and +30,000 budget. The extra actions are not paid out as budget again.
+ * Dev shortcut: +1,000,000 actions and +1,000,000 budget. The extra actions are not paid out as budget again.
  */
 export function devBoost(state: LaunchedGame): LaunchedGame {
   return {
@@ -371,6 +371,30 @@ export function integrityBlocked(state: LaunchedGame): boolean {
   return state.integrity <= 0;
 }
 
+/** A new protest needs this many clicks to resolve. */
+export const protestResistance = 20;
+/** At 0% integrity a protest's resistance grows by this much per second (linearly less up to 50%). */
+export const maxResistanceGrowth = 2;
+/** Client whose riot-control robots resolve protests automatically. */
+export const robotClient = 'edisonx';
+/** Resistance the robots remove from every protest per second. */
+export const robotPower = 5;
+
+/** How much a protest's resistance grows per second: the lower the integrity, the faster. */
+export function resistanceGrowth(state: LaunchedGame): number {
+  if (state.integrity >= protestIntegrity) return 0;
+  return maxResistanceGrowth * (protestIntegrity - state.integrity) / protestIntegrity;
+}
+
+/** Riot-control robots on site: available while EdisonX rents a slot. */
+export function robotsOnSite(state: LaunchedGame): boolean {
+  return state.rentals.includes(robotClient);
+}
+
+export function inProtest(entry: ProgramState): boolean {
+  return entry.resistance > 0;
+}
+
 /** Chance per second that a running program is hit by a protest. */
 export function protestChance(state: LaunchedGame): number {
   if (state.integrity >= protestIntegrity) return 0;
@@ -407,7 +431,7 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
 export function startProgram(state: LaunchedGame, id: string): LaunchedGame | null {
   const program = programDefinition(id);
   if (!program || programBlocker(state, id)) return null;
-  return { ...state, budget: state.budget - program.cost, programs: [...state.programs, { id, protest: false }] };
+  return { ...state, budget: state.budget - program.cost, programs: [...state.programs, { id, resistance: 0 }] };
 }
 
 export function stopProgram(state: LaunchedGame, id: string): LaunchedGame | null {
@@ -415,10 +439,19 @@ export function stopProgram(state: LaunchedGame, id: string): LaunchedGame | nul
   return { ...state, programs: state.programs.filter(entry => entry.id !== id) };
 }
 
-/** Talks to the protesters; the program continues. */
+/** One click on "Talk to the protesters": resistance -1. At 0 the protest is over and the program continues. */
 export function resolveProtest(state: LaunchedGame, id: string): LaunchedGame | null {
-  if (!state.programs.some(entry => entry.id === id && entry.protest)) return null;
-  return { ...state, programs: state.programs.map(entry => entry.id === id ? { ...entry, protest: false } : entry) };
+  if (!state.programs.some(entry => entry.id === id && inProtest(entry))) return null;
+  return {
+    ...state,
+    programs: state.programs.map(entry => entry.id === id ? { ...entry, resistance: lowerResistance(entry.resistance, 1) } : entry)
+  };
+}
+
+/** Lowers resistance; anything below one click counts as resolved. */
+function lowerResistance(resistance: number, by: number): number {
+  const rest = resistance - by;
+  return rest < 1e-9 ? 0 : rest;
 }
 
 /** Whether a running program can pay this second's upkeep (income programs always can). */
@@ -435,12 +468,15 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
 function runPrograms(next: LaunchedGame, random: () => number): void {
   if (!next.programs.length || integrityBlocked(next)) return;
   const chance = protestChance(next);
+  const growth = resistanceGrowth(next);
+  const robots = robotsOnSite(next) ? robotPower : 0;
   const progress = { ...next.worldProgress };
   next.programs = next.programs.map(entry => {
     const program = programDefinition(entry.id);
     if (!program) return entry;
-    if (entry.protest) return entry;
-    if (chance > 0 && random() < chance) return { ...entry, protest: true };
+    // A protest grows with distrust and shrinks while robots are on site; the program waits meanwhile.
+    if (inProtest(entry)) return { ...entry, resistance: lowerResistance(entry.resistance + growth, robots) };
+    if (chance > 0 && random() < chance) return { ...entry, resistance: protestResistance };
     if (!programFunded(next, entry.id)) return entry;
     next.budget = cap(Math.max(0, next.budget - program.upkeep));
     progress[program.problem] = percent(progress[program.problem] + program.rate * programBoost(next, program.product));

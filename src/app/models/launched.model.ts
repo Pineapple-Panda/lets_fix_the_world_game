@@ -36,10 +36,11 @@ export interface LaunchedGame {
   programs: ProgramState[];
 }
 
-/** A running program. `protest` is true while a protest blocks its progress. */
+/** A running program. While `resistance` is above 0, a protest blocks its progress. */
 export interface ProgramState {
   id: string;
-  protest: boolean;
+  /** Clicks still needed to talk the protesters round (0 = no protest). */
+  resistance: number;
 }
 
 /** A long-running program in a problem solving card. */
