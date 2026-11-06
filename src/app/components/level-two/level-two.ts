@@ -3,7 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, courtWinChance, dataCentersActive, epicDefinition, epicDone, epicDuration,
-  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programRevealed,
+  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
@@ -157,6 +157,8 @@ export class LevelTwoComponent {
       !state.completedPrograms.includes(program.id) && programRevealed(state, program.id));
     return {
       productName: productDefinition(productId)?.name ?? productId,
+      // Any running program blocked by a protest; makes the card border pulse.
+      protest: state.programs.some(entry => inProtest(entry) && programDefinition(entry.id)?.product === productId),
       problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id] })),
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,

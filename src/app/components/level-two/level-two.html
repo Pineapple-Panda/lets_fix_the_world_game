@@ -5,6 +5,7 @@
     @for (card of v.productCards; track card.definition.id) {
         @if (card.released; as released) {
             <article class="ops-card ops-product" [class.active]="released.active" [class.with-panel]="!!card.panel"
+                     [class.alert-lawsuit]="!!card.panel?.lawsuit" [class.alert-protest]="!!card.panel?.protest"
                      [attr.aria-labelledby]="'product-' + released.id">
                 <h2 class="product-title" [id]="'product-' + released.id">{{ card.title }}</h2>
                 @if (card.panel; as panel) {

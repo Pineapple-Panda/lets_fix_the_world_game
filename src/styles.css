@@ -1430,3 +1430,27 @@ footer {
 .milestone-fill {
     background: var(--yellow) !important;
 }
+
+/* Product cards pulse while a lawsuit is open (purple) or a protest runs (red; wins when both). */
+.ops-card.alert-lawsuit {
+    animation: pulse-lawsuit 1.6s ease-in-out infinite;
+}
+
+.ops-card.alert-protest {
+    animation: pulse-protest 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-lawsuit {
+    0%, 100% { border-color: var(--line); box-shadow: 0 0 0 0 rgba(199, 125, 187, 0); }
+    50% { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(199, 125, 187, .35); }
+}
+
+@keyframes pulse-protest {
+    0%, 100% { border-color: var(--line); box-shadow: 0 0 0 0 rgba(247, 84, 100, 0); }
+    50% { border-color: var(--red); box-shadow: 0 0 0 3px rgba(247, 84, 100, .35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ops-card.alert-lawsuit { animation: none; border-color: var(--purple); }
+    .ops-card.alert-protest { animation: none; border-color: var(--red); }
+}
