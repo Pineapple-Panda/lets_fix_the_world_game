@@ -48,7 +48,8 @@ export class LevelTwoComponent {
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
-      openPerks: openLaunchedPerks(state).map(perk => ({
+      // Only the next three perks (by unlock threshold) are offered at a time.
+      openPerks: openLaunchedPerks(state).slice(0, 3).map(perk => ({
         perk,
         unlocked: launchedPerkAvailable(state, perk)
       })),
