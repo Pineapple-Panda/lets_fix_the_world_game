@@ -252,26 +252,48 @@ export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
   return [
     ...launchedPerks.filter(perk => !state.perks.includes(perk.id)),
     addServerPerk(state),
-    // Tegridy is on sale once Network & Financing is open, as often as you can afford it.
-    ...(networkOnline(state) ? [tegridyPerk] : [])
+    // The Tegridy deal is offered once Network & Financing is open.
+    ...(networkOnline(state) && !tegridyActive(state) ? [tegridyPerk] : [])
   ].sort((a, b) => a.actionsRequired - b.actionsRequired);
 }
 
-/** A farm in Colorado sells integrity by the bag: 100,000 budget for +10 integrity, as often as you like. */
+/**
+ * One-time deal with a small family farm in Colorado (1,000,000 budget). Afterwards integrity can be bought
+ * by the bag in Network & Financing: +1 integrity for 100,000 budget, as often as you like.
+ */
 export const tegridyPerk: LaunchedPerk = {
-  id: 'tegridy',
-  name: 'Buy Some Tegridy',
-  description: 'A small family farm in Colorado sells integrity by the bag. Nobody asks how it is grown. +10 integrity.',
+  id: 'tegridy-farms',
+  name: 'Tegridy Farms Supply Deal',
+  description: 'Sign an exclusive deal with a small family farm in Colorado. Nobody asks how their integrity is grown.',
   icon: 'TF',
   actionsRequired: 0,
-  cost: 100000
+  cost: 1000000
 };
-export const tegridyIntegrity = 10;
+export const tegridyBagCost = 100000;
+export const tegridyBagIntegrity = 1;
+
+export function tegridyActive(state: LaunchedGame): boolean {
+  return state.perks.includes(tegridyPerk.id);
+}
+
+export function canBuyTegridy(state: LaunchedGame): boolean {
+  return tegridyActive(state) && state.budget >= tegridyBagCost && state.integrity < 100;
+}
+
+/** "Buy some Tegridy": +1 integrity for 100,000 budget. */
+export function buyTegridy(state: LaunchedGame): LaunchedGame | null {
+  if (!canBuyTegridy(state)) return null;
+  return {
+    ...state,
+    budget: state.budget - tegridyBagCost,
+    integrity: Math.min(100, state.integrity + tegridyBagIntegrity)
+  };
+}
 
 /** Whether a perk can be taken right now: enough actions, enough budget for bought perks, and its prerequisites. */
 export function launchedPerkAvailable(state: LaunchedGame, perk: LaunchedPerk): boolean {
   if (perk.id === addServerPerkId) return serverOnline(state) && launchedPerkUnlocked(state, perk);
-  if (perk.id === tegridyPerk.id) return networkOnline(state) && state.budget >= (perk.cost ?? 0);
+  if (perk.id === tegridyPerk.id) return networkOnline(state) && !tegridyActive(state) && state.budget >= (perk.cost ?? 0);
   return launchedPerkUnlocked(state, perk);
 }
 
@@ -286,11 +308,7 @@ export function networkOnline(state: LaunchedGame): boolean {
 export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedGame | null {
   if (id === tegridyPerk.id) {
     if (!launchedPerkAvailable(state, tegridyPerk)) return null;
-    return {
-      ...state,
-      budget: state.budget - (tegridyPerk.cost ?? 0),
-      integrity: Math.min(100, state.integrity + tegridyIntegrity)
-    };
+    return { ...state, budget: state.budget - (tegridyPerk.cost ?? 0), perks: [...state.perks, id] };
   }
   if (id === addServerPerkId) {
     // Adding a server only makes sense once there is a server to extend.

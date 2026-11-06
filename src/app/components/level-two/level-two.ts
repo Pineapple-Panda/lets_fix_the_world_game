@@ -2,9 +2,9 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
+  canBuyTegridy, canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
-  serverOnline
+  serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
 } from '../../game/launched';
 import { launchedPerks, products, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
@@ -25,6 +25,7 @@ export class LevelTwoComponent {
   readonly focusChanged = output<number>();
   readonly slotRented = output<string>();
   readonly rentalEnded = output<string>();
+  readonly tegridyBought = output<void>();
 
   protected readonly view = computed(() => {
     const state = this.state();
@@ -32,13 +33,6 @@ export class LevelTwoComponent {
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
-      activePerks: [
-        ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
-        // Add Server can be taken many times; show it once with its count.
-        ...(addedServers(state) > 0
-          ? [{ ...addServerPerk(state), name: `Add Server ×${addedServers(state)}`, description: `${state.serverSlots} server slots in total.` }]
-          : [])
-      ],
       openPerks: openLaunchedPerks(state).map(perk => ({
         perk,
         unlocked: launchedPerkAvailable(state, perk)
@@ -73,6 +67,17 @@ export class LevelTwoComponent {
         integrity: client.integrity
       })),
       integrity: state.integrity,
+      tegridy: tegridyActive(state),
+      canBuyTegridy: canBuyTegridy(state),
+      tegridyBagCost,
+      activePerks: [
+        ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
+        ...(tegridyActive(state) ? [tegridyPerk] : []),
+        // Add Server can be taken many times; show it once with its count.
+        ...(addedServers(state) > 0
+          ? [{ ...addServerPerk(state), name: `Add Server ×${addedServers(state)}`, description: `${state.serverSlots} server slots in total.` }]
+          : [])
+      ],
       slots: state.serverSlots,
       // One block per world goal that has epics: finished epics, then the next one in the chain.
       goals: worldGoals.filter(goal => goalEpics(goal.id).length).map(goal => {

@@ -45,6 +45,15 @@
                 <b>{{ v.integrity | number: '1.0-1' }}%</b>
             </div>
             <small class="upgrade-hint">Who you work with changes how the world sees you. Some clients only sign at the right level.</small>
+            @if (v.tegridy) {
+                <div class="upgrade-row">
+                    <span>Tegridy Farms delivers by the bag.</span>
+                    <button class="tool-button tegridy-button" type="button" [disabled]="!v.canBuyTegridy"
+                            [attr.aria-label]="'Buy some Tegridy: +1 integrity for ' + v.tegridyBagCost + ' budget'"
+                            (click)="tegridyBought.emit()">Buy some Tegridy</button>
+                </div>
+                <small class="upgrade-hint">+1 integrity for {{ format(v.tegridyBagCost) }} budget.</small>
+            }
 
             <h3 class="tool-heading ops-subheading">Rent out server slots</h3>
             <small class="upgrade-hint">A rented slot pays every second but is not available for epics. Every second, clients nudge the solution progress and your integrity.</small>
@@ -144,7 +153,7 @@
                     <strong>{{ entry.perk.name }}</strong>
                     <small>{{ entry.perk.description }}</small>
                     @if (entry.perk.cost) {
-                        <small>Costs {{ format(entry.perk.cost) }} budget · can be bought again</small>
+                        <small>Costs {{ format(entry.perk.cost) }} budget</small>
                     } @else {
                         <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
                     }

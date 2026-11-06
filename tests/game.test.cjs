@@ -761,22 +761,32 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
     'perks are listed by unlock threshold (Add Server now at 300,000)');
 });
 
-test('Buy Some Tegridy: 100,000 budget for +10 integrity, as often as you like', () => {
-  const closed = liveState({ budget: 500000 });
-  assert.ok(!launched.openLaunchedPerks(closed).some(perk => perk.id === 'tegridy'), 'only sold once Network & Financing is open');
-  assert.equal(launched.activateLaunchedPerk(closed, 'tegridy'), null);
-  const open = liveState({ budget: 250000, perks: ['network-financing'] });
-  assert.ok(launched.openLaunchedPerks(open).some(perk => perk.id === 'tegridy'));
-  let live = launched.activateLaunchedPerk(open, 'tegridy');
+test('Tegridy Farms: a 1,000,000 deal, then +1 integrity per 100,000 bag', () => {
+  const closed = liveState({ budget: 5000000 });
+  assert.ok(!launched.openLaunchedPerks(closed).some(perk => perk.id === 'tegridy-farms'), 'only offered once Network & Financing is open');
+  assert.equal(launched.activateLaunchedPerk(closed, 'tegridy-farms'), null);
+  const poor = liveState({ budget: 999999, perks: ['network-financing'] });
+  assert.ok(launched.openLaunchedPerks(poor).some(perk => perk.id === 'tegridy-farms'));
+  assert.equal(launched.activateLaunchedPerk(poor, 'tegridy-farms'), null, 'costs 1,000,000');
+  assert.equal(launched.buyTegridy({ ...poor, budget: 5000000 }), null, 'no bags before the deal');
+
+  let live = launched.activateLaunchedPerk(liveState({ budget: 1250000, perks: ['network-financing'] }), 'tegridy-farms');
+  assert.equal(live.budget, 250000);
+  assert.equal(live.integrity, 50, 'the deal itself adds no integrity');
+  assert.equal(launched.tegridyActive(live), true);
+  assert.ok(!launched.openLaunchedPerks(live).some(perk => perk.id === 'tegridy-farms'), 'a one-time deal');
+  assert.equal(launched.activateLaunchedPerk(live, 'tegridy-farms'), null);
+  live = launched.buyTegridy(live);
   assert.equal(live.budget, 150000);
-  assert.equal(live.integrity, 60);
-  live = launched.activateLaunchedPerk(live, 'tegridy');
-  assert.equal(live.integrity, 70);
-  assert.equal(launched.activateLaunchedPerk(live, 'tegridy'), null, 'not enough budget left');
-  assert.deepEqual(live.perks, ['network-financing'], 'not stored as a one-time perk');
-  assert.equal(launched.clientAvailable(live, 'green-left-union'), true, 'two bags later the idealists sign');
-  const almostPure = launched.activateLaunchedPerk(liveState({ budget: 100000, perks: ['network-financing'], integrity: 95 }), 'tegridy');
-  assert.equal(almostPure.integrity, 100, 'capped at 100%');
+  assert.equal(live.integrity, 51);
+  live = launched.buyTegridy(live);
+  assert.equal(live.integrity, 52);
+  assert.equal(launched.buyTegridy(live), null, 'not enough budget for another bag');
+  const pure = liveState({ budget: 1000000, perks: ['network-financing', 'tegridy-farms'], integrity: 100 });
+  assert.equal(launched.buyTegridy(pure), null, 'nothing to buy at 100%');
+  const store = memoryStorage();
+  storage.saveLaunched(store, live);
+  assert.deepEqual(storage.loadLaunched(store), live);
 });
 
 test('epics cost budget, take server time and need a free server slot', () => {

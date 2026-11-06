@@ -764,6 +764,12 @@ app-level-two {
     background: var(--green);
 }
 
+.tegridy-button {
+    margin-top: 0;
+    background: var(--green);
+    color: #10230f;
+}
+
 .client.unavailable {
     opacity: .55;
 }

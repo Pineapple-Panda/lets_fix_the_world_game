@@ -9,7 +9,8 @@
             }
             <app-level-two [state]="live" [fastEpics]="devMode()" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
                            (productActivated)="activateProduct($event)" (focusChanged)="setFocus($event)"
-                           (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)" />
+                           (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)"
+                           (tegridyBought)="buyTegridy()" />
             <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
                 <span class="footer-actions">
                     <button id="dev-mode-live" class="dev-toggle" type="button" [class.on]="devMode()" [attr.aria-pressed]="devMode()"
