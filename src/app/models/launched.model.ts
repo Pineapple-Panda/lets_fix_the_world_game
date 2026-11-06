@@ -34,6 +34,16 @@ export interface LaunchedGame {
   integrity: number;
   /** Programs running in the problem solving cards (e.g. Green World). */
   programs: ProgramState[];
+  /** A lawsuit against the platform, or null. While it runs, the Green World programs are frozen. */
+  lawsuit: Lawsuit | null;
+}
+
+/** Someone drags you to court with a flimsy accusation. */
+export interface Lawsuit {
+  /** Index into `lawsuits` (plaintiff and accusation). */
+  caseId: number;
+  /** Seconds left in court once you decided to fight it; null while undecided. */
+  courtSeconds: number | null;
 }
 
 /** A running program. While `resistance` is above 0, a protest blocks its progress. */

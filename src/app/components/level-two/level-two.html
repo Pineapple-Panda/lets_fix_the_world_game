@@ -24,6 +24,25 @@
                                     (click)="productUpgraded.emit(released.id)">Upgrade version</button>
                         </div>
                         <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
+                        @if (panel.lawsuit; as lawsuit) {
+                            <div class="lawsuit" role="alert">
+                                <strong>⚖️ Sued by {{ lawsuit.plaintiff }}</strong>
+                                <small>{{ lawsuit.plaintiff }} {{ lawsuit.accusation }}</small>
+                                <small class="panel-warning">A court injunction freezes all Green World programs.</small>
+                                @if (lawsuit.courtSeconds !== null) {
+                                    <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. The accusations are flimsy, you will win.</small>
+                                } @else {
+                                    <div class="lawsuit-actions">
+                                        <button class="tool-button" type="button" [disabled]="!lawsuit.canSettle"
+                                                [attr.aria-label]="'Settle out of court for ' + panel.settlementCost + ' budget'"
+                                                (click)="lawsuitSettled.emit()">Settle ({{ format(panel.settlementCost) }})</button>
+                                        <button class="tool-button client-end" type="button"
+                                                [attr.aria-label]="'Fight in court for ' + panel.courtDuration + ' seconds'"
+                                                (click)="lawsuitFought.emit()">Fight in court ({{ panel.courtDuration }}s)</button>
+                                    </div>
+                                }
+                            </div>
+                        }
                         @if (panel.frozen) {
                             <small class="panel-alert">Integrity is 0%. Nobody cooperates, every program is frozen.</small>
                         } @else if (panel.protestRisk > 0) {

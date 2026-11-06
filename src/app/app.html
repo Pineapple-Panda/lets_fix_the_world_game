@@ -12,7 +12,8 @@
                            (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)"
                            (tegridyBought)="buyTegridy()" (programStarted)="startProgram($event)"
                            (programStopped)="stopProgram($event)" (protestResolved)="resolveProtest($event)"
-                           (productUpgraded)="upgradeProduct($event)" />
+                           (productUpgraded)="upgradeProduct($event)" (lawsuitSettled)="settleLawsuit()"
+                           (lawsuitFought)="fightLawsuit()" />
             <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
                 <span class="footer-actions">
                     <button id="dev-mode-live" class="dev-toggle" type="button" [class.on]="devMode()" [attr.aria-pressed]="devMode()"

@@ -16,7 +16,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
@@ -273,6 +273,14 @@ export class AppComponent {
 
   activateProduct(goal: string): void {
     this.updateLaunched(state => activateProduct(state, goal));
+  }
+
+  settleLawsuit(): void {
+    this.updateLaunched(state => settleLawsuit(state));
+  }
+
+  fightLawsuit(): void {
+    this.updateLaunched(state => fightLawsuit(state));
   }
 
   startProgram(id: string): void {

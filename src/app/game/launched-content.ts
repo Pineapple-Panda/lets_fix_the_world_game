@@ -391,3 +391,16 @@ export const programs: ProgramDefinition[] = [
     minActions: 1500000
   }
 ];
+
+/**
+ * Flimsy lawsuits. Once the climate work starts to hurt their business (30% climate solution) and the
+ * platform looks squeaky clean (integrity above 80%), these companies drag you to court.
+ */
+export const lawsuits: { plaintiff: string; accusation: string }[] = [
+  { plaintiff: 'Mississippi Corp', accusation: 'claims your reforestation network casts “unauthorised shade” on its soy fields.' },
+  { plaintiff: 'Mississippi Corp', accusation: 'says your methane maps violate the trade secret of “how much our cows burp”.' },
+  { plaintiff: 'Bananas Inc.', accusation: 'alleges that a stable climate destroys the market for its premium hurricane-resistant bananas.' },
+  { plaintiff: 'Bananas Inc.', accusation: 'sues for defamation because your dashboard listed its plantations next to the word “deforestation”.' },
+  { plaintiff: 'EdisonX', accusation: 'demands damages because your smart grid made its rocket launches look “energetically embarrassing”.' },
+  { plaintiff: 'EdisonX', accusation: 'claims to have invented wind, and wants royalties.' }
+];

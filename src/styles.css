@@ -1384,3 +1384,35 @@ footer {
         min-height: 0;
     }
 }
+
+/* ---------- Lawsuits (Green World) ---------- */
+
+.lawsuit {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--purple);
+    border-radius: 5px;
+    background: rgba(199, 125, 187, .12);
+}
+
+.lawsuit strong {
+    color: var(--purple);
+    font-size: 12px;
+}
+
+.lawsuit small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.lawsuit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.lawsuit-actions .tool-button {
+    margin-top: 3px;
+}

@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canBuyTegridy, canStartEpic, clientAvailable, clientFactor, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
+  canBuyTegridy, canStartEpic, clientAvailable, courtDuration, lawsuitCase, settlementCost, clientFactor, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
   protestChance, resistanceGrowth, robotPerk, robotPower, robotsOnSite,
   upgradeCost, dataCentersPerk, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
@@ -32,6 +32,8 @@ export class LevelTwoComponent {
   readonly programStopped = output<string>();
   readonly protestResolved = output<string>();
   readonly productUpgraded = output<string>();
+  readonly lawsuitSettled = output<void>();
+  readonly lawsuitFought = output<void>();
 
   protected readonly view = computed(() => {
     const state = this.state();
@@ -137,6 +139,13 @@ export class LevelTwoComponent {
       progress: state.worldProgress[problem],
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
+      lawsuit: productId === 'green-world' && state.lawsuit ? {
+        ...lawsuitCase(state)!,
+        courtSeconds: state.lawsuit.courtSeconds,
+        canSettle: state.budget >= settlementCost
+      } : null,
+      settlementCost,
+      courtDuration,
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
       robots: robotsOnSite(state),
       robotPower,

@@ -96,6 +96,8 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.rentals) || !game.rentals.every(id => typeof id === 'string') ||
     typeof game.integrity !== 'number' || game.integrity < 0 || game.integrity > 100 ||
     !Array.isArray(game.programs) ||
+    !(game.lawsuit === null || (isObject(game.lawsuit) && isCount(game.lawsuit.caseId) &&
+      (game.lawsuit.courtSeconds === null || isCount(game.lawsuit.courtSeconds)))) ||
     !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0) ||
     !isObject(game.worldProgress) ||
     !['climate', 'war', 'hunger', 'poverty', 'corruption'].every(problem => {

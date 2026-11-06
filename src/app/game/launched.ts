@@ -3,7 +3,7 @@ import type {
   EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, ProgramDefinition, ProgramState,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, products, programs, rentalClients, worldGoals } from './launched-content.ts';
+import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -36,7 +36,8 @@ export function launch(game: Game): LaunchedGame | null {
     rentals: [],
     worldProgress: noProgress(),
     integrity: startIntegrity,
-    programs: []
+    programs: [],
+    lawsuit: null
   };
 }
 
@@ -59,7 +60,8 @@ export function skippedLevelTwo(): LaunchedGame {
     rentals: [],
     worldProgress: noProgress(),
     integrity: startIntegrity,
-    programs: []
+    programs: [],
+    lawsuit: null
   };
 }
 
@@ -199,6 +201,7 @@ export function tickLaunched(
   }
   next.worldProgress = progress;
   runPrograms(next, random);
+  runLawsuit(next, random);
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
     .filter(definition => definition.goals.every(goal => goalComplete(next, goal)) && !product(next, definition.id))
@@ -509,6 +512,8 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
  */
 function runPrograms(next: LaunchedGame, random: () => number): void {
   if (!next.programs.length || integrityBlocked(next)) return;
+  // A court injunction freezes the Green World programs while a lawsuit is open.
+  if (next.lawsuit) return;
   const chance = protestChance(next);
   const growth = resistanceGrowth(next);
   const robots = robotsOnSite(next) ? robotPower : 0;
@@ -660,4 +665,52 @@ export function startEpic(state: LaunchedGame, id: string): LaunchedGame | null 
   const epic = epicDefinition(id);
   if (!epic || !canStartEpic(state, id)) return null;
   return { ...state, budget: state.budget - epic.cost, epics: [...state.epics, { id, progress: 0, done: false }] };
+}
+
+// ---------- Lawsuits ----------
+
+/** Lawsuits only start once climate work hurts business ... */
+export const lawsuitClimate = 30;
+/** ... and the platform looks too clean to ignore. */
+export const lawsuitIntegrity = 80;
+/** Chance per second of a lawsuit while both conditions hold. */
+export const lawsuitChance = 0.003;
+/** Budget to settle out of court. */
+export const settlementCost = 500000;
+/** Seconds in court when you fight (and always win, the accusations are flimsy). */
+export const courtDuration = 90;
+
+/** Whether companies feel threatened enough to sue. */
+export function lawsuitRisk(state: LaunchedGame): boolean {
+  return state.worldProgress.climate >= lawsuitClimate && state.integrity > lawsuitIntegrity &&
+    productActive(state, 'green-world');
+}
+
+/** One second of lawsuit logic (mutates `next`): a new case may be filed, a fought case counts down. */
+function runLawsuit(next: LaunchedGame, random: () => number): void {
+  if (next.lawsuit) {
+    if (next.lawsuit.courtSeconds === null) return;
+    const courtSeconds = next.lawsuit.courtSeconds - 1;
+    next.lawsuit = courtSeconds <= 0 ? null : { ...next.lawsuit, courtSeconds };
+    return;
+  }
+  if (lawsuitRisk(next) && random() < lawsuitChance) {
+    next.lawsuit = { caseId: Math.min(lawsuits.length - 1, Math.floor(random() * lawsuits.length)), courtSeconds: null };
+  }
+}
+
+export function lawsuitCase(state: LaunchedGame): { plaintiff: string; accusation: string } | undefined {
+  return state.lawsuit ? lawsuits[state.lawsuit.caseId] : undefined;
+}
+
+/** Pay to make it go away. */
+export function settleLawsuit(state: LaunchedGame): LaunchedGame | null {
+  if (!state.lawsuit || state.lawsuit.courtSeconds !== null || state.budget < settlementCost) return null;
+  return { ...state, budget: state.budget - settlementCost, lawsuit: null };
+}
+
+/** Go to court: free, but the programs stay frozen until the case is won. */
+export function fightLawsuit(state: LaunchedGame): LaunchedGame | null {
+  if (!state.lawsuit || state.lawsuit.courtSeconds !== null) return null;
+  return { ...state, lawsuit: { ...state.lawsuit, courtSeconds: courtDuration } };
 }
