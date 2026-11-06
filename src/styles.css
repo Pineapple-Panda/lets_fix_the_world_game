@@ -1416,3 +1416,13 @@ footer {
 .lawsuit-actions .tool-button {
     margin-top: 3px;
 }
+
+.court-button {
+    border: 1px solid var(--purple) !important;
+    background: transparent !important;
+    color: var(--purple) !important;
+}
+
+.court-button:hover {
+    background: rgba(199, 125, 187, .18) !important;
+}

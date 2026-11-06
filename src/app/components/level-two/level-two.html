@@ -36,7 +36,7 @@
                                         <button class="tool-button" type="button" [disabled]="!lawsuit.canSettle"
                                                 [attr.aria-label]="'Settle out of court for ' + panel.settlementCost + ' budget'"
                                                 (click)="lawsuitSettled.emit()">Settle ({{ format(panel.settlementCost) }})</button>
-                                        <button class="tool-button client-end" type="button"
+                                        <button class="tool-button court-button" type="button"
                                                 [attr.aria-label]="'Fight in court for ' + panel.courtDuration + ' seconds'"
                                                 (click)="lawsuitFought.emit()">Fight in court ({{ panel.courtDuration }}s)</button>
                                     </div>
