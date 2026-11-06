@@ -591,13 +591,21 @@ test('incompatible or corrupt saves are ignored', () => {
   assert.equal(storage.loadLaunched(store), null);
 });
 
-test('level 2 saves are tiny and separate from level 1', () => {
+const liveState = overrides => ({
+  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], ...overrides
+});
+
+test('level 2 saves are small and separate from level 1', () => {
   const store = memoryStorage();
-  const raw = storage.saveLaunched(store, { actions: 5000, budget: 42 });
-  assert.deepEqual(JSON.parse(raw), { level: 2, game: { actions: 5000, budget: 42 } });
-  assert.deepEqual(storage.loadLaunched(store), { actions: 5000, budget: 42 });
+  const state = liveState({ budget: 42, perks: ['workflow-abstraction'], epics: [{ id: 'climate-algorithm', progress: 3, done: false }] });
+  const raw = storage.saveLaunched(store, state);
+  assert.deepEqual(JSON.parse(raw), { level: 2, game: state });
+  assert.ok(raw.length < 300);
+  assert.deepEqual(storage.loadLaunched(store), state);
   assert.equal(storage.loadGame(store), null);
-  store.data.set(storage.saveKey, JSON.stringify({ level: 2, game: { actions: -1, budget: 0 } }));
+  store.data.set(storage.saveKey, JSON.stringify({ level: 2, game: { actions: 5000, budget: 42 } }));
+  assert.equal(storage.loadLaunched(store), null, 'the old two-field level 2 save is incompatible');
+  store.data.set(storage.saveKey, JSON.stringify({ level: 2, game: liveState({ actions: -1 }) }));
   assert.equal(storage.loadLaunched(store), null);
 });
 
@@ -607,23 +615,85 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   const state = newGame();
   state.actions = 17000;
   assert.equal(launched.canLaunch(state), false);
-  grant(state, 'earl');
+  grant(state, 'earl', 'code-assistant', 'auto-deploy');
   state.testCoverage = 99999;
   assert.equal(launched.launch(state), null);
   state.testCoverage = 100000;
   state.budget = 1234;
-  assert.deepEqual(launched.launch(state), { actions: 17000, budget: 1234 });
+  assert.deepEqual(launched.launch(state), {
+    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: []
+  }, 'level 1 perks do not carry over');
 });
 
 test('level 2 adds 50 to 300 actions per second', () => {
-  const live = { actions: 100, budget: 7 };
-  assert.deepEqual(launched.tickLaunched(live, () => 0), { actions: 150, budget: 7 });
-  assert.deepEqual(launched.tickLaunched(live, () => 0.999999), { actions: 400, budget: 7 });
-  assert.deepEqual(live, { actions: 100, budget: 7 }, 'ticks do not mutate');
+  const live = liveState({ actions: 100, budgetActions: 100 });
+  assert.equal(launched.tickLaunched(live, () => 0).actions, 150);
+  assert.equal(launched.tickLaunched(live, () => 0.999999).actions, 400);
+  assert.equal(live.actions, 100, 'ticks do not mutate');
   for (let index = 0; index < 200; index++) {
     const gained = launched.tickLaunched(live).actions - live.actions;
     assert.ok(Number.isInteger(gained) && gained >= 50 && gained <= 300);
   }
+});
+
+test('every 5 seconds the budget grows by the new actions times 20', () => {
+  let live = liveState({ budget: 7 });
+  for (let second = 1; second <= 4; second++) {
+    live = launched.tickLaunched(live, () => 0);
+    assert.equal(live.budget, 7, 'no payout before 5 seconds');
+  }
+  live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.seconds, 5);
+  assert.equal(live.budget, 7 + 5 * 50 * 20);
+  assert.equal(live.budgetActions, live.actions);
+  for (let second = 1; second <= 5; second++) live = launched.tickLaunched(live, () => 0.999999);
+  assert.equal(live.budget, 7 + 5 * 50 * 20 + 5 * 300 * 20);
+});
+
+test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
+  const live = liveState({ actions: 34999 });
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['workflow-abstraction']);
+  assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
+  assert.equal(launched.serverOnline(live), false);
+  const ready = liveState({ actions: 35000 });
+  const active = launched.activateLaunchedPerk(ready, 'workflow-abstraction');
+  assert.deepEqual(active.perks, ['workflow-abstraction']);
+  assert.equal(launched.serverOnline(active), true);
+  assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
+  assert.deepEqual(launched.openLaunchedPerks(active), []);
+  assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
+});
+
+test('epics cost budget, take server time and need a free server slot', () => {
+  const offline = liveState({ budget: 10000 });
+  assert.equal(launched.startEpic(offline, 'climate-algorithm'), null, 'needs the server');
+  const poor = liveState({ budget: 4999, perks: ['workflow-abstraction'] });
+  assert.equal(launched.canStartEpic(poor, 'climate-algorithm'), false);
+  assert.equal(launched.serverLoad(poor), 0);
+
+  let live = launched.startEpic(liveState({ budget: 6000, perks: ['workflow-abstraction'] }), 'climate-algorithm');
+  assert.equal(live.budget, 1000);
+  assert.equal(launched.serverLoad(live), 1, 'one epic fills the single slot');
+  assert.equal(launched.startEpic(live, 'climate-algorithm'), null, 'an epic runs only once');
+  assert.equal(launched.epicDefinition('climate-algorithm').duration, 20);
+  for (let second = 1; second < 20; second++) live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.epics[0].progress, 19);
+  assert.equal(live.epics[0].done, false);
+  live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.epics[0].done, true);
+  assert.equal(launched.serverLoad(live), 0, 'a finished epic frees its slot');
+  live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.epics[0].progress, 20, 'finished epics stop counting');
+});
+
+test('more server slots allow more epics at the same time', () => {
+  const twoSlots = liveState({ budget: 100000, perks: ['workflow-abstraction'], serverSlots: 2,
+    epics: [{ id: 'other-epic', progress: 0, done: false }] });
+  assert.equal(launched.serverLoad(twoSlots), 0.5);
+  assert.equal(launched.canStartEpic(twoSlots, 'climate-algorithm'), true);
+  const full = liveState({ budget: 100000, perks: ['workflow-abstraction'],
+    epics: [{ id: 'other-epic', progress: 0, done: false }] });
+  assert.equal(launched.canStartEpic(full, 'climate-algorithm'), false);
 });
 
 // ---------- versions ----------

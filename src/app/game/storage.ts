@@ -71,13 +71,22 @@ export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
 }
 
 export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedGame): string {
-  const value = JSON.stringify({ level: 2, game: { actions: state.actions, budget: state.budget } });
+  const value = JSON.stringify({ level: 2, game: state });
   storage.setItem(saveKey, value);
   return value;
 }
 
+const isEpic = (value: unknown): boolean =>
+  isObject(value) && typeof value.id === 'string' && isCount(value.progress) && typeof value.done === 'boolean';
+
 /** The level 2 state, or null when there is no compatible level 2 save. */
 export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
   const game = readSnapshot(storage, 2);
-  return game && isCount(game.actions) && isCount(game.budget) ? { actions: game.actions, budget: game.budget } : null;
+  if (
+    !game ||
+    !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
+    !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
+    !Array.isArray(game.epics) || !game.epics.every(isEpic)
+  ) return null;
+  return game as unknown as LaunchedGame;
 }

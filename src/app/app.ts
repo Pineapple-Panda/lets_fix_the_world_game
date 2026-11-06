@@ -4,6 +4,7 @@ import { BoardComponent } from './components/board/board';
 import { EarlComponent } from './components/earl/earl';
 import { IntroComponent } from './components/intro/intro';
 import { LaunchComponent } from './components/launch/launch';
+import { LevelTwoComponent } from './components/level-two/level-two';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
@@ -14,7 +15,7 @@ import {
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { canLaunch, launch, tickLaunched } from './game/launched';
+import { activateLaunchedPerk, canLaunch, launch, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -28,7 +29,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, PerksComponent, StatsComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -251,6 +252,24 @@ export class AppComponent {
 
   toggleDevMode(): void {
     this.devMode.update(on => !on);
+  }
+
+  activateLaunchedPerk(id: string): void {
+    this.updateLaunched(state => activateLaunchedPerk(state, id));
+  }
+
+  startEpic(id: string): void {
+    this.updateLaunched(state => startEpic(state, id));
+  }
+
+  /** Applies a level 2 action; a null result means the action was not possible and nothing changes. */
+  private updateLaunched(change: (state: LaunchedGame) => LaunchedGame | null): void {
+    const current = this.launched();
+    if (!current) return;
+    const next = change(current);
+    if (!next) return;
+    this.launched.set(next);
+    this.persistLaunched(next);
   }
 
   /** Leaves level 1 for good: the save is reduced to actions and budget. */

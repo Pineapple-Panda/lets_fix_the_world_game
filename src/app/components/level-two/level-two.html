@@ -1,0 +1,104 @@
+@let s = state();
+@let v = view();
+<section class="ops-grid" aria-label="Operations">
+    <!-- Top row and bottom left: reserved for later features. -->
+    @for (slot of [1, 2, 3, 4]; track slot) {
+        <div class="ops-card ops-locked" [class]="'ops-slot-' + slot" aria-hidden="true">
+            <span>Locked</span>
+        </div>
+    }
+
+    <!-- Bottom centre: development keeps running on its own. -->
+    <article class="ops-card ops-dev" aria-labelledby="dev-title">
+        <h2 class="tool-heading" id="dev-title">Development</h2>
+        <svg class="monitor" viewBox="0 0 240 160" role="img" aria-label="The board keeps working itself off: tasks move from to do to done">
+            <rect class="monitor-frame" x="6" y="6" width="228" height="128" rx="8" />
+            <rect class="monitor-screen" x="16" y="16" width="208" height="108" rx="3" />
+            <path class="monitor-stand" d="M104 134 L98 152 H142 L136 134 Z" />
+            <rect class="monitor-foot" x="84" y="150" width="72" height="5" rx="2" />
+            <!-- three board columns -->
+            <line class="monitor-divider" x1="85" y1="22" x2="85" y2="118" />
+            <line class="monitor-divider" x1="155" y1="22" x2="155" y2="118" />
+            <rect class="monitor-heading" x="24" y="24" width="30" height="4" rx="2" />
+            <rect class="monitor-heading" x="93" y="24" width="38" height="4" rx="2" />
+            <rect class="monitor-heading" x="163" y="24" width="24" height="4" rx="2" />
+            <!-- tasks flowing from left to right -->
+            @for (task of [0, 1, 2, 3, 4, 5]; track task) {
+                <rect class="monitor-task" [class]="'monitor-task-' + task" x="22" [attr.y]="36 + (task % 3) * 26" width="56" height="18" rx="3" />
+            }
+        </svg>
+
+        <div class="live-stats">
+            <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong></div>
+            <div class="live-stat">
+                <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
+                <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
+            </div>
+        </div>
+
+        <h3 class="tool-heading ops-subheading">Perks</h3>
+        @if (v.activePerks.length) {
+            <div class="active-tools">
+                @for (perk of v.activePerks; track perk.id) {
+                    <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
+                          [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
+                }
+            </div>
+        }
+        @for (entry of v.openPerks; track entry.perk.id) {
+            <div class="tool" [class.available]="entry.unlocked">
+                <span class="tool-icon" aria-hidden="true">{{ entry.perk.icon }}</span>
+                <div class="tool-details">
+                    <strong>{{ entry.perk.name }}</strong>
+                    <small>{{ entry.perk.description }}</small>
+                    <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    @if (entry.unlocked) {
+                        <button class="tool-button" type="button" [attr.aria-label]="'Activate ' + entry.perk.name"
+                                (click)="perkActivated.emit(entry.perk.id)">Activate</button>
+                    }
+                </div>
+            </div>
+        } @empty {
+            <div class="empty">No open perks.</div>
+        }
+    </article>
+
+    <!-- Bottom right: the server and its epics, once the workflow is abstracted. -->
+    @if (v.serverOnline) {
+        <article class="ops-card ops-server" aria-labelledby="server-title">
+            <h2 class="tool-heading" id="server-title">Server</h2>
+            <div class="upgrade-row">
+                <span>Server load</span>
+                <strong id="server-load">{{ v.load }}% · {{ v.running }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}</strong>
+            </div>
+            <div class="load-track" role="meter" aria-label="Server load" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.load">
+                <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>
+            </div>
+
+            <h3 class="tool-heading ops-subheading">Epics</h3>
+            @for (entry of v.epics; track entry.epic.id) {
+                <div class="epic" [class.running]="entry.status === 'running'" [class.done]="entry.status === 'done'">
+                    <strong>{{ entry.epic.title }}</strong>
+                    <small>{{ entry.epic.detail }}</small>
+                    <small>{{ format(entry.epic.cost) }} budget · {{ entry.epic.duration }}s server time</small>
+                    @switch (entry.status) {
+                        @case ('open') {
+                            <button class="tool-button" type="button" [disabled]="!entry.canStart"
+                                    [attr.aria-label]="'Start epic ' + entry.epic.title + ' for ' + entry.epic.cost + ' budget'"
+                                    (click)="epicStarted.emit(entry.epic.id)">Start epic</button>
+                        }
+                        @case ('running') {
+                            <div class="progress-track"><div class="progress-fill" [style.width.%]="entry.progress / entry.epic.duration * 100"></div></div>
+                            <small>Running · {{ entry.progress }} / {{ entry.epic.duration }}s</small>
+                        }
+                        @case ('done') {
+                            <small class="epic-done">✓ Shipped</small>
+                        }
+                    }
+                </div>
+            }
+        </article>
+    } @else {
+        <div class="ops-card ops-locked ops-server-locked" aria-hidden="true"><span>Locked</span></div>
+    }
+</section>

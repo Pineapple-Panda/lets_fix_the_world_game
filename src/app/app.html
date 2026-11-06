@@ -7,10 +7,7 @@
             @if (saveWarning()) {
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
-            <section class="live-stats" aria-label="Live statistics">
-                <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ live.actions.toLocaleString('en-US') }}</strong></div>
-                <div class="live-stat"><span>Budget</span><strong id="live-budget">{{ live.budget.toLocaleString('en-US') }}</strong></div>
-            </section>
+            <app-level-two [state]="live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)" />
             <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
                 <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
             </footer>

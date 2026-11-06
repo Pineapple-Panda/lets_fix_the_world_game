@@ -662,23 +662,199 @@ app-board {
     cursor: not-allowed;
 }
 
-/* ---------- Level 2: live stats only ---------- */
+/* ---------- Level 2: operations grid ---------- */
 
-.live-stats {
-    display: flex;
+app-level-two {
+    display: block;
     flex: 1;
-    flex-wrap: wrap;
-    align-content: center;
-    justify-content: center;
-    gap: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-color: var(--line-strong) transparent;
 }
 
-.live-stat {
-    min-width: 240px;
-    padding: 20px 24px;
+.ops-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: minmax(120px, auto) auto;
+    gap: 10px;
+    min-height: 100%;
+}
+
+.ops-card {
+    min-width: 0;
+    padding: 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
+}
+
+.ops-locked {
+    display: grid;
+    place-items: center;
+    border-style: dashed;
+    background: transparent;
+    color: var(--faint);
+    font: 600 11px var(--mono);
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.ops-subheading {
+    margin-top: 12px;
+}
+
+.monitor {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    margin: 4px auto 10px;
+}
+
+.monitor-frame {
+    fill: var(--surface-2);
+    stroke: var(--line-strong);
+}
+
+.monitor-screen {
+    fill: var(--bg);
+}
+
+.monitor-stand, .monitor-foot {
+    fill: var(--line-strong);
+}
+
+.monitor-divider {
+    stroke: var(--line);
+}
+
+.monitor-heading {
+    fill: var(--faint);
+}
+
+.monitor-task {
+    fill: var(--blue-soft);
+    stroke: var(--blue);
+    stroke-width: 1;
+    opacity: 0;
+    animation: monitor-task-flow 6s linear infinite;
+}
+
+.monitor-task-1 { animation-delay: -1s; }
+.monitor-task-2 { animation-delay: -2s; }
+.monitor-task-3 { animation-delay: -3s; }
+.monitor-task-4 { animation-delay: -4s; }
+.monitor-task-5 { animation-delay: -5s; }
+
+/* A task card enters TO DO, slides through IN PROGRESS and fades out in DONE. */
+@keyframes monitor-task-flow {
+    0% { transform: translateX(0); opacity: 0; fill: var(--blue-soft); }
+    8% { opacity: 1; }
+    45% { transform: translateX(70px); }
+    80% { transform: translateX(140px); opacity: 1; fill: var(--green-soft); stroke: var(--green); }
+    100% { transform: translateX(140px); opacity: 0; fill: var(--green-soft); stroke: var(--green); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .monitor-task {
+        animation: none;
+        opacity: 1;
+    }
+}
+
+.live-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.live-stat {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+}
+
+.live-stat small {
+    display: block;
+    color: var(--faint);
+    font-size: 10px;
+}
+
+.load-track {
+    height: 6px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-2);
+}
+
+.load-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width .3s;
+}
+
+.load-fill.full {
+    background: var(--yellow);
+}
+
+.epic {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg);
+}
+
+.epic + .epic {
+    margin-top: 6px;
+}
+
+.epic strong {
+    font-size: 12px;
+}
+
+.epic small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.epic.running {
+    border-color: var(--blue);
+}
+
+.epic.done {
+    opacity: .7;
+}
+
+.epic .tool-button {
+    align-self: flex-start;
+}
+
+.epic-done {
+    color: var(--green) !important;
+    font-weight: 600;
+}
+
+@media (max-width: 950px) {
+    .ops-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ops-dev {
+        order: -2;
+    }
+
+    .ops-server {
+        order: -1;
+    }
+
+    .ops-locked {
+        min-height: 60px;
+    }
 }
 
 .live-stat span {
@@ -691,8 +867,8 @@ app-board {
 
 .live-stat strong {
     display: block;
-    margin-top: 4px;
-    font: 600 34px var(--mono);
+    margin-top: 2px;
+    font: 600 22px var(--mono);
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
 }
