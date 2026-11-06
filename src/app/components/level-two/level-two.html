@@ -32,7 +32,7 @@
                                 <small>{{ lawsuit.plaintiff }} {{ lawsuit.accusation }}</small>
                                 <small class="panel-warning">A court injunction freezes all {{ panel.productName }} programs.</small>
                                 @if (lawsuit.courtSeconds !== null) {
-                                    <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. {{ panel.winChance }}% chance to win; a loss costs {{ format(panel.courtDamages) }} in damages.</small>
+                                    <small>In court: verdict in {{ clock(lawsuit.courtSeconds) }}. {{ panel.winChance }}% chance to win; if you lose, you pay up to {{ format(panel.courtDamages) }} in damages.</small>
                                 } @else {
                                     <div class="lawsuit-actions">
                                         <button class="tool-button" type="button" [disabled]="!lawsuit.canSettle"
@@ -42,7 +42,7 @@
                                                 [attr.aria-label]="'Fight in court for ' + panel.courtDuration + ' seconds, ' + panel.winChance + ' percent chance to win'"
                                                 (click)="lawsuitFought.emit()">Fight in court ({{ panel.courtDuration }}s)</button>
                                     </div>
-                                    <small>Court: {{ panel.winChance }}% chance to win. If you lose, you pay {{ format(panel.courtDamages) }} in damages.</small>
+                                    <small>Court: {{ panel.winChance }}% chance to win. If you lose, you pay up to {{ format(panel.courtDamages) }} in damages.</small>
                                 }
                             </div>
                         }
@@ -65,15 +65,10 @@
                                 <strong>{{ entry.program.name }}</strong>
                                 <small>{{ entry.program.detail }}</small>
                                 <small class="client-terms">
-                                    @if (entry.program.cost) { {{ format(entry.program.cost) }} to start · }
-                                    @if (entry.program.upkeep > 0) { −{{ format(entry.program.upkeep) }} budget/sec · }
-                                    @if (entry.program.upkeep < 0) { <span class="good">+{{ format(-entry.program.upkeep) }} budget/sec</span> · }
-                                    <span class="good">{{ entry.problemName }} +{{ entry.rate }}%/sec</span>
-                                    @if (entry.program.integrity) { · <span class="bad">Integrity {{ rate(entry.program.integrity) }}/sec</span> }
-                                    @if (entry.program.slots) { · {{ entry.program.slots }} server slot }
+                                    @for (term of entry.terms; track $index) {<span [class]="term.tone">{{ term.text }}</span>@if (!$last) { · }}
                                 </small>
                                 @if (entry.milestone !== null) {
-                                    <small>Optimisation {{ entry.milestone | number: '1.0-0' }}% · at 100% the program ends and unlocks “{{ entry.unlocksEpic }}”</small>
+                                    <small>{{ entry.milestoneLabel }} {{ entry.milestone | number: '1.0-0' }}% · at 100% the program ends and unlocks “{{ entry.unlocksEpic }}”</small>
                                     <div class="progress-track"><div class="progress-fill milestone-fill" [style.width.%]="entry.milestone"></div></div>
                                 }
                                 @if (entry.protest) {
@@ -296,7 +291,7 @@
             </small>
 
             @if (v.infrastructure.length) {
-                <h3 class="tool-heading ops-subheading">Infrastructure</h3>
+                <h3 class="tool-heading ops-subheading">Special Epics</h3>
                 @for (entry of v.infrastructure; track entry.epic.id) {
                     <div class="epic" [class.running]="entry.running">
                         <strong>{{ entry.epic.title }}</strong>

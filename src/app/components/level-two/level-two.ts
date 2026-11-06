@@ -3,14 +3,14 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, courtWinChance, dataCentersActive, epicDefinition, epicDone, epicDuration,
-  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms,
+  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
-import type { EpicDefinition, LaunchedGame, LaunchedPerk, WorldProblem } from '../../models/launched.model';
+import type { EpicDefinition, LaunchedGame, LaunchedPerk, ProgramDefinition, WorldProblem } from '../../models/launched.model';
 
 /** Rounds tiny per-second rates for display (5 decimals). */
 const small = (value: number) => Math.round(value * 100000) / 100000;
@@ -153,7 +153,8 @@ export class LevelTwoComponent {
     if (!released?.active || !productPrograms.length) return null;
     const boost = programBoost(state, productId);
     const cost = upgradeCost(state, productId);
-    const cardPrograms = productPrograms.filter(program => !state.completedPrograms.includes(program.id));
+    const cardPrograms = productPrograms.filter(program =>
+      !state.completedPrograms.includes(program.id) && programRevealed(state, program.id));
     return {
       productName: productDefinition(productId)?.name ?? productId,
       problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id] })),
@@ -181,10 +182,12 @@ export class LevelTwoComponent {
           program,
           problemName: problemName(program.problem),
           rate: small(program.rate * boost),
+          terms: this.programTerms(program, small(program.rate * boost)),
           running: !!running,
           protest: !!running && inProtest(running),
           clicksLeft: running ? Math.ceil(running.resistance) : 0,
           milestone: program.milestoneRate ? (running?.milestone ?? 0) : null,
+          milestoneLabel: program.milestoneLabel ?? 'Progress',
           unlocksEpic: program.unlocksEpic ? epicDefinition(program.unlocksEpic)?.title : undefined,
           unfunded: !!running && !inProtest(running) && !programFunded(state, program.id),
           waitingFor: running ? missingPrograms(state, program.id) : [],
@@ -192,6 +195,18 @@ export class LevelTwoComponent {
         };
       })
     };
+  }
+
+  /** The cost line of a program: start price, upkeep or income, effect, integrity, slots. */
+  private programTerms(program: ProgramDefinition, rate: number): { text: string; tone: string }[] {
+    return [
+      program.cost ? { text: `${this.format(program.cost)} to start`, tone: '' } : null,
+      program.upkeep > 0 ? { text: `−${this.format(program.upkeep)} budget/sec`, tone: '' } : null,
+      program.upkeep < 0 ? { text: `+${this.format(-program.upkeep)} budget/sec`, tone: 'good' } : null,
+      rate ? { text: `${problemName(program.problem)} ${this.rate(rate)}%/sec`, tone: rate > 0 ? 'good' : 'bad' } : null,
+      program.integrity ? { text: `Integrity ${this.rate(program.integrity)}/sec`, tone: program.integrity > 0 ? 'good' : 'bad' } : null,
+      program.slots ? { text: `${program.slots} server ${program.slots === 1 ? 'slot' : 'slots'}`, tone: '' } : null
+    ].filter(term => term !== null);
   }
 
   /** Per-second rates: 0.005 → "+0.005", -0.1 → "−0.1". */

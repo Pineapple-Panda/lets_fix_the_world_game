@@ -161,7 +161,7 @@ export const epics: EpicDefinition[] = [
     duration: 300
   },
 
-  // Infrastructure: special epics unlocked by programs, outside the world goal chains.
+  // Special epics unlocked by programs, outside the world goal chains.
   {
     id: 'data-center-green-connector',
     goal: 'infrastructure',
@@ -172,6 +172,15 @@ export const epics: EpicDefinition[] = [
     requiresProgram: 'renewables-optimization',
     requiresPerk: 'data-centers',
     climateBoost: 20
+  },
+  {
+    id: 'weapons-kill-switch',
+    goal: 'special',
+    title: 'Kill Switch Virus for High-Tech Weapons',
+    detail: 'Every upgraded weapon on the planet runs your firmware. Hide a kill switch in it: one command, and they all turn into very expensive paperweights.',
+    cost: 3000000,
+    duration: 240,
+    requiresProgram: 'weapons-lobbying'
   },
 
   // War
@@ -403,6 +412,7 @@ export const programs: ProgramDefinition[] = [
     rate: 0.01,
     minActions: 1500000,
     milestoneRate: 1,
+    milestoneLabel: 'Optimisation',
     unlocksEpic: 'data-center-green-connector'
   },
 
@@ -474,6 +484,66 @@ export const programs: ProgramDefinition[] = [
     upkeep: 1000,
     rate: 0.012,
     minVersion: 1.1
+  },
+
+  // Peace & Integrity
+  {
+    id: 'deescalation-chatbot',
+    product: 'peace-integrity',
+    problem: 'war',
+    name: 'Diplomatic De-escalation Chatbot',
+    detail: 'Reads every tense message between two governments and drafts the reply that calms things down instead. Has never once written “with all due respect”.',
+    cost: 800000,
+    upkeep: 400,
+    rate: 0.006,
+    slots: 1
+  },
+  {
+    id: 'tax-the-rich',
+    product: 'peace-integrity',
+    problem: 'corruption',
+    name: 'Tax the Rich',
+    detail: 'Follows the money through offshore accounts, shell companies and suspiciously cheap yachts, and hands the evidence to tax offices worldwide. Billionaires call it harassment, everybody else calls it fair.',
+    cost: 1000000,
+    upkeep: 0,
+    rate: 0.008,
+    minIntegrity: 50
+  },
+  {
+    id: 'high-tech-weapons',
+    product: 'peace-integrity',
+    problem: 'war',
+    name: 'Build High-Tech Weapons',
+    detail: 'Smart drones, autonomous tanks, lasers on everything. The order books pay very well. Peace does not.',
+    cost: 0,
+    upkeep: -3000,
+    rate: -0.006,
+    integrity: -0.05
+  },
+  {
+    id: 'weapons-lobbying',
+    product: 'peace-integrity',
+    problem: 'war',
+    name: 'Lobby for High-Tech Weapons',
+    detail: 'Convinces every army on the planet to replace or upgrade its old weapons with your high-tech ones. All of them, with the same firmware. Only works while you build the weapons.',
+    cost: 1500000,
+    upkeep: 1000,
+    rate: 0,
+    milestoneRate: 1.5,
+    milestoneLabel: 'Weapons replaced or upgraded',
+    requiresPrograms: ['high-tech-weapons'],
+    unlocksEpic: 'weapons-kill-switch'
+  },
+  {
+    id: 'destroy-all-weapons',
+    product: 'peace-integrity',
+    problem: 'war',
+    name: 'Destroy All Weapons on the Planet',
+    detail: 'Sends the kill switch. Every weapon on Earth shuts down, and the recycling plants melt them into wind turbines.',
+    cost: 5000000,
+    upkeep: 2000,
+    rate: 0.05,
+    requiresEpic: 'weapons-kill-switch'
   }
 ];
 

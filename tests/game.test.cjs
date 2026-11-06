@@ -1409,6 +1409,43 @@ test('Fair Share fights poverty with fair wages and tax relief on food and rent'
   assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: poverty }), 'fair-share'), true, '30% poverty also draws lawsuits');
 });
 
+const peaceActive = overrides => greenWorldActive({ serverSlots: 4,
+  products: [{ id: 'peace-integrity', major: 1, minor: 0, active: true }], ...overrides });
+
+test('Peace & Integrity: diplomacy chatbot, tax the rich and high-tech weapons', () => {
+  assert.deepEqual(launched.productProblems('peace-integrity'), ['war', 'corruption']);
+  const peace = climateAfter(launched.startProgram(peaceActive(), 'deescalation-chatbot'), 100);
+  assert.ok(Math.abs(peace.worldProgress.war - 0.6) < 1e-9, 'chatbot: +0.006% war solution per second');
+  const taxed = climateAfter(launched.startProgram(peaceActive(), 'tax-the-rich'), 100);
+  assert.ok(Math.abs(taxed.worldProgress.corruption - 0.8) < 1e-6, 'tax the rich: +0.008% corruption per second');
+  const war = { ...liveState().worldProgress, war: 10 };
+  const armed = launched.startProgram(peaceActive({ worldProgress: war }), 'high-tech-weapons');
+  const later = climateAfter(armed, 100);
+  assert.ok(Math.abs(later.worldProgress.war - 9.4) < 1e-6, 'weapons make the war bar worse');
+  assert.ok(later.budget > armed.budget + 290000, 'but pay 3,000 budget per second');
+});
+
+test('weapons lobbying reveals the kill switch virus, which reveals Destroy All Weapons', () => {
+  assert.equal(launched.programBlocker(peaceActive(), 'weapons-lobbying'), 'Needs Build High-Tech Weapons running');
+  assert.equal(launched.programBlocker(peaceActive(), 'destroy-all-weapons'), 'Not available yet');
+  let live = launched.startProgram(launched.startProgram(peaceActive(), 'high-tech-weapons'), 'weapons-lobbying');
+  live = climateAfter(live, 66);
+  assert.equal(live.programs.find(entry => entry.id === 'weapons-lobbying').milestone, 99, '1.5% per second');
+  assert.equal(launched.epicRevealed(live, 'weapons-kill-switch'), false);
+  live = climateAfter(live, 1);
+  assert.deepEqual(live.completedPrograms, ['weapons-lobbying'], 'done after 67 seconds and gone');
+  assert.equal(launched.epicRevealed(live, 'weapons-kill-switch'), true);
+  assert.equal(launched.canStartEpic(live, 'weapons-kill-switch'), true);
+  live = launched.startEpic(live, 'weapons-kill-switch');
+  live = climateAfter(live, 240);
+  assert.equal(launched.epicDone(live, 'weapons-kill-switch'), true);
+  assert.equal(launched.goalComplete(live, 'war'), false, 'the virus is no step of the war goal');
+  assert.equal(launched.programRevealed(live, 'destroy-all-weapons'), true);
+  assert.equal(launched.programBlocker(live, 'destroy-all-weapons'), null);
+  const destroyed = climateAfter(launched.startProgram(launched.stopProgram(live, 'high-tech-weapons'), 'destroy-all-weapons'), 10);
+  assert.ok(destroyed.worldProgress.war >= live.worldProgress.war + 0.49, 'destroying all weapons: +0.05% war per second');
+});
+
 test('Fair Share gets sued under the same conditions, and only its programs are frozen', () => {
   const hunger = value => ({ ...liveState().worldProgress, hunger: value });
   assert.equal(launched.lawsuitRisk(fairShareActive({ integrity: 90, worldProgress: hunger(29.9) }), 'fair-share'), false);

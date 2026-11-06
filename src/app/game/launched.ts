@@ -448,6 +448,12 @@ export function programBoost(state: LaunchedGame, productId: string): number {
   return released ? 1 + upgradeBonus * (versionStep(released.major, released.minor) - versionStep(1, 0)) : 1;
 }
 
+/** Programs that need an epic stay hidden until it is done. */
+export function programRevealed(state: LaunchedGame, id: string): boolean {
+  const program = programDefinition(id);
+  return !!program && (!program.requiresEpic || epicDone(state, program.requiresEpic));
+}
+
 /** Names of the programs a program needs that are not running right now (missing or in protest). */
 export function missingPrograms(state: LaunchedGame, id: string): string[] {
   return (programDefinition(id)?.requiresPrograms ?? [])
@@ -462,6 +468,7 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
   if (!productActive(state, program.product)) return 'Activate the product first';
   if (state.programs.some(entry => entry.id === id)) return 'Already running';
   if (state.completedPrograms.includes(id)) return 'Already completed';
+  if (!programRevealed(state, id)) return 'Not available yet';
   if (integrityBlocked(state)) return 'Integrity is 0%: nobody cooperates';
   if (program.minActions !== undefined && state.actions < program.minActions) {
     return `Needs ${program.minActions.toLocaleString('en-US')} total coding actions`;

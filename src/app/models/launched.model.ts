@@ -104,6 +104,10 @@ export interface ProgramDefinition {
   milestoneRate?: number;
   /** Epic that appears once the milestone reaches 100%. */
   unlocksEpic?: string;
+  /** What the milestone bar measures, e.g. "Optimisation" (default "Progress"). */
+  milestoneLabel?: string;
+  /** Hidden until this epic is done. */
+  requiresEpic?: string;
 }
 
 /** The five problems the platform sets out to fix. */
