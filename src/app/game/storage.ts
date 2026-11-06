@@ -71,13 +71,37 @@ export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
 }
 
 export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedGame): string {
-  const value = JSON.stringify({ level: 2, game: { actions: state.actions, budget: state.budget } });
+  const value = JSON.stringify({ level: 2, game: state });
   storage.setItem(saveKey, value);
   return value;
 }
 
+const isProduct = (value: unknown): boolean =>
+  isObject(value) && typeof value.id === 'string' && isCount(value.major) && isCount(value.minor) &&
+  typeof value.active === 'boolean';
+
+const isEpic = (value: unknown): boolean =>
+  isObject(value) && typeof value.id === 'string' && isCount(value.progress) && typeof value.done === 'boolean';
+
 /** The level 2 state, or null when there is no compatible level 2 save. */
 export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
   const game = readSnapshot(storage, 2);
-  return game && isCount(game.actions) && isCount(game.budget) ? { actions: game.actions, budget: game.budget } : null;
+  if (
+    !game ||
+    !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
+    !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
+    !Array.isArray(game.epics) || !game.epics.every(isEpic) ||
+    !Array.isArray(game.products) || !game.products.every(isProduct) ||
+    typeof game.focus !== 'number' || !Number.isInteger(game.focus) || game.focus < -100 || game.focus > 100 ||
+    !Array.isArray(game.rentals) || !game.rentals.every(id => typeof id === 'string') ||
+    typeof game.integrity !== 'number' || game.integrity < 0 || game.integrity > 100 ||
+    !Array.isArray(game.programs) ||
+    !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0) ||
+    !isObject(game.worldProgress) ||
+    !['climate', 'war', 'hunger', 'poverty', 'corruption'].every(problem => {
+      const value = (game.worldProgress as Snapshot)[problem];
+      return typeof value === 'number' && value >= 0 && value <= 100;
+    })
+  ) return null;
+  return game as unknown as LaunchedGame;
 }

@@ -1,0 +1,297 @@
+@let s = state();
+@let v = view();
+<section class="ops-grid" aria-label="Operations">
+    <!-- Top row: Peace & Integrity, Fair Share, Green World. Each card unlocks once its product is released. -->
+    @for (card of v.productCards; track card.definition.id) {
+        @if (card.released; as released) {
+            <article class="ops-card ops-product" [class.active]="released.active" [class.with-panel]="!!card.panel"
+                     [attr.aria-labelledby]="'product-' + released.id">
+                <h2 class="product-title" [id]="'product-' + released.id">{{ card.title }}</h2>
+                @if (card.panel; as panel) {
+                    <div class="panel-body">
+                        <div class="world-row">
+                            <span>{{ panel.problemName }}</span>
+                            <div class="world-track" role="progressbar" [attr.aria-label]="panel.problemName + ' solution progress'"
+                                 aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="panel.progress | number: '1.0-0'">
+                                <div class="world-fill world-climate" [style.width.%]="panel.progress"></div>
+                            </div>
+                            <b>{{ panel.progress | number: '1.3-3' }}%</b>
+                        </div>
+                        @if (panel.frozen) {
+                            <small class="panel-alert">Integrity is 0%. Nobody cooperates, every program is frozen.</small>
+                        } @else if (panel.protestRisk > 0) {
+                            <small class="panel-warning">Integrity below 50%: people distrust you. Protest risk {{ panel.protestRisk }}% per program and second.</small>
+                        }
+
+                        @for (entry of panel.programs; track entry.program.id) {
+                            <div class="program" [class.running]="entry.running" [class.protest]="entry.protest">
+                                <strong>{{ entry.program.name }}</strong>
+                                <small>{{ entry.program.detail }}</small>
+                                <small class="client-terms">
+                                    @if (entry.program.cost) { {{ format(entry.program.cost) }} to start · }
+                                    @if (entry.program.upkeep > 0) { −{{ format(entry.program.upkeep) }} budget/sec · }
+                                    @if (entry.program.upkeep < 0) { <span class="good">+{{ format(-entry.program.upkeep) }} budget/sec</span> · }
+                                    <span class="good">{{ panel.problemName }} +{{ entry.rate }}%/sec</span>
+                                    @if (entry.program.integrity) { · <span class="bad">Integrity {{ rate(entry.program.integrity) }}/sec</span> }
+                                    @if (entry.program.slots) { · {{ entry.program.slots }} server slot }
+                                </small>
+                                @if (entry.protest) {
+                                    <small class="panel-alert">✊ Protest! People are blocking this program.</small>
+                                    <small class="protest-status">
+                                        Resistance: {{ entry.clicksLeft }} {{ entry.clicksLeft === 1 ? 'click' : 'clicks' }} left
+                                        @if (panel.resistanceGrowth > 0) { · <span class="bad">+{{ panel.resistanceGrowth }}/sec from distrust</span> }
+                                        @if (panel.robots) { · <span class="good">EdisonX robots −{{ panel.robotPower }}/sec</span> }
+                                    </small>
+                                    <div class="protest-track"><div class="protest-fill" [style.width.%]="entry.clicksLeft"></div></div>
+                                    <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
+                                            (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
+                                } @else if (entry.running) {
+                                    <small [class.panel-warning]="entry.unfunded" [class.epic-done]="!entry.unfunded && !panel.frozen">
+                                        {{ panel.frozen ? 'Frozen' : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
+                                    </small>
+                                    <button class="tool-button client-end" type="button" [attr.aria-label]="'Stop ' + entry.program.name"
+                                            (click)="programStopped.emit(entry.program.id)">Stop</button>
+                                } @else {
+                                    @if (entry.blocker) { <small class="panel-warning">{{ entry.blocker }}</small> }
+                                    <button class="tool-button" type="button" [disabled]="!!entry.blocker"
+                                            [attr.aria-label]="'Start ' + entry.program.name"
+                                            (click)="programStarted.emit(entry.program.id)">Start</button>
+                                }
+                            </div>
+                        }
+
+                        <div class="upgrade-row">
+                            <span>Programs +{{ panel.boostPercent }}%</span>
+                            <button class="tool-button" type="button" [disabled]="!panel.canUpgrade"
+                                    [attr.aria-label]="'Upgrade ' + card.title + ' for ' + panel.upgradeCost + ' budget'"
+                                    (click)="productUpgraded.emit(released.id)">Upgrade version</button>
+                        </div>
+                        <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
+                    </div>
+                } @else if (released.active) {
+                    <span class="product-status">Active</span>
+                } @else {
+                    <button class="tool-button product-button" type="button" [attr.aria-label]="'Activate ' + card.title"
+                            (click)="productActivated.emit(released.id)">Activate</button>
+                }
+            </article>
+        } @else {
+            <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
+        }
+    }
+
+    <!-- Bottom left: the economic network that pays for the systems. Opened by "Who Pays for All This?". -->
+    @if (v.networkOnline) {
+        <article class="ops-card ops-network" aria-labelledby="network-title">
+            <h2 class="tool-heading" id="network-title">Network &amp; Financing</h2>
+            <h3 class="tool-heading ops-subheading">World Problem Solution Progress</h3>
+            @for (problem of v.worldProgress; track problem.id) {
+                <div class="world-row">
+                    <span>{{ problem.name }}</span>
+                    <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' solution progress'" aria-valuemin="0" aria-valuemax="100"
+                         [attr.aria-valuenow]="problem.value | number: '1.0-0'">
+                        <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
+                    </div>
+                    <b>{{ problem.value | number: '1.3-3' }}%</b>
+                </div>
+            }
+
+            <h3 class="tool-heading ops-subheading">Integrity</h3>
+            <div class="world-row integrity-row">
+                <span>Integrity</span>
+                <div class="world-track" role="meter" aria-label="Integrity" aria-valuemin="0" aria-valuemax="100"
+                     [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
+                    <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
+                         [style.width.%]="v.integrity"></div>
+                </div>
+                <b>{{ v.integrity | number: '1.3-3' }}%</b>
+            </div>
+            <small class="upgrade-hint">Who you work with changes how the world sees you. Some clients only sign at the right level.</small>
+            @if (v.tegridy) {
+                <div class="upgrade-row">
+                    <span>Tegridy Farms delivers by the bag.</span>
+                    <button class="tool-button tegridy-button" type="button" [disabled]="!v.canBuyTegridy"
+                            [attr.aria-label]="'Buy some Tegridy: +1 integrity for ' + v.tegridyBagCost + ' budget'"
+                            (click)="tegridyBought.emit()">Buy some Tegridy</button>
+                </div>
+                <small class="upgrade-hint">+1 integrity for {{ format(v.tegridyBagCost) }} budget.</small>
+            }
+
+            <h3 class="tool-heading ops-subheading">Rent out server slots</h3>
+            <small class="upgrade-hint">A rented slot pays every second but is not available for epics. Every second, clients nudge the solution progress and your integrity.</small>
+            @if (v.rentalIncome) {
+                <small class="upgrade-hint">Rental income: +{{ format(v.rentalIncome) }} budget/sec</small>
+            }
+            @for (entry of v.clients; track entry.client.id) {
+                <div class="client" [class.rented]="entry.rented" [class.unavailable]="!entry.available && !entry.rented">
+                    <strong>{{ entry.client.name }}</strong>
+                    <small>{{ entry.client.description }}</small>
+                    <small class="client-terms">
+                        +{{ format(entry.client.income) }} budget/sec
+                        @for (effect of entry.effects; track effect.name) {
+                            · <span [class.good]="effect.delta > 0" [class.bad]="effect.delta < 0">{{ effect.name }} {{ rate(effect.delta) }}%/sec</span>
+                        }
+                        · <span [class.good]="entry.integrity > 0" [class.bad]="entry.integrity < 0">Integrity {{ rate(entry.integrity) }}/sec</span>
+                    </small>
+                    @if (entry.condition) {
+                        <small class="client-condition" [class.met]="entry.available">{{ entry.condition }}</small>
+                    }
+                    @if (entry.rented) {
+                        <button class="tool-button client-end" type="button" [attr.aria-label]="'End contract with ' + entry.client.name"
+                                (click)="rentalEnded.emit(entry.client.id)">End contract</button>
+                    } @else {
+                        <button class="tool-button" type="button" [disabled]="!entry.canRent"
+                                [attr.aria-label]="'Rent ' + ((entry.client.slots ?? 1) === 1 ? 'a server slot' : (entry.client.slots + ' server slots')) + ' to ' + entry.client.name"
+                                (click)="slotRented.emit(entry.client.id)">{{ (entry.client.slots ?? 1) === 1 ? 'Rent a slot' : 'Rent ' + entry.client.slots + ' slots' }}</button>
+                    }
+                </div>
+            }
+        </article>
+    } @else {
+        <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
+    }
+
+    <!-- Bottom centre: development keeps running on its own. -->
+    <article class="ops-card ops-dev" aria-labelledby="dev-title">
+        <h2 class="tool-heading" id="dev-title">Development</h2>
+        <svg class="monitor" viewBox="0 0 240 160" role="img" aria-label="The board keeps working itself off: tasks move from to do to done">
+            <rect class="monitor-frame" x="6" y="6" width="228" height="128" rx="8" />
+            <rect class="monitor-screen" x="16" y="16" width="208" height="108" rx="3" />
+            <path class="monitor-stand" d="M104 134 L98 152 H142 L136 134 Z" />
+            <rect class="monitor-foot" x="84" y="150" width="72" height="5" rx="2" />
+            <!-- three board columns -->
+            <line class="monitor-divider" x1="85" y1="22" x2="85" y2="118" />
+            <line class="monitor-divider" x1="155" y1="22" x2="155" y2="118" />
+            <rect class="monitor-heading" x="24" y="24" width="30" height="4" rx="2" />
+            <rect class="monitor-heading" x="93" y="24" width="38" height="4" rx="2" />
+            <rect class="monitor-heading" x="163" y="24" width="24" height="4" rx="2" />
+            <!-- tasks flowing from left to right -->
+            @for (task of [0, 1, 2, 3, 4, 5]; track task) {
+                <rect class="monitor-task" [class]="'monitor-task-' + task" x="22" [attr.y]="36 + (task % 3) * 26" width="56" height="18" rx="3" />
+            }
+        </svg>
+
+        <div class="live-stats">
+            <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong></div>
+            <div class="live-stat">
+                <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
+                <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
+            </div>
+        </div>
+
+        <div class="focus" role="group" aria-labelledby="focus-title">
+            <div class="focus-labels">
+                <span [class.on]="v.actionBoost > 0" [class.down]="v.actionBoost < 0">Ship features <b>{{ signed(v.actionBoost) }}% actions</b></span>
+                <span class="focus-title" id="focus-title">Focus @if (v.focusPower > 1) {<b>×{{ v.focusPower }}</b>}</span>
+                <span [class.on]="v.budgetBoost > 0" [class.down]="v.budgetBoost < 0">Monetise <b>{{ signed(v.budgetBoost) }}% budget</b></span>
+            </div>
+            <input class="focus-slider" type="range" min="-100" max="100" step="10" [value]="s.focus"
+                   aria-label="Focus between shipping features (more actions) and monetising (more budget)"
+                   [attr.aria-valuetext]="s.focus === 0 ? 'Balanced' : signed(v.actionBoost) + '% actions, ' + signed(v.budgetBoost) + '% budget'"
+                   (input)="focusChanged.emit(+$any($event.target).value)" />
+        </div>
+
+        <div class="live-stats live-stats-perks">
+            <div class="live-stat live-perks">
+                <span>Activated perks</span>
+                @if (v.activePerks.length) {
+                    <div class="active-tools">
+                        @for (perk of v.activePerks; track perk.id) {
+                            <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
+                                  [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
+                        }
+                    </div>
+                } @else {
+                    <small>None yet</small>
+                }
+            </div>
+        </div>
+
+        <h3 class="tool-heading ops-subheading">Perks</h3>
+        @for (entry of v.openPerks; track entry.perk.id) {
+            <div class="tool" [class.available]="entry.unlocked">
+                <span class="tool-icon" aria-hidden="true">{{ entry.perk.icon }}</span>
+                <div class="tool-details">
+                    <strong>{{ entry.perk.name }}</strong>
+                    <small>{{ entry.perk.description }}</small>
+                    @if (entry.perk.actionsRequired) {
+                        <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    }
+                    @if (entry.perk.cost) {
+                        <small>Costs {{ format(entry.perk.cost) }} budget</small>
+                    }
+                    @if (entry.perk.id === 'edisonx-robots') {
+                        <small>Only while EdisonX is your client.</small>
+                    }
+                    @if (entry.perk.id === 'add-server' && !v.serverOnline) {
+                        <small>Requires Abstract the Automation Workflow.</small>
+                    }
+                    @if (entry.unlocked) {
+                        <button class="tool-button" type="button" [attr.aria-label]="(entry.perk.cost ? 'Buy ' : 'Activate ') + entry.perk.name"
+                                (click)="perkActivated.emit(entry.perk.id)">{{ entry.perk.cost ? 'Buy' : 'Activate' }}</button>
+                    }
+                </div>
+            </div>
+        } @empty {
+            <div class="empty">No open perks.</div>
+        }
+    </article>
+
+    <!-- Bottom right: the server and its epics, once the workflow is abstracted. -->
+    @if (v.serverOnline) {
+        <article class="ops-card ops-server" aria-labelledby="server-title">
+            <h2 class="tool-heading" id="server-title">Server</h2>
+            <div class="upgrade-row">
+                <span>Server load</span>
+                <strong id="server-load">{{ v.load }}% · {{ v.running + v.rented }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}@if (v.rented) { ({{ v.rented }} rented) }</strong>
+            </div>
+            <div class="load-track" role="meter" aria-label="Server load" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.load">
+                <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>
+            </div>
+            <small class="upgrade-hint" id="rented-slots">
+                @if (v.rented) {
+                    {{ v.rented }} {{ v.rented === 1 ? 'slot' : 'slots' }} rented
+                } @else {
+                    No slots rented
+                }
+            </small>
+
+            <h3 class="tool-heading ops-subheading">Epics</h3>
+            @for (entry of v.goals; track entry.goal.id) {
+                <section class="goal" [class.complete]="entry.complete" [attr.aria-label]="entry.goal.name">
+                    <div class="goal-head">
+                        <strong>{{ entry.goal.name }}</strong>
+                        <span>{{ entry.shipped.length }}/{{ entry.total }} epics</span>
+                    </div>
+                    <div class="progress-track goal-track">
+                        <div class="progress-fill" [style.width.%]="entry.shipped.length / entry.total * 100"></div>
+                    </div>
+                    @for (epic of entry.shipped; track epic.id) {
+                        <small class="epic-shipped">✓ {{ epic.title }}</small>
+                    }
+                    @if (entry.next; as next) {
+                        <div class="epic" [class.running]="next.running">
+                            <strong>{{ next.epic.title }}</strong>
+                            <small>{{ next.epic.detail }}</small>
+                            <small>{{ format(next.epic.cost) }} budget · {{ duration(next.epic.duration) }} server time</small>
+                            @if (next.running) {
+                                <div class="progress-track"><div class="progress-fill" [style.width.%]="next.progress / next.epic.duration * 100"></div></div>
+                                <small>Running · {{ clock(next.progress) }} / {{ clock(next.epic.duration) }}</small>
+                            } @else if (next.waitingFor) {
+                                <small class="epic-waiting">Starts after “{{ next.waitingFor }}”</small>
+                            } @else {
+                                <button class="tool-button" type="button" [disabled]="!next.canStart"
+                                        [attr.aria-label]="'Start epic ' + next.epic.title + ' for ' + next.epic.cost + ' budget'"
+                                        (click)="epicStarted.emit(next.epic.id)">Start epic</button>
+                            }
+                        </div>
+                    } @else {
+                        <div class="goal-feature">{{ entry.outcome }}</div>
+                    }
+                </section>
+            }
+        </article>
+    } @else {
+        <div class="ops-card ops-locked ops-server-locked" aria-hidden="true"><span>Locked</span></div>
+    }
+</section>

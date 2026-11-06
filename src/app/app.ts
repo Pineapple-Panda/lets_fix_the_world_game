@@ -4,6 +4,7 @@ import { BoardComponent } from './components/board/board';
 import { EarlComponent } from './components/earl/earl';
 import { IntroComponent } from './components/intro/intro';
 import { LaunchComponent } from './components/launch/launch';
+import { LevelTwoComponent } from './components/level-two/level-two';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
@@ -14,7 +15,9 @@ import {
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { canLaunch, launch, tickLaunched } from './game/launched';
+import {
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, resolveProtest, startProgram, stopProgram,
+  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -28,7 +31,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, PerksComponent, StatsComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -140,7 +143,7 @@ export class AppComponent {
     const timer = setInterval(() => {
       const launched = this.launched();
       if (launched) {
-        const next = tickLaunched(launched);
+        const next = tickLaunched(launched, Math.random, this.devMode());
         this.launched.set(next);
         this.persistLaunched(next);
         return;
@@ -249,8 +252,73 @@ export class AppComponent {
     }
   }
 
+  /** Dev shortcut: jump to level 2 with 34,000 actions and 3,000 budget. Level 1 progress is dropped. */
+  skipLevel(): void {
+    if (!window.confirm('Skip to level 2? Your level 1 progress will be lost.')) return;
+    const state = skippedLevelTwo();
+    this.showIntro.set(false);
+    this.launched.set(state);
+    this.persistLaunched(state);
+  }
+
   toggleDevMode(): void {
     this.devMode.update(on => !on);
+    // In level 2, switching dev mode on also grants +1,000,000 actions and +1,000,000 budget.
+    if (this.devMode()) this.updateLaunched(state => devBoost(state));
+  }
+
+  activateLaunchedPerk(id: string): void {
+    this.updateLaunched(state => activateLaunchedPerk(state, id));
+  }
+
+  activateProduct(goal: string): void {
+    this.updateLaunched(state => activateProduct(state, goal));
+  }
+
+  startProgram(id: string): void {
+    this.updateLaunched(state => startProgram(state, id));
+  }
+
+  stopProgram(id: string): void {
+    this.updateLaunched(state => stopProgram(state, id));
+  }
+
+  resolveProtest(id: string): void {
+    this.updateLaunched(state => resolveProtest(state, id));
+  }
+
+  upgradeProduct(id: string): void {
+    this.updateLaunched(state => upgradeProduct(state, id));
+  }
+
+  buyTegridy(): void {
+    this.updateLaunched(state => buyTegridy(state));
+  }
+
+  rentSlot(client: string): void {
+    this.updateLaunched(state => rentSlot(state, client));
+  }
+
+  endRental(client: string): void {
+    this.updateLaunched(state => endRental(state, client));
+  }
+
+  setFocus(focus: number): void {
+    this.updateLaunched(state => setFocus(state, focus));
+  }
+
+  startEpic(id: string): void {
+    this.updateLaunched(state => startEpic(state, id));
+  }
+
+  /** Applies a level 2 action; a null result means the action was not possible and nothing changes. */
+  private updateLaunched(change: (state: LaunchedGame) => LaunchedGame | null): void {
+    const current = this.launched();
+    if (!current) return;
+    const next = change(current);
+    if (!next) return;
+    this.launched.set(next);
+    this.persistLaunched(next);
   }
 
   /** Leaves level 1 for good: the save is reduced to actions and budget. */
