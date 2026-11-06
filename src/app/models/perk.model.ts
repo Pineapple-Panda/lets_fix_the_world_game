@@ -70,7 +70,7 @@ export const perks: Perk[] = [
   {
     id: 'ai-subscription',
     name: 'AI Pro Plan',
-    description: 'Double the output of every assistant, upgrades included.',
+    description: 'Double the output of every assistant.',
     icon: 'AI',
     kind: 'simple',
     actionsRequired: 4000

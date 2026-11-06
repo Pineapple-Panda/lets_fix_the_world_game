@@ -8,7 +8,7 @@ import type { Item } from '../../models/item.model';
     <section class="panel work-panel" aria-label="Current work">
       <button id="code-button" class="code-button" type="button"
         [disabled]="!item || item.progress >= item.required || canDeploy()"
-        (click)="code.emit()">{{ item?.type === 'bug' ? 'Fix bug' : 'Write code' }} <span
+        (click)="code.emit()">{{ item?.type === 'bug' ? 'Fix bug' : 'Write code' }}@if (clicksPerPress() > 1) { ×{{ clicksPerPress() }} } <span
         aria-hidden="true">↗</span></button>
       <div class="deploy-bar" [attr.title]="tasksDone() + ' / ' + tasksTotal() + ' tasks done · +' + deploymentBudget() + ' budget'">
         <button class="deploy-button" type="button" [disabled]="!canDeploy()"
@@ -22,6 +22,7 @@ import type { Item } from '../../models/item.model';
 export class ActionBaseComponent {
   readonly selected = input.required<Item | undefined>();
   readonly canDeploy = input.required<boolean>();
+  readonly clicksPerPress = input.required<number>();
   readonly tasksDone = input.required<number>();
   readonly tasksTotal = input.required<number>();
   readonly releaseVersion = input.required<string>();

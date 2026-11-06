@@ -42,7 +42,7 @@
                     <div class="console-line success">An additional Code Assistant is available in your toolkit.</div>
                 }
                 @if (state.perks.assistants > 0 && state.multiAgent && state.perks.budget >= state.perks.performanceCost) {
-                    <div class="console-line success">An assistant performance upgrade is available in your toolkit.</div>
+                    <div class="console-line success">An extra-click upgrade is available in your toolkit.</div>
                 }
                 @if (state.won) {
                     <div class="console-line success">All tasks of this release are done. Deploy v{{ state.releaseVersion }} to earn {{ state.deploymentBudget }} budget and unlock more work.</div>
@@ -51,7 +51,7 @@
         </section>
         <div class="workspace">
             <aside class="sidebar">
-                <app-action-base [selected]="state.selected" [canDeploy]="state.won" [tasksDone]="state.releaseDone" [tasksTotal]="state.releaseTotal"
+                <app-action-base [selected]="state.selected" [canDeploy]="state.won" [clicksPerPress]="state.perks.clicksPerPress" [tasksDone]="state.releaseDone" [tasksTotal]="state.releaseTotal"
                                  [releaseVersion]="state.releaseVersion" [deploymentBudget]="state.deploymentBudget"
                                  (code)="code()" (deploy)="deploy()" />
                 <app-stats [stats]="state.stats" />
