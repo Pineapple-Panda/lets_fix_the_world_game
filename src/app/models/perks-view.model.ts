@@ -15,7 +15,8 @@ export interface PerksView {
   budget: number;
   assistantCost: number;
   performanceCost: number;
-  performanceUpgrades: number;
+  /** Clicks triggered by one press of Write code / Fix bug. */
+  clicksPerPress: number;
   assistantOutput: number;
   coverage: number;
 }

@@ -21,8 +21,9 @@
             <small class="upgrade-hint">Next assistant costs {{ state.assistantCost }} budget.</small>
             <small class="upgrade-hint">{{ state.assignedAgents }} / {{ state.assistants }} agents assigned</small>
                 <div class="upgrade-row">
-                    <span>Performance +{{ state.performanceUpgrades * 10 }}%</span>
-                    <button class="tool-button" type="button" [disabled]="state.budget < state.performanceCost" (click)="performanceUpgraded.emit()">Upgrade +10%</button>
+                    <span>{{ state.clicksPerPress }} {{ state.clicksPerPress === 1 ? 'click' : 'clicks' }} per press</span>
+                    <button class="tool-button" type="button" [disabled]="state.budget < state.performanceCost" [attr.aria-label]="'Add an extra click per press for ' + state.performanceCost + ' budget'"
+                            (click)="performanceUpgraded.emit()">+1 click</button>
                 </div>
             <small class="upgrade-hint">Next upgrade costs {{ state.performanceCost }} budget.</small>
     </section>

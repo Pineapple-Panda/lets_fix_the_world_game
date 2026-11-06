@@ -8,7 +8,7 @@ import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
-  assistantOutput, autoCoverageRate, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
+  assistantOutput, autoCoverageRate, clicksPerPress, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
@@ -86,7 +86,7 @@ export class AppComponent {
         budget: game.budget,
         assistantCost: nextAssistantCount(game),
         performanceCost: nextAssistantUpgrade(game),
-        performanceUpgrades: game.assistantUpgrades,
+        clicksPerPress: clicksPerPress(game),
         assistantOutput: assistantOutput(game),
         coverage: coveragePercent(game)
       },
@@ -178,16 +178,12 @@ export class AppComponent {
 
   code(): void {
     if (!this.view().selected) return;
-    if (!this.devMode()) {
-      this.update(game => { work(game, game.selected, 1); });
-      return;
-    }
-    // Dev mode: the click always counts as 30 actions, even when the item needs less to finish.
+    const devMode = this.devMode();
     this.update(game => {
-      const before = game.actions;
-      if (work(game, game.selected, devModeActions)) {
-        game.actions = Math.min(Number.MAX_SAFE_INTEGER, before + devModeActions);
-      }
+      // Each performance upgrade adds one extra click; in dev mode every click is worth 30 actions.
+      // Only the work the item still needs is counted: surplus clicks are lost, not credited as actions.
+      const amount = clicksPerPress(game) * (devMode ? devModeActions : 1);
+      work(game, game.selected, amount);
     });
   }
 

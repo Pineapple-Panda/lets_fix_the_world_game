@@ -441,13 +441,18 @@ test('assistants: buying, upgrading and output', () => {
   assert.equal(assistantCount(state), 2);
   assert.equal(nextAssistantCount(state), 625);
   assert.equal(nextAssistantUpgrade(state), 500);
+  assert.equal(game.clicksPerPress(state), 1);
   assert.equal(upgradeAssistants(state), true);
-  assert.equal(assistantOutput(state), 1.1);
+  assert.equal(game.clicksPerPress(state), 2, 'each performance upgrade adds one extra click per press');
+  assert.equal(assistantOutput(state), 1, 'performance upgrades no longer boost assistants');
+  assert.equal(nextAssistantUpgrade(state), 625);
+  assert.equal(upgradeAssistants(state), true);
+  assert.equal(game.clicksPerPress(state), 3);
   grant(state, 'ai-subscription');
-  assert.equal(assistantOutput(state), 2.2);
+  assert.equal(assistantOutput(state), 2);
 });
 
-test('multi agent assignments, auto assigner and carry-over of fractional output', () => {
+test('multi agent assignments and auto assigner', () => {
   const state = newGame();
   grant(state, 'code-assistant', 'multi-agent');
   assert.equal(assignAgent(state, 'T-02'), true);
@@ -455,10 +460,9 @@ test('multi agent assignments, auto assigner and carry-over of fractional output
   assert.equal(assignAgent(state, 'T-02'), true, 'assigning again removes the agent');
   assert.deepEqual(state.agentTargets, [null]);
   assignAgent(state, 'T-02');
-  state.assistantUpgrades = 5; // 1.5 actions per second
   automate(state);
   automate(state);
-  assert.equal(item(state, 'T-02').progress, 3);
+  assert.equal(item(state, 'T-02').progress, 2);
   grant(state, 'auto-assigner');
   work(state, 'T-02', 10);
   assert.deepEqual(state.agentTargets, [null], 'finished task frees the agent');

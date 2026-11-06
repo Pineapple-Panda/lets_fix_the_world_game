@@ -421,7 +421,12 @@ function baseAutomationRate(game: Game): number {
 }
 
 function assistantOutputTenths(game: Game): number {
-  return (10 + game.assistantUpgrades) * (game.activatedPerks.includes('ai-subscription') ? 2 : 1);
+  return 10 * (game.activatedPerks.includes('ai-subscription') ? 2 : 1);
+}
+
+/** Clicks triggered by one press of Write code / Fix bug: 1, plus one extra click per performance upgrade. */
+export function clicksPerPress(game: Game): number {
+  return 1 + game.assistantUpgrades;
 }
 
 export function assistantOutput(game: Game): number {
