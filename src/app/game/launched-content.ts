@@ -47,7 +47,7 @@ export const rentalClients: RentalClient[] = [
     id: 'green-left-union',
     name: 'United Green-Left Federation of Europe',
     description: 'Seventeen committees, one shared spreadsheet, endless good intentions. Pays in fair-trade coffee vouchers, mostly.',
-    income: 40,
+    income: 1000,
     progress: { climate: 0.005 },
     integrity: 0.05,
     minIntegrity: 70
