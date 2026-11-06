@@ -1153,12 +1153,29 @@ test('a protest takes 20 clicks, and low integrity adds resistance every second'
   assert.equal(steady.programs[0].resistance, 20, 'an old protest does not grow above 50% integrity');
 });
 
-test('EdisonX sends robots that resolve protests automatically', () => {
-  const protest = rentals => greenWorldActive({ integrity: 25, rentals, serverSlots: 3,
+test('EdisonX robots: a perk only for EdisonX clients that works only while EdisonX rents', () => {
+  const buyer = overrides => greenWorldActive({ integrity: 10, serverSlots: 3, actions: 5000000, budget: 2000000, ...overrides });
+  const offered = state => launched.openLaunchedPerks(state).some(perk => perk.id === 'edisonx-robots');
+  assert.equal(offered(buyer()), false, 'not offered without EdisonX as a client');
+  assert.equal(launched.activateLaunchedPerk(buyer(), 'edisonx-robots'), null);
+  const client = launched.rentSlot(buyer(), 'edisonx');
+  assert.equal(offered(client), true, 'offered while EdisonX rents a slot');
+  assert.equal(launched.activateLaunchedPerk({ ...client, actions: 4999999 }, 'edisonx-robots'), null, 'needs 5,000,000 TCA');
+  assert.equal(launched.activateLaunchedPerk({ ...client, budget: 1999999 }, 'edisonx-robots'), null, 'costs 2,000,000 budget');
+  const owner = launched.activateLaunchedPerk(client, 'edisonx-robots');
+  assert.equal(owner.budget, 0);
+  assert.equal(launched.robotsOnSite(owner), true);
+  assert.equal(offered(owner), false, 'bought once');
+  assert.equal(launched.robotsOnSite(launched.endRental(owner, 'edisonx')), false, 'idle once EdisonX leaves');
+  assert.equal(launched.robotsOnSite(launched.rentSlot(buyer(), 'edisonx')), false, 'EdisonX alone brings no robots');
+});
+
+test('EdisonX robots resolve protests automatically', () => {
+  const protest = (perks, rentals) => greenWorldActive({ integrity: 25, rentals, serverSlots: 3,
+    perks: ['workflow-abstraction', 'network-financing', ...perks],
     programs: [{ id: 'reforestation-network', resistance: 20 }] });
-  assert.equal(launched.robotsOnSite(protest([])), false);
-  let live = protest(['edisonx']);
-  assert.equal(launched.robotsOnSite(live), true);
+  assert.equal(launched.tickLaunched(protest([], ['edisonx']), () => 0.99).programs[0].resistance > 20, true, 'no robots without the perk');
+  let live = protest(['edisonx-robots'], ['edisonx']);
   live = launched.tickLaunched(live, () => 0.99);
   assert.ok(Math.abs(live.programs[0].resistance - 16) < 0.01, 'about +1 distrust, -5 robots');
   let seconds = 1;

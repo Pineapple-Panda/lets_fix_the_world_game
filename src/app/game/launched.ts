@@ -257,7 +257,9 @@ export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
     ...launchedPerks.filter(perk => !state.perks.includes(perk.id)),
     addServerPerk(state),
     // The Tegridy deal is offered once Network & Financing is open.
-    ...(networkOnline(state) && !tegridyActive(state) ? [tegridyPerk] : [])
+    ...(networkOnline(state) && !tegridyActive(state) ? [tegridyPerk] : []),
+    // The robots are only offered while EdisonX is a client.
+    ...(state.rentals.includes(robotClient) && !state.perks.includes(robotPerk.id) ? [robotPerk] : [])
   ].sort((a, b) => a.actionsRequired - b.actionsRequired);
 }
 
@@ -297,6 +299,10 @@ export function buyTegridy(state: LaunchedGame): LaunchedGame | null {
 /** Whether a perk can be taken right now: enough actions, enough budget for bought perks, and its prerequisites. */
 export function launchedPerkAvailable(state: LaunchedGame, perk: LaunchedPerk): boolean {
   if (perk.id === addServerPerkId) return serverOnline(state) && launchedPerkUnlocked(state, perk);
+  if (perk.id === robotPerk.id) {
+    return state.rentals.includes(robotClient) && !state.perks.includes(robotPerk.id) &&
+      launchedPerkUnlocked(state, perk) && state.budget >= (perk.cost ?? 0);
+  }
   if (perk.id === tegridyPerk.id) return networkOnline(state) && !tegridyActive(state) && state.budget >= (perk.cost ?? 0);
   return launchedPerkUnlocked(state, perk);
 }
@@ -310,6 +316,10 @@ export function networkOnline(state: LaunchedGame): boolean {
 }
 
 export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (id === robotPerk.id) {
+    if (!launchedPerkAvailable(state, robotPerk)) return null;
+    return { ...state, budget: state.budget - (robotPerk.cost ?? 0), perks: [...state.perks, id] };
+  }
   if (id === tegridyPerk.id) {
     if (!launchedPerkAvailable(state, tegridyPerk)) return null;
     return { ...state, budget: state.budget - (tegridyPerk.cost ?? 0), perks: [...state.perks, id] };
@@ -388,8 +398,21 @@ export function resistanceGrowth(state: LaunchedGame): number {
 
 /** Riot-control robots on site: available while EdisonX rents a slot. */
 export function robotsOnSite(state: LaunchedGame): boolean {
-  return state.rentals.includes(robotClient);
+  return state.perks.includes(robotPerk.id) && state.rentals.includes(robotClient);
 }
+
+/**
+ * EdisonX's riot-control robots: offered only while EdisonX rents a slot (5,000,000 TCA, 2,000,000 budget),
+ * and they only operate while EdisonX is still a client.
+ */
+export const robotPerk: LaunchedPerk = {
+  id: 'edisonx-robots',
+  name: 'EdisonX Riot-Control Robots',
+  description: 'Polite, tireless and very large. They clear protests automatically, as long as EdisonX is your client.',
+  icon: 'RB',
+  actionsRequired: 5000000,
+  cost: 2000000
+};
 
 export function inProtest(entry: ProgramState): boolean {
   return entry.resistance > 0;

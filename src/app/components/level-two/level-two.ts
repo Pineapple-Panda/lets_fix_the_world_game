@@ -3,7 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
   canBuyTegridy, canStartEpic, clientAvailable, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
-  protestChance, resistanceGrowth, robotPower, robotsOnSite,
+  protestChance, resistanceGrowth, robotPerk, robotPower, robotsOnSite,
   upgradeCost, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
@@ -79,6 +79,9 @@ export class LevelTwoComponent {
       activePerks: [
         ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
         ...(tegridyActive(state) ? [tegridyPerk] : []),
+        ...(state.perks.includes(robotPerk.id)
+          ? [{ ...robotPerk, description: robotPerk.description + (robotsOnSite(state) ? ' On site.' : ' Idle: EdisonX is not a client.') }]
+          : []),
         // Add Server can be taken many times; show it once with its count.
         ...(addedServers(state) > 0
           ? [{ ...addServerPerk(state), name: `Add Server ×${addedServers(state)}`, description: `${state.serverSlots} server slots in total.` }]
