@@ -1001,6 +1001,7 @@ test('rental clients and world problems are defined', () => {
   assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'edisonx']);
   const [green, , , edison] = content.rentalClients;
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
+  assert.ok(edison.income >= 10 * content.rentalClients[2].income, 'EdisonX pays far more than anyone else');
   assert.ok(green.progress.climate > 0 && green.integrity > 0 && green.minIntegrity === 70);
   assert.ok(edison.progress.climate < 0 && edison.progress.corruption < 0 && edison.integrity < 0 && edison.maxIntegrity === 20);
   for (const client of content.rentalClients) {

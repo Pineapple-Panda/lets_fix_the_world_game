@@ -72,7 +72,7 @@ export const rentalClients: RentalClient[] = [
     id: 'edisonx',
     name: 'EdisonX',
     description: 'A billionaire’s rocket-car-tunnel-AI conglomerate. Pays brilliantly. Asks no questions you would like to answer.',
-    income: 400,
+    income: 2500,
     progress: { climate: -0.005, corruption: -0.005 },
     integrity: -0.1,
     maxIntegrity: 20
