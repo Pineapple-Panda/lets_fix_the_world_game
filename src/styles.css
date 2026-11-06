@@ -1028,6 +1028,74 @@ app-level-two {
     background: linear-gradient(160deg, var(--green-soft), var(--surface) 70%);
 }
 
+.ops-product.with-panel {
+    justify-content: flex-start;
+    align-items: stretch;
+    max-height: 42vh;
+    overflow-y: auto;
+    scrollbar-color: var(--line-strong) transparent;
+}
+
+@media (max-width: 950px) {
+    .ops-product.with-panel {
+        max-height: none;
+    }
+}
+
+.panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.panel-alert {
+    color: var(--red) !important;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.panel-warning {
+    color: var(--yellow) !important;
+    font-size: 10px;
+}
+
+.program {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg);
+}
+
+.program strong {
+    font-size: 12px;
+}
+
+.program small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.program.running {
+    border-color: var(--green);
+}
+
+.program.protest {
+    border-color: var(--red);
+    box-shadow: 0 0 0 1px var(--red);
+}
+
+.program .tool-button {
+    align-self: flex-start;
+}
+
+.protest-button {
+    background: var(--red) !important;
+    color: #fff !important;
+}
+
 .product-title {
     margin: 0;
     color: var(--green);

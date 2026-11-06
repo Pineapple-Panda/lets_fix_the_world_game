@@ -1,8 +1,9 @@
 import type { Game } from '../models/game.model.ts';
 import type {
-  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, RentalClient, WorldProblem
+  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, ProgramDefinition, RentalClient,
+  WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, products, rentalClients, worldGoals } from './launched-content.ts';
+import { epics, launchedPerks, products, programs, rentalClients, worldGoals } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -34,7 +35,8 @@ export function launch(game: Game): LaunchedGame | null {
     focus: 0,
     rentals: [],
     worldProgress: noProgress(),
-    integrity: startIntegrity
+    integrity: startIntegrity,
+    programs: []
   };
 }
 
@@ -56,7 +58,8 @@ export function skippedLevelTwo(): LaunchedGame {
     focus: 0,
     rentals: [],
     worldProgress: noProgress(),
-    integrity: startIntegrity
+    integrity: startIntegrity,
+    programs: []
   };
 }
 
@@ -189,6 +192,7 @@ export function tickLaunched(
     for (const problem of goal.problems) progress[problem] = percent(progress[problem] + share);
   }
   next.worldProgress = progress;
+  runPrograms(next, random);
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
     .filter(definition => definition.goals.every(goal => goalComplete(next, goal)) && !product(next, definition.id))
@@ -335,7 +339,134 @@ export function runningEpics(state: LaunchedGame): number {
 
 /** Server slots taken by running epics and rented clients. */
 export function usedSlots(state: LaunchedGame): number {
-  return runningEpics(state) + rentedSlots(state);
+  return runningEpics(state) + rentedSlots(state) + programSlots(state);
+}
+
+// ---------- Problem solving cards: programs, integrity and protests ----------
+
+/** Below this integrity the population distrusts the programs and protests can break out. */
+export const protestIntegrity = 50;
+/** Chance per program and second of a protest at 0% integrity (it falls linearly to 0 at 50%). */
+export const maxProtestChance = 0.02;
+/** Each product upgrade (v1.0 → v1.1 → …) makes its programs this much stronger. */
+export const upgradeBonus = 0.25;
+/** Budget for the next product upgrade: 500,000 × the next minor version. */
+export const upgradeCostStep = 500000;
+
+export function programDefinition(id: string): ProgramDefinition | undefined {
+  return programs.find(program => program.id === id);
+}
+
+export function programSlots(state: LaunchedGame): number {
+  return state.programs.reduce((total, entry) => total + (programDefinition(entry.id)?.slots ?? 0), 0);
+}
+
+/** A product's card works only once the product is active. */
+export function productActive(state: LaunchedGame, id: string): boolean {
+  return !!product(state, id)?.active;
+}
+
+/** At 0% integrity nobody cooperates: nothing can be started and nothing runs. */
+export function integrityBlocked(state: LaunchedGame): boolean {
+  return state.integrity <= 0;
+}
+
+/** Chance per second that a running program is hit by a protest. */
+export function protestChance(state: LaunchedGame): number {
+  if (state.integrity >= protestIntegrity) return 0;
+  return maxProtestChance * (protestIntegrity - state.integrity) / protestIntegrity;
+}
+
+/** Multiplier on program output from product upgrades: v1.0 ×1, v1.1 ×1.25, v1.2 ×1.5 … */
+export function programBoost(state: LaunchedGame, productId: string): number {
+  const released = product(state, productId);
+  return released ? 1 + upgradeBonus * (released.minor + (released.major - 1) * 10) : 1;
+}
+
+/** Why a program cannot start right now, or null when it can. */
+export function programBlocker(state: LaunchedGame, id: string): string | null {
+  const program = programDefinition(id);
+  if (!program) return 'Unknown program';
+  if (!productActive(state, program.product)) return 'Activate the product first';
+  if (state.programs.some(entry => entry.id === id)) return 'Already running';
+  if (integrityBlocked(state)) return 'Integrity is 0%: nobody cooperates';
+  if (program.minIntegrity !== undefined && state.integrity < program.minIntegrity) {
+    return `Needs ${program.minIntegrity}% integrity`;
+  }
+  const released = product(state, program.product);
+  if (program.minMinor !== undefined && (released?.minor ?? 0) < program.minMinor) {
+    return `Needs v${released?.major ?? 1}.${program.minMinor}`;
+  }
+  if ((program.slots ?? 0) > 0 && usedSlots(state) + (program.slots ?? 0) > state.serverSlots) {
+    return `Needs ${program.slots} free server ${program.slots === 1 ? 'slot' : 'slots'}`;
+  }
+  if (state.budget < program.cost) return 'Not enough budget';
+  return null;
+}
+
+export function startProgram(state: LaunchedGame, id: string): LaunchedGame | null {
+  const program = programDefinition(id);
+  if (!program || programBlocker(state, id)) return null;
+  return { ...state, budget: state.budget - program.cost, programs: [...state.programs, { id, protest: false }] };
+}
+
+export function stopProgram(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (!state.programs.some(entry => entry.id === id)) return null;
+  return { ...state, programs: state.programs.filter(entry => entry.id !== id) };
+}
+
+/** Talks to the protesters; the program continues. */
+export function resolveProtest(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (!state.programs.some(entry => entry.id === id && entry.protest)) return null;
+  return { ...state, programs: state.programs.map(entry => entry.id === id ? { ...entry, protest: false } : entry) };
+}
+
+/** Whether a running program can pay this second's upkeep (income programs always can). */
+export function programFunded(state: LaunchedGame, id: string): boolean {
+  const program = programDefinition(id);
+  return !!program && (program.upkeep <= 0 || state.budget >= program.upkeep);
+}
+
+/**
+ * One second of all running programs (mutates `next`): at 0% integrity everything is frozen. Below 50%
+ * protests can break out; a protested program makes no progress until the protest is resolved. A program
+ * that cannot pay its upkeep pauses for that second.
+ */
+function runPrograms(next: LaunchedGame, random: () => number): void {
+  if (!next.programs.length || integrityBlocked(next)) return;
+  const chance = protestChance(next);
+  const progress = { ...next.worldProgress };
+  next.programs = next.programs.map(entry => {
+    const program = programDefinition(entry.id);
+    if (!program) return entry;
+    if (entry.protest) return entry;
+    if (chance > 0 && random() < chance) return { ...entry, protest: true };
+    if (!programFunded(next, entry.id)) return entry;
+    next.budget = cap(Math.max(0, next.budget - program.upkeep));
+    progress[program.problem] = percent(progress[program.problem] + program.rate * programBoost(next, program.product));
+    if (program.integrity) next.integrity = percent(next.integrity + program.integrity);
+    return entry;
+  });
+  next.worldProgress = progress;
+}
+
+/** Budget for the next product version (v1.0 → v1.1 costs 500,000, v1.1 → v1.2 1,000,000, …). */
+export function upgradeCost(state: LaunchedGame, productId: string): number {
+  return upgradeCostStep * ((product(state, productId)?.minor ?? 0) + 1);
+}
+
+/** Raises an active product's version by 0.1; at v1.9 the next step is v2.0. */
+export function upgradeProduct(state: LaunchedGame, productId: string): LaunchedGame | null {
+  const released = product(state, productId);
+  const cost = upgradeCost(state, productId);
+  if (!released?.active || integrityBlocked(state) || state.budget < cost) return null;
+  const minor = released.minor === 9 ? 0 : released.minor + 1;
+  const major = released.minor === 9 ? released.major + 1 : released.major;
+  return {
+    ...state,
+    budget: state.budget - cost,
+    products: state.products.map(entry => entry.id === productId ? { ...entry, major, minor } : entry)
+  };
 }
 
 /** Server slots taken by rental contracts (some clients rent several at once). */

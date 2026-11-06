@@ -2,11 +2,12 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canBuyTegridy, canStartEpic, clientAvailable, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
+  canBuyTegridy, canStartEpic, clientAvailable, integrityBlocked, programBlocker, programBoost, programFunded, protestChance,
+  upgradeCost, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
   serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
 } from '../../game/launched';
-import { launchedPerks, products, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
+import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
 
 /** Level 2: a 3×2 grid of cards. The development card sits bottom centre; the others unlock over time. */
@@ -26,6 +27,10 @@ export class LevelTwoComponent {
   readonly slotRented = output<string>();
   readonly rentalEnded = output<string>();
   readonly tegridyBought = output<void>();
+  readonly programStarted = output<string>();
+  readonly programStopped = output<string>();
+  readonly protestResolved = output<string>();
+  readonly productUpgraded = output<string>();
 
   protected readonly view = computed(() => {
     const state = this.state();
@@ -40,7 +45,7 @@ export class LevelTwoComponent {
       // Top row of the grid, left to right. Each card stays locked until its product is released.
       productCards: products.map(definition => {
         const released = product(state, definition.id);
-        return { definition, released, title: released ? productTitle(released) : '' };
+        return { definition, released, title: released ? productTitle(released) : '', panel: this.panel(state, definition.id) };
       }),
       actionBoost: Math.round((actionBoost(state) - 1) * 100),
       budgetBoost: Math.round((budgetBoost(state) - 1) * 100),
@@ -110,6 +115,35 @@ export class LevelTwoComponent {
       })
     };
   });
+
+  /** The control panel of an active product card (programs, protests, upgrade). */
+  private panel(state: LaunchedGame, productId: string) {
+    const released = product(state, productId);
+    const cardPrograms = programs.filter(program => program.product === productId);
+    if (!released?.active || !cardPrograms.length) return null;
+    const problem = cardPrograms[0]!.problem;
+    const boost = programBoost(state, productId);
+    return {
+      problemName: worldProblems.find(entry => entry.id === problem)?.name ?? problem,
+      progress: state.worldProgress[problem],
+      frozen: integrityBlocked(state),
+      protestRisk: Math.round(protestChance(state) * 1000) / 10,
+      boostPercent: Math.round((boost - 1) * 100),
+      upgradeCost: upgradeCost(state, productId),
+      canUpgrade: !integrityBlocked(state) && state.budget >= upgradeCost(state, productId),
+      programs: cardPrograms.map(program => {
+        const running = state.programs.find(entry => entry.id === program.id);
+        return {
+          program,
+          rate: Math.round(program.rate * boost * 100000) / 100000,
+          running: !!running,
+          protest: !!running?.protest,
+          unfunded: !!running && !running.protest && !programFunded(state, program.id),
+          blocker: running ? null : programBlocker(state, program.id)
+        };
+      })
+    };
+  }
 
   /** Per-second rates: 0.005 → "+0.005", -0.1 → "−0.1". */
   protected rate(value: number): string {

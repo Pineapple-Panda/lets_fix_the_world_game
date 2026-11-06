@@ -32,6 +32,39 @@ export interface LaunchedGame {
   worldProgress: Record<WorldProblem, number>;
   /** Integrity of the platform in percent (0–100); starts at 50. Clients push it up or down. */
   integrity: number;
+  /** Programs running in the problem solving cards (e.g. Green World). */
+  programs: ProgramState[];
+}
+
+/** A running program. `protest` is true while a protest blocks its progress. */
+export interface ProgramState {
+  id: string;
+  protest: boolean;
+}
+
+/** A long-running program in a problem solving card. */
+export interface ProgramDefinition {
+  id: string;
+  /** Product whose card runs the program. */
+  product: string;
+  /** World problem the program works on. */
+  problem: WorldProblem;
+  name: string;
+  detail: string;
+  /** Budget to start the program. */
+  cost: number;
+  /** Budget per second while running; negative values are income. */
+  upkeep: number;
+  /** Solution progress (percentage points) per second, before the product version bonus. */
+  rate: number;
+  /** Integrity change per second while running. */
+  integrity?: number;
+  /** Server slots the program occupies. */
+  slots?: number;
+  /** Only startable at this integrity or more. */
+  minIntegrity?: number;
+  /** Only startable from this product minor version on (e.g. 1 = v1.1). */
+  minMinor?: number;
 }
 
 /** The five problems the platform sets out to fix. */

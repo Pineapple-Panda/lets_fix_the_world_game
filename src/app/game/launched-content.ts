@@ -1,5 +1,5 @@
 import type {
-  EpicDefinition, LaunchedPerk, ProductDefinition, RentalClient, WorldGoal, WorldProblem
+  EpicDefinition, LaunchedPerk, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
 } from '../models/launched.model.ts';
 
 /** Perks of level 2. Level 1 perks that were never activated are gone after the launch. */
@@ -309,5 +309,66 @@ export const epics: EpicDefinition[] = [
     detail: 'One API for food, cash and credit that any NGO can plug into.',
     cost: 1000000,
     duration: 420
+  }
+];
+
+/**
+ * Programs of the Green World card. They run continuously: each second they cost upkeep and add climate
+ * solution progress. They need integrity: nothing runs at 0%, and below 50% protests can stop them.
+ */
+export const programs: ProgramDefinition[] = [
+  {
+    id: 'reforestation-network',
+    product: 'green-world',
+    problem: 'climate',
+    name: 'Community Reforestation Network',
+    detail: 'Connects 10,000 volunteers with land that needs trees. Snacks not included.',
+    cost: 200000,
+    upkeep: 100,
+    rate: 0.002
+  },
+  {
+    id: 'methane-leak-watch',
+    product: 'green-world',
+    problem: 'climate',
+    name: 'Methane Leak Watch',
+    detail: 'Satellite data finds leaking pipelines. Operators suddenly very cooperative.',
+    cost: 400000,
+    upkeep: 200,
+    rate: 0.004,
+    slots: 1
+  },
+  {
+    id: 'smart-grid-scheduler',
+    product: 'green-world',
+    problem: 'climate',
+    name: 'Smart Grid Scheduler',
+    detail: 'Charges cars when the wind blows, not when the influencer posts.',
+    cost: 600000,
+    upkeep: 300,
+    rate: 0.005,
+    minMinor: 1
+  },
+  {
+    id: 'carbon-price-lobbying',
+    product: 'green-world',
+    problem: 'climate',
+    name: 'Carbon Price Lobbying',
+    detail: 'Politely explains to parliament what a spreadsheet is.',
+    cost: 800000,
+    upkeep: 0,
+    rate: 0.008,
+    minIntegrity: 60
+  },
+  {
+    id: 'greenwashing-campaign',
+    product: 'green-world',
+    problem: 'climate',
+    name: 'Greenwashing Campaign',
+    detail: 'Paint it green, call it a day.',
+    cost: 0,
+    upkeep: -500,
+    rate: 0.001,
+    integrity: -0.05
   }
 ];

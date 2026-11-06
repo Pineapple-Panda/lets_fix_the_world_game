@@ -15,7 +15,9 @@ import {
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
-import { activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
+import {
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, resolveProtest, startProgram, stopProgram,
+  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -271,6 +273,22 @@ export class AppComponent {
 
   activateProduct(goal: string): void {
     this.updateLaunched(state => activateProduct(state, goal));
+  }
+
+  startProgram(id: string): void {
+    this.updateLaunched(state => startProgram(state, id));
+  }
+
+  stopProgram(id: string): void {
+    this.updateLaunched(state => stopProgram(state, id));
+  }
+
+  resolveProtest(id: string): void {
+    this.updateLaunched(state => resolveProtest(state, id));
+  }
+
+  upgradeProduct(id: string): void {
+    this.updateLaunched(state => upgradeProduct(state, id));
   }
 
   buyTegridy(): void {

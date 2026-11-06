@@ -593,7 +593,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -623,14 +623,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: []
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: []
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -1059,6 +1059,99 @@ test('level 2 dev mode: 5-second epics and a boost of 100,000 actions and 30,000
   let normal = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
   for (let second = 0; second < 5; second++) normal = launched.tickLaunched(normal, () => 0);
   assert.equal(normal.epics[0].done, false);
+});
+
+const greenWorldActive = overrides => liveState({
+  perks: ['workflow-abstraction', 'network-financing'], serverSlots: 2, budget: 10000000,
+  products: [{ id: 'green-world', major: 1, minor: 0, active: true }], ...overrides
+});
+const climateAfter = (state, seconds) => {
+  let live = state;
+  for (let second = 0; second < seconds; second++) live = launched.tickLaunched(live, () => 0.99);
+  return live;
+};
+
+test('Green World programs need the active product and follow their start rules', () => {
+  assert.match(launched.programBlocker(liveState({ budget: 10000000 }), 'reforestation-network'), /Activate/);
+  const live = greenWorldActive();
+  assert.equal(launched.programBlocker(live, 'reforestation-network'), null);
+  assert.match(launched.programBlocker(live, 'carbon-price-lobbying'), /60% integrity/);
+  assert.equal(launched.programBlocker(greenWorldActive({ integrity: 60 }), 'carbon-price-lobbying'), null);
+  assert.match(launched.programBlocker(live, 'smart-grid-scheduler'), /v1\.1/);
+  assert.match(launched.programBlocker(greenWorldActive({ budget: 100 }), 'reforestation-network'), /budget/);
+  assert.match(launched.programBlocker(greenWorldActive({ serverSlots: 1, rentals: ['blue-helmets'] }), 'methane-leak-watch'), /server slot/);
+  const started = launched.startProgram(live, 'reforestation-network');
+  assert.equal(started.budget, 10000000 - 200000);
+  assert.deepEqual(started.programs, [{ id: 'reforestation-network', protest: false }]);
+  assert.equal(launched.startProgram(started, 'reforestation-network'), null, 'runs only once');
+  const watch = launched.startProgram(live, 'methane-leak-watch');
+  assert.equal(launched.usedSlots(watch), 1, 'Methane Leak Watch takes a server slot');
+  assert.deepEqual(launched.stopProgram(started, 'reforestation-network').programs, []);
+});
+
+test('running programs cost upkeep and add climate progress every second', () => {
+  const start = launched.startProgram(greenWorldActive(), 'reforestation-network');
+  const live = climateAfter(start, 100);
+  const without = climateAfter({ ...start, programs: [] }, 100);
+  assert.ok(Math.abs(live.worldProgress.climate - 0.2) < 1e-9, '0.002% per second');
+  assert.equal(without.budget - live.budget, 100 * 100, 'upkeep of 100 per second is paid');
+  let broke = launched.startProgram(greenWorldActive({ budget: 200050 }), 'reforestation-network');
+  broke = climateAfter(broke, 3);
+  assert.equal(broke.worldProgress.climate, 0, 'paused without budget for the upkeep');
+  assert.ok(broke.budget >= 0, 'budget never goes negative');
+  let wash = launched.startProgram(greenWorldActive({ budget: 0 }), 'greenwashing-campaign');
+  wash = climateAfter(wash, 10);
+  assert.equal(wash.budget >= 5000, true, 'greenwashing earns 500 per second');
+  assert.ok(Math.abs(wash.integrity - 49.5) < 1e-9, 'and costs 0.05 integrity per second');
+});
+
+test('at 0% integrity nothing works in the problem solving cards', () => {
+  const frozen = greenWorldActive({ integrity: 0 });
+  assert.match(launched.programBlocker(frozen, 'reforestation-network'), /0%/);
+  assert.equal(launched.upgradeProduct(frozen, 'green-world'), null);
+  let running = greenWorldActive({ integrity: 0, programs: [{ id: 'reforestation-network', protest: false }] });
+  const budget = running.budget;
+  running = climateAfter(running, 10);
+  assert.equal(running.worldProgress.climate, 0, 'no progress');
+  assert.ok(running.budget >= budget, 'no upkeep either');
+});
+
+test('below 50% integrity protests break out and stop a program until resolved', () => {
+  assert.equal(launched.protestChance(greenWorldActive({ integrity: 50 })), 0);
+  assert.ok(Math.abs(launched.protestChance(greenWorldActive({ integrity: 25 })) - 0.01) < 1e-12);
+  assert.equal(launched.protestChance(greenWorldActive({ integrity: 0 })), 0.02);
+  let live = launched.startProgram(greenWorldActive({ integrity: 25 }), 'reforestation-network');
+  live = launched.tickLaunched(live, () => 0);
+  assert.equal(live.programs[0].protest, true, 'a protest breaks out');
+  assert.equal(live.worldProgress.climate, 0);
+  live = climateAfter(live, 20);
+  assert.equal(live.worldProgress.climate, 0, 'no progress while protested');
+  assert.equal(launched.resolveProtest(launched.startProgram(greenWorldActive(), 'reforestation-network'), 'reforestation-network'), null,
+    'nothing to resolve without a protest');
+  live = launched.resolveProtest(live, 'reforestation-network');
+  assert.equal(live.programs[0].protest, false);
+  live = climateAfter(live, 1);
+  assert.ok(live.worldProgress.climate > 0, 'runs again after talking to the protesters');
+  let calm = launched.startProgram(greenWorldActive({ integrity: 50 }), 'reforestation-network');
+  calm = launched.tickLaunched(calm, () => 0);
+  assert.equal(calm.programs[0].protest, false, 'no protests at 50% or more');
+});
+
+test('Green World upgrades raise the version and make programs stronger', () => {
+  let live = greenWorldActive();
+  assert.equal(launched.upgradeCost(live, 'green-world'), 500000);
+  live = launched.upgradeProduct(live, 'green-world');
+  assert.deepEqual(launched.product(live, 'green-world'), { id: 'green-world', major: 1, minor: 1, active: true });
+  assert.equal(launched.productTitle(launched.product(live, 'green-world')), 'Green World v1.1');
+  assert.equal(launched.programBoost(live, 'green-world'), 1.25);
+  assert.equal(launched.programBlocker(live, 'smart-grid-scheduler'), null, 'v1.1 unlocks the Smart Grid Scheduler');
+  assert.equal(launched.upgradeCost(live, 'green-world'), 1000000);
+  live = launched.startProgram(live, 'reforestation-network');
+  live = climateAfter(live, 100);
+  assert.ok(Math.abs(live.worldProgress.climate - 0.25) < 1e-9, '+25% per upgrade');
+  assert.equal(launched.upgradeProduct(greenWorldActive({ budget: 499999 }), 'green-world'), null);
+  const nine = greenWorldActive({ products: [{ id: 'green-world', major: 1, minor: 9, active: true }] });
+  assert.equal(launched.productTitle(launched.product(launched.upgradeProduct(nine, 'green-world'), 'green-world')), 'Green World v2.0');
 });
 
 test('more server slots allow more epics at the same time', () => {
