@@ -53,6 +53,8 @@ export interface ProgramState {
   id: string;
   /** Clicks still needed to talk the protesters round (0 = no protest). */
   resistance: number;
+  /** Progress of the program's optimisation milestone in percent (0–100); only used by some programs. */
+  milestone: number;
 }
 
 /** A long-running program in a problem solving card. */
@@ -80,6 +82,10 @@ export interface ProgramDefinition {
   minMinor?: number;
   /** Only startable once total coding actions reach this value. */
   minActions?: number;
+  /** Milestone progress in percent per second while the program runs (e.g. 1 = done after 100 s). */
+  milestoneRate?: number;
+  /** Epic that appears once the milestone reaches 100%. */
+  unlocksEpic?: string;
 }
 
 /** The five problems the platform sets out to fix. */
@@ -148,4 +154,10 @@ export interface EpicDefinition {
   cost: number;
   /** Seconds of server time the epic needs. */
   duration: number;
+  /** Only appears once this program has finished its milestone. */
+  requiresProgram?: string;
+  /** Can only be started with this perk. */
+  requiresPerk?: string;
+  /** One-time climate solution boost (percentage points) when the epic is done. */
+  climateBoost?: number;
 }

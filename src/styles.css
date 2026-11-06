@@ -1426,3 +1426,7 @@ footer {
 .court-button:hover {
     background: rgba(199, 125, 187, .18) !important;
 }
+
+.milestone-fill {
+    background: var(--yellow) !important;
+}

@@ -62,6 +62,10 @@
                                     @if (entry.program.integrity) { · <span class="bad">Integrity {{ rate(entry.program.integrity) }}/sec</span> }
                                     @if (entry.program.slots) { · {{ entry.program.slots }} server slot }
                                 </small>
+                                @if (entry.milestone !== null) {
+                                    <small>Optimisation {{ entry.milestone | number: '1.0-0' }}%@if (entry.milestone >= 100) { · ✓ “{{ entry.unlocksEpic }}” is available }</small>
+                                    <div class="progress-track"><div class="progress-fill milestone-fill" [style.width.%]="entry.milestone"></div></div>
+                                }
                                 @if (entry.protest) {
                                     <small class="panel-alert">✊ Protest! People are blocking this program.</small>
                                     <small class="protest-status">
@@ -277,6 +281,28 @@
                     No slots rented
                 }
             </small>
+
+            @if (v.infrastructure.length) {
+                <h3 class="tool-heading ops-subheading">Infrastructure</h3>
+                @for (entry of v.infrastructure; track entry.epic.id) {
+                    <div class="epic" [class.running]="entry.running">
+                        <strong>{{ entry.epic.title }}</strong>
+                        <small>{{ entry.epic.detail }}</small>
+                        <small>{{ format(entry.epic.cost) }} budget · {{ duration(entry.epic.duration) }} server time
+                            @if (entry.epic.climateBoost) { · <span class="epic-done">Climate change +{{ entry.epic.climateBoost }}% once</span> }</small>
+                        @if (entry.running) {
+                            <div class="progress-track"><div class="progress-fill" [style.width.%]="entry.progress / entry.epic.duration * 100"></div></div>
+                            <small>Running · {{ clock(entry.progress) }} / {{ clock(entry.epic.duration) }}</small>
+                        } @else if (entry.missingPerk) {
+                            <small class="epic-waiting">Needs the perk “{{ entry.missingPerk }}”</small>
+                        } @else {
+                            <button class="tool-button" type="button" [disabled]="!entry.canStart"
+                                    [attr.aria-label]="'Start epic ' + entry.epic.title + ' for ' + entry.epic.cost + ' budget'"
+                                    (click)="epicStarted.emit(entry.epic.id)">Start epic</button>
+                        }
+                    </div>
+                }
+            }
 
             <h3 class="tool-heading ops-subheading">Epics</h3>
             @for (entry of openGoals(); track entry.goal.id) {

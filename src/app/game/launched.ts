@@ -196,6 +196,7 @@ export function tickLaunched(
   const finished = next.epics.filter(epic => epic.done && !state.epics.find(before => before.id === epic.id)?.done);
   for (const entry of finished) {
     const epic = epicDefinition(entry.id);
+    if (epic?.climateBoost) progress.climate = percent(progress.climate + epic.climateBoost);
     const goal = epic && worldGoals.find(candidate => candidate.id === epic.goal);
     if (!epic || !goal) continue;
     const share = epicProgress;
@@ -478,7 +479,7 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
 export function startProgram(state: LaunchedGame, id: string): LaunchedGame | null {
   const program = programDefinition(id);
   if (!program || programBlocker(state, id)) return null;
-  return { ...state, budget: state.budget - program.cost, programs: [...state.programs, { id, resistance: 0 }] };
+  return { ...state, budget: state.budget - program.cost, programs: [...state.programs, { id, resistance: 0, milestone: 0 }] };
 }
 
 export function stopProgram(state: LaunchedGame, id: string): LaunchedGame | null {
@@ -532,6 +533,10 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
     next.budget = cap(Math.max(0, next.budget - program.upkeep));
     progress[program.problem] = percent(progress[program.problem] + program.rate * programBoost(next, program.product));
     if (program.integrity) next.integrity = percent(next.integrity + program.integrity);
+    // Some programs work towards a milestone that unlocks an epic.
+    if (program.milestoneRate && entry.milestone < 100) {
+      return { ...entry, milestone: Math.min(100, entry.milestone + program.milestoneRate) };
+    }
     return entry;
   });
   next.worldProgress = progress;
@@ -652,10 +657,37 @@ export function goalComplete(state: LaunchedGame, goal: string): boolean {
   return chain.length > 0 && chain.every(epic => epicDone(state, epic.id));
 }
 
+/** Special epics appear only once their program has finished its milestone. */
+export function epicRevealed(state: LaunchedGame, id: string): boolean {
+  const epic = epicDefinition(id);
+  if (!epic?.requiresProgram) return !!epic;
+  return state.programs.some(entry => entry.id === epic.requiresProgram && entry.milestone >= 100) ||
+    state.epics.some(entry => entry.id === id);
+}
+
+/** Why a revealed special epic cannot start yet (missing perk), or null. */
+export function epicPerkMissing(state: LaunchedGame, id: string): string | null {
+  const perk = epicDefinition(id)?.requiresPerk;
+  if (!perk || state.perks.includes(perk)) return null;
+  return launchedPerks.find(entry => entry.id === perk)?.name ?? perk;
+}
+
+/** Special epics outside the world goal chains (e.g. infrastructure) that are visible right now. */
+export function infrastructureEpics(state: LaunchedGame): EpicDefinition[] {
+  return epics.filter(epic => epic.requiresProgram && epicRevealed(state, epic.id));
+}
+
+/** True once the data centres run on green energy (the connector epic is done). */
+export function greenDataCenters(state: LaunchedGame): boolean {
+  return state.perks.includes(dataCentersPerk) && epicDone(state, 'data-center-green-connector');
+}
+
 export function canStartEpic(state: LaunchedGame, id: string): boolean {
   const epic = epicDefinition(id);
   return !!epic &&
     serverOnline(state) &&
+    epicRevealed(state, id) &&
+    !epicPerkMissing(state, id) &&
     epicUnlocked(state, id) &&
     !state.epics.some(entry => entry.id === id) &&
     usedSlots(state) < state.serverSlots &&

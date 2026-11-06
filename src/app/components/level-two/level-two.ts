@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canBuyTegridy, canStartEpic, clientAvailable, courtDuration, lawsuitCase, settlementCost, clientFactor, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
+  canBuyTegridy, canStartEpic, clientAvailable, epicDefinition, epicPerkMissing, infrastructureEpics, courtDuration, lawsuitCase, settlementCost, clientFactor, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
   protestChance, resistanceGrowth, robotPerk, robotPower, robotsOnSite,
   upgradeCost, dataCentersPerk, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
   openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
@@ -92,6 +92,18 @@ export class LevelTwoComponent {
           : [])
       ],
       slots: state.serverSlots,
+      // Special epics unlocked by programs; hidden again once done.
+      infrastructure: infrastructureEpics(state).filter(epic => !epicDone(state, epic.id)).map(epic => {
+        const entry = state.epics.find(candidate => candidate.id === epic.id);
+        const duration = epicDuration(epic, fast, halved);
+        return {
+          epic: { ...epic, duration },
+          running: !!entry,
+          progress: entry ? Math.min(entry.progress, duration) : 0,
+          missingPerk: epicPerkMissing(state, epic.id),
+          canStart: canStartEpic(state, epic.id)
+        };
+      }),
       // One block per world goal that has epics: finished epics, then the next one in the chain.
       goals: worldGoals.filter(goal => goalEpics(goal.id).length).map(goal => {
         const chain = goalEpics(goal.id);
@@ -160,6 +172,8 @@ export class LevelTwoComponent {
           running: !!running,
           protest: !!running && inProtest(running),
           clicksLeft: running ? Math.ceil(running.resistance) : 0,
+          milestone: program.milestoneRate ? (running?.milestone ?? 0) : null,
+          unlocksEpic: program.unlocksEpic ? epicDefinition(program.unlocksEpic)?.title : undefined,
           unfunded: !!running && !inProtest(running) && !programFunded(state, program.id),
           blocker: running ? null : programBlocker(state, program.id)
         };

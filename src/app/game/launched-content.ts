@@ -161,6 +161,19 @@ export const epics: EpicDefinition[] = [
     duration: 300
   },
 
+  // Infrastructure: special epics unlocked by programs, outside the world goal chains.
+  {
+    id: 'data-center-green-connector',
+    goal: 'infrastructure',
+    title: 'Upgrade Data Center Infrastructure Connector',
+    detail: 'Plug the data centres straight into the optimised solar and wind farms. From now on they run entirely on green energy.',
+    cost: 1500000,
+    duration: 180,
+    requiresProgram: 'renewables-optimization',
+    requiresPerk: 'data-centers',
+    climateBoost: 20
+  },
+
   // War
   {
     id: 'war-early-warning',
@@ -388,7 +401,9 @@ export const programs: ProgramDefinition[] = [
     cost: 0,
     upkeep: 1000,
     rate: 0.01,
-    minActions: 1500000
+    minActions: 1500000,
+    milestoneRate: 1,
+    unlocksEpic: 'data-center-green-connector'
   }
 ];
 

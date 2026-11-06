@@ -1115,7 +1115,7 @@ test('Green World programs need the active product and follow their start rules'
   assert.match(launched.programBlocker(greenWorldActive({ serverSlots: 1, rentals: ['blue-helmets'] }), 'methane-leak-watch'), /server slot/);
   const started = launched.startProgram(live, 'reforestation-network');
   assert.equal(started.budget, 10000000 - 200000);
-  assert.deepEqual(started.programs, [{ id: 'reforestation-network', resistance: 0 }]);
+  assert.deepEqual(started.programs, [{ id: 'reforestation-network', resistance: 0, milestone: 0 }]);
   assert.equal(launched.startProgram(started, 'reforestation-network'), null, 'runs only once');
   const watch = launched.startProgram(live, 'methane-leak-watch');
   assert.equal(launched.usedSlots(watch), 1, 'Methane Leak Watch takes a server slot');
@@ -1133,6 +1133,45 @@ test('the renewables optimisation program needs 1,500,000 TCA and costs 1,000 bu
   const without = climateAfter({ ...start, programs: [] }, 100);
   assert.ok(Math.abs(live.worldProgress.climate - 1) < 1e-9, '0.01% per second');
   assert.equal(without.budget - live.budget, 1000 * 100, '1,000 budget per second');
+});
+
+test('the solar program finishes its optimisation at 1% per second and reveals the connector epic', () => {
+  let live = launched.startProgram(greenWorldActive({ actions: 1500000, perks: ['workflow-abstraction', 'network-financing'] }), 'renewables-optimization');
+  assert.equal(live.programs[0].milestone, 0);
+  assert.equal(launched.epicRevealed(live, 'data-center-green-connector'), false, 'hidden until the optimisation is done');
+  live = climateAfter(live, 50);
+  assert.equal(live.programs[0].milestone, 50, '1% per second');
+  live = climateAfter(live, 60);
+  assert.equal(live.programs[0].milestone, 100, 'capped at 100%');
+  assert.equal(launched.epicRevealed(live, 'data-center-green-connector'), true);
+  assert.deepEqual(launched.infrastructureEpics(live).map(epic => epic.id), ['data-center-green-connector']);
+  const blocked = launched.startProgram(greenWorldActive({ actions: 1500000, integrity: 0 }), 'renewables-optimization');
+  assert.equal(blocked, null);
+  const frozen = climateAfter(greenWorldActive({ actions: 1500000, integrity: 0,
+    programs: [{ id: 'renewables-optimization', resistance: 0, milestone: 10 }] }), 10);
+  assert.equal(frozen.programs[0].milestone, 10, 'no milestone progress while the program cannot run');
+});
+
+test('the connector epic needs real data centres and adds 20% climate solution once', () => {
+  const revealed = overrides => greenWorldActive({ actions: 1500000, budget: 5000000,
+    programs: [{ id: 'renewables-optimization', resistance: 0, milestone: 100 }], ...overrides });
+  assert.equal(launched.epicPerkMissing(revealed(), 'data-center-green-connector'), 'Migrate to Data Centers');
+  assert.equal(launched.canStartEpic(revealed(), 'data-center-green-connector'), false, 'needs the data centre perk');
+  const withDc = revealed({ perks: ['workflow-abstraction', 'network-financing', 'data-centers'] });
+  assert.equal(launched.canStartEpic(withDc, 'data-center-green-connector'), true);
+  let live = launched.startEpic({ ...withDc, programs: [] , serverSlots: 2 }, 'data-center-green-connector');
+  assert.equal(live, null, 'not revealed without the finished program');
+  live = launched.startEpic(withDc, 'data-center-green-connector');
+  assert.equal(live.budget, 5000000 - 1500000);
+  const climateBefore = live.worldProgress.climate;
+  const seconds = launched.epicDuration(launched.epicDefinition('data-center-green-connector'), false, true);
+  assert.equal(seconds, 90, '3 minutes, halved by the data centres');
+  for (let second = 0; second < seconds; second++) live = launched.tickLaunched({ ...live, programs: [] }, () => 0.99);
+  assert.equal(launched.epicDone(live, 'data-center-green-connector'), true);
+  assert.ok(Math.abs(live.worldProgress.climate - (climateBefore + 20)) < 1e-9, '+20% climate solution once');
+  assert.equal(launched.greenDataCenters(live), true);
+  const after = launched.tickLaunched(live, () => 0.99);
+  assert.equal(after.worldProgress.climate, live.worldProgress.climate, 'the boost is not repeated');
 });
 
 test('running programs cost upkeep and add climate progress every second', () => {
@@ -1155,7 +1194,7 @@ test('at 0% integrity nothing works in the problem solving cards', () => {
   const frozen = greenWorldActive({ integrity: 0 });
   assert.match(launched.programBlocker(frozen, 'reforestation-network'), /0%/);
   assert.equal(launched.upgradeProduct(frozen, 'green-world'), null);
-  let running = greenWorldActive({ integrity: 0, programs: [{ id: 'reforestation-network', resistance: 0 }] });
+  let running = greenWorldActive({ integrity: 0, programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }] });
   const budget = running.budget;
   running = climateAfter(running, 10);
   assert.equal(running.worldProgress.climate, 0, 'no progress');
@@ -1195,10 +1234,10 @@ test('a protest takes 20 clicks, and low integrity adds resistance every second'
   growing = launched.tickLaunched(growing, () => 0.99);
   assert.equal(growing.programs[0].resistance, 22);
   assert.equal(growing.worldProgress.climate, 0, 'no progress while protested');
-  const steady = launched.tickLaunched(greenWorldActive({ integrity: 60, programs: [{ id: 'reforestation-network', resistance: 20 }] }), () => 0.99);
+  const steady = launched.tickLaunched(greenWorldActive({ integrity: 60, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }] }), () => 0.99);
   assert.equal(steady.programs[0].resistance, 20, 'an old protest does not grow above 50% integrity');
   assert.equal(launched.maxResistance, 100);
-  const capped = launched.tickLaunched(greenWorldActive({ integrity: 1, programs: [{ id: 'reforestation-network', resistance: 99.5 }] }), () => 0.99);
+  const capped = launched.tickLaunched(greenWorldActive({ integrity: 1, programs: [{ id: 'reforestation-network', resistance: 99.5, milestone: 0 }] }), () => 0.99);
   assert.equal(capped.programs[0].resistance, 100, 'resistance never grows beyond 100');
 });
 
@@ -1222,7 +1261,7 @@ test('EdisonX robots: a perk only for EdisonX clients that works only while Edis
 test('EdisonX robots resolve protests automatically', () => {
   const protest = (perks, rentals) => greenWorldActive({ integrity: 25, rentals, serverSlots: 3,
     perks: ['workflow-abstraction', 'network-financing', ...perks],
-    programs: [{ id: 'reforestation-network', resistance: 20 }] });
+    programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }] });
   assert.equal(launched.tickLaunched(protest([], ['edisonx']), () => 0.99).programs[0].resistance > 20, true, 'no robots without the perk');
   let live = protest(['edisonx-robots'], ['edisonx']);
   live = launched.tickLaunched(live, () => 0.99);
@@ -1253,7 +1292,7 @@ test('flimsy lawsuits: only at 30% climate solution and more than 80% integrity'
 
 test('a lawsuit freezes the programs until it is settled or won in court', () => {
   const climate = { ...liveState().worldProgress, climate: 30 };
-  const base = greenWorldActive({ integrity: 70, worldProgress: climate, programs: [{ id: 'reforestation-network', resistance: 0 }],
+  const base = greenWorldActive({ integrity: 70, worldProgress: climate, programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }],
     lawsuit: { caseId: 2, courtSeconds: null } });
   let frozen = launched.tickLaunched(base, () => 0.99);
   assert.equal(frozen.worldProgress.climate, 30, 'the injunction freezes the programs');

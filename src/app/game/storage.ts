@@ -99,7 +99,8 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !isCount(game.lawsuitsFiled) ||
     !(game.lawsuit === null || (isObject(game.lawsuit) && isCount(game.lawsuit.caseId) &&
       (game.lawsuit.courtSeconds === null || isCount(game.lawsuit.courtSeconds)))) ||
-    !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0) ||
+    !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0 &&
+      typeof entry.milestone === 'number' && entry.milestone >= 0 && entry.milestone <= 100) ||
     !isObject(game.worldProgress) ||
     !['climate', 'war', 'hunger', 'poverty', 'corruption'].every(problem => {
       const value = (game.worldProgress as Snapshot)[problem];
