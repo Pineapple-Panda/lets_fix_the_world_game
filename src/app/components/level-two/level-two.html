@@ -42,7 +42,7 @@
                                         @if (panel.resistanceGrowth > 0) { · <span class="bad">+{{ panel.resistanceGrowth }}/sec from distrust</span> }
                                         @if (panel.robots) { · <span class="good">EdisonX robots −{{ panel.robotPower }}/sec</span> }
                                     </small>
-                                    <div class="protest-track"><div class="protest-fill" [style.width.%]="(entry.clicksLeft / 20) * 100 > 100 ? 100 : (entry.clicksLeft / 20) * 100"></div></div>
+                                    <div class="protest-track"><div class="protest-fill" [style.width.%]="entry.clicksLeft"></div></div>
                                     <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
                                             (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
                                 } @else if (entry.running) {

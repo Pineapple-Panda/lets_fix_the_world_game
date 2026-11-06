@@ -383,6 +383,8 @@ export function integrityBlocked(state: LaunchedGame): boolean {
 
 /** A new protest needs this many clicks to resolve. */
 export const protestResistance = 20;
+/** Distrust can push a protest's resistance up to this many clicks, but not further. */
+export const maxResistance = 100;
 /** At 0% integrity a protest's resistance grows by this much per second (linearly less up to 50%). */
 export const maxResistanceGrowth = 2;
 /** Client whose riot-control robots resolve protests automatically. */
@@ -498,7 +500,9 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
     const program = programDefinition(entry.id);
     if (!program) return entry;
     // A protest grows with distrust and shrinks while robots are on site; the program waits meanwhile.
-    if (inProtest(entry)) return { ...entry, resistance: lowerResistance(entry.resistance + growth, robots) };
+    if (inProtest(entry)) {
+      return { ...entry, resistance: lowerResistance(Math.min(maxResistance, entry.resistance + growth), robots) };
+    }
     if (chance > 0 && random() < chance) return { ...entry, resistance: protestResistance };
     if (!programFunded(next, entry.id)) return entry;
     next.budget = cap(Math.max(0, next.budget - program.upkeep));

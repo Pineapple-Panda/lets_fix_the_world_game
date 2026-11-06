@@ -1151,6 +1151,9 @@ test('a protest takes 20 clicks, and low integrity adds resistance every second'
   assert.equal(growing.worldProgress.climate, 0, 'no progress while protested');
   const steady = launched.tickLaunched(greenWorldActive({ integrity: 60, programs: [{ id: 'reforestation-network', resistance: 20 }] }), () => 0.99);
   assert.equal(steady.programs[0].resistance, 20, 'an old protest does not grow above 50% integrity');
+  assert.equal(launched.maxResistance, 100);
+  const capped = launched.tickLaunched(greenWorldActive({ integrity: 1, programs: [{ id: 'reforestation-network', resistance: 99.5 }] }), () => 0.99);
+  assert.equal(capped.programs[0].resistance, 100, 'resistance never grows beyond 100');
 });
 
 test('EdisonX robots: a perk only for EdisonX clients that works only while EdisonX rents', () => {
