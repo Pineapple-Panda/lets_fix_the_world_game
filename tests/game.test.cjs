@@ -1029,8 +1029,9 @@ test('finished epics fill the solution progress bars', () => {
 test('rental clients and world problems are defined', () => {
   const content = require('../src/app/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
-  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'edisonx', 'nsa']);
-  const [green, , , edison] = content.rentalClients;
+  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx']);
+  const green = content.rentalClients[0];
+  const edison = content.rentalClients.find(client => client.id === 'edisonx');
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
   assert.ok(edison.income >= 10 * content.rentalClients[2].income, 'EdisonX pays far more than anyone else');
   assert.ok(green.progress.climate > 0 && green.integrity > 0 && green.minIntegrity === 70);

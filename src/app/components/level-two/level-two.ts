@@ -51,12 +51,6 @@ export class LevelTwoComponent {
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
       rented: rentedSlots(state),
-      // e.g. "NSA (5), EdisonX (1)"
-      renters: state.rentals
-        .map(id => rentalClients.find(client => client.id === id))
-        .filter(client => !!client)
-        .map(client => `${client!.name} (${client!.slots ?? 1})`)
-        .join(', '),
       rentalIncome: rentalIncome(state),
       worldProgress: worldProblems.map(problem => ({ ...problem, value: state.worldProgress[problem.id] })),
       clients: rentalClients.map(client => ({
