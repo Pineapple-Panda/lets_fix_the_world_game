@@ -1,15 +1,20 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
-  canBuyTegridy, canStartEpic, clientAvailable, epicDefinition, epicPerkMissing, infrastructureEpics, courtDuration, lawsuitCase, settlementCost, clientFactor, inProtest, integrityBlocked, programBlocker, programBoost, programFunded,
-  protestChance, resistanceGrowth, robotPerk, robotPower, robotsOnSite,
-  upgradeCost, dataCentersPerk, epicDone, epicDuration, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkAvailable, networkOnline,
-  openLaunchedPerks, previousEpic, rentedSlots, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
-  serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
+  actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
+  canStartEpic, clientAvailable, clientFactor, courtDuration, dataCentersActive, epicDefinition, epicDone, epicDuration,
+  epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, greenWorld, inProtest, infrastructureEpics,
+  integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
+  productForGoal, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, runningEpics, serverLoad, serverOnline, settlementCost,
+  tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
-import type { LaunchedGame, LaunchedPerk } from '../../models/launched.model';
+import type { EpicDefinition, LaunchedGame, LaunchedPerk, WorldProblem } from '../../models/launched.model';
+
+/** Rounds tiny per-second rates for display (5 decimals). */
+const small = (value: number) => Math.round(value * 100000) / 100000;
+const problemName = (id: string) => worldProblems.find(entry => entry.id === id)?.name ?? id;
 
 /** Level 2: a 3×2 grid of cards. The development card sits bottom centre; the others unlock over time. */
 @Component({
@@ -38,7 +43,8 @@ export class LevelTwoComponent {
   protected readonly view = computed(() => {
     const state = this.state();
     const fast = this.fastEpics();
-    const halved = state.perks.includes(dataCentersPerk);
+    const halved = dataCentersActive(state);
+    const factor = clientFactor(state);
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
@@ -53,7 +59,7 @@ export class LevelTwoComponent {
       }),
       actionBoost: Math.round((actionBoost(state) - 1) * 100),
       budgetBoost: Math.round((budgetBoost(state) - 1) * 100),
-      // Every Add Server doubles the slider effect.
+      // Every Add Server adds one step to the slider effect.
       focusPower: focusPower(state),
       networkOnline: networkOnline(state),
       serverOnline: serverOnline(state),
@@ -69,12 +75,12 @@ export class LevelTwoComponent {
         available: clientAvailable(state, client.id),
         condition: client.minIntegrity !== undefined ? `Only signs at ${client.minIntegrity}% integrity or more`
           : client.maxIntegrity !== undefined ? `Only signs at ${client.maxIntegrity}% integrity or less` : '',
-        income: Math.round(client.income * clientFactor(state)),
-        effects: (Object.entries(client.progress) as [string, number][]).map(([problem, delta]) => ({
-          name: worldProblems.find(entry => entry.id === problem)?.name ?? problem,
-          delta: Math.round(delta * clientFactor(state) * 100000) / 100000
+        income: Math.round(client.income * factor),
+        effects: (Object.entries(client.progress) as [WorldProblem, number][]).map(([problem, delta]) => ({
+          name: problemName(problem),
+          delta: small(delta * factor)
         })),
-        integrity: Math.round(client.integrity * clientFactor(state) * 100000) / 100000
+        integrity: small(client.integrity * factor)
       })),
       integrity: state.integrity,
       tegridy: tegridyActive(state),
@@ -93,22 +99,14 @@ export class LevelTwoComponent {
       ],
       slots: state.serverSlots,
       // Special epics unlocked by programs; hidden again once done.
-      infrastructure: infrastructureEpics(state).filter(epic => !epicDone(state, epic.id)).map(epic => {
-        const entry = state.epics.find(candidate => candidate.id === epic.id);
-        const duration = epicDuration(epic, fast, halved);
-        return {
-          epic: { ...epic, duration },
-          running: !!entry,
-          progress: entry ? Math.min(entry.progress, duration) : 0,
-          missingPerk: epicPerkMissing(state, epic.id),
-          canStart: canStartEpic(state, epic.id)
-        };
-      }),
+      infrastructure: infrastructureEpics(state).filter(epic => !epicDone(state, epic.id)).map(epic => ({
+        ...this.epicCard(state, epic, fast, halved),
+        missingPerk: epicPerkMissing(state, epic.id)
+      })),
       // One block per world goal that has epics: finished epics, then the next one in the chain.
       goals: worldGoals.filter(goal => goalEpics(goal.id).length).map(goal => {
         const chain = goalEpics(goal.id);
         const next = chain.find(epic => !epicDone(state, epic.id));
-        const entry = next && state.epics.find(candidate => candidate.id === next.id);
         const target = productForGoal(goal.id);
         const released = target && product(state, target.id);
         // Goals that share a product (war + corruption) wait for each other.
@@ -124,10 +122,7 @@ export class LevelTwoComponent {
             ? `Released: ${productTitle(released)}`
             : `Goal reached · ${target?.name ?? 'The product'} also needs ${missing.join(' and ')}`,
           next: next && {
-            epic: { ...next, duration: epicDuration(next, fast, halved) },
-            progress: entry ? Math.min(entry.progress, epicDuration(next, fast, halved)) : 0,
-            running: !!entry,
-            canStart: canStartEpic(state, next.id),
+            ...this.epicCard(state, next, fast, halved),
             // Within a system epics run one after another (Peace & Integrity: war first, then corruption).
             waitingFor: epicUnlocked(state, next.id) ? undefined : previousEpic(next.id)?.title
           }
@@ -139,19 +134,33 @@ export class LevelTwoComponent {
   /** Epic categories that still have work left; finished ones are hidden. */
   protected readonly openGoals = computed(() => this.view().goals.filter(goal => !goal.complete));
 
-  /** The control panel of an active product card (programs, protests, upgrade). */
+  /** An epic as shown on the server card: its effective duration, whether it runs and how far it is. */
+  private epicCard(state: LaunchedGame, epic: EpicDefinition, fast: boolean, halved: boolean) {
+    const entry = state.epics.find(candidate => candidate.id === epic.id);
+    const duration = epicDuration(epic, fast, halved);
+    return {
+      epic: { ...epic, duration },
+      running: !!entry,
+      progress: entry ? Math.min(entry.progress, duration) : 0,
+      canStart: canStartEpic(state, epic.id)
+    };
+  }
+
+  /** The control panel of an active product card (programs, protests, upgrade). Completed programs are hidden. */
   private panel(state: LaunchedGame, productId: string) {
     const released = product(state, productId);
-    const cardPrograms = programs.filter(program => program.product === productId);
-    if (!released?.active || !cardPrograms.length) return null;
-    const problem = cardPrograms[0]!.problem;
+    const productPrograms = programs.filter(program => program.product === productId);
+    if (!released?.active || !productPrograms.length) return null;
+    const problem = productPrograms[0]!.problem;
     const boost = programBoost(state, productId);
+    const cost = upgradeCost(state, productId);
+    const cardPrograms = productPrograms.filter(program => !state.completedPrograms.includes(program.id));
     return {
-      problemName: worldProblems.find(entry => entry.id === problem)?.name ?? problem,
+      problemName: problemName(problem),
       progress: state.worldProgress[problem],
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
-      lawsuit: productId === 'green-world' && state.lawsuit ? {
+      lawsuit: productId === greenWorld && state.lawsuit ? {
         ...lawsuitCase(state)!,
         courtSeconds: state.lawsuit.courtSeconds,
         canSettle: state.budget >= settlementCost(state)
@@ -162,13 +171,13 @@ export class LevelTwoComponent {
       robots: robotsOnSite(state),
       robotPower,
       boostPercent: Math.round((boost - 1) * 100),
-      upgradeCost: upgradeCost(state, productId),
-      canUpgrade: !integrityBlocked(state) && state.budget >= upgradeCost(state, productId),
+      upgradeCost: cost,
+      canUpgrade: !integrityBlocked(state) && state.budget >= cost,
       programs: cardPrograms.map(program => {
         const running = state.programs.find(entry => entry.id === program.id);
         return {
           program,
-          rate: Math.round(program.rate * boost * 100000) / 100000,
+          rate: small(program.rate * boost),
           running: !!running,
           protest: !!running && inProtest(running),
           clicksLeft: running ? Math.ceil(running.resistance) : 0,

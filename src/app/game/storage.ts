@@ -86,6 +86,8 @@ const isEpic = (value: unknown): boolean =>
 /** The level 2 state, or null when there is no compatible level 2 save. */
 export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
   const game = readSnapshot(storage, 2);
+  // Saves from before completed programs existed simply have none.
+  if (game && game.completedPrograms === undefined) game.completedPrograms = [];
   if (
     !game ||
     !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
@@ -96,6 +98,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.rentals) || !game.rentals.every(id => typeof id === 'string') ||
     typeof game.integrity !== 'number' || game.integrity < 0 || game.integrity > 100 ||
     !Array.isArray(game.programs) ||
+    !Array.isArray(game.completedPrograms) || !game.completedPrograms.every(id => typeof id === 'string') ||
     !isCount(game.lawsuitsFiled) ||
     !(game.lawsuit === null || (isObject(game.lawsuit) && isCount(game.lawsuit.caseId) &&
       (game.lawsuit.courtSeconds === null || isCount(game.lawsuit.courtSeconds)))) ||

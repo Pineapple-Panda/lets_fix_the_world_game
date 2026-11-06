@@ -63,7 +63,7 @@
                                     @if (entry.program.slots) { · {{ entry.program.slots }} server slot }
                                 </small>
                                 @if (entry.milestone !== null) {
-                                    <small>Optimisation {{ entry.milestone | number: '1.0-0' }}%@if (entry.milestone >= 100) { · ✓ “{{ entry.unlocksEpic }}” is available }</small>
+                                    <small>Optimisation {{ entry.milestone | number: '1.0-0' }}% · at 100% the program ends and unlocks “{{ entry.unlocksEpic }}”</small>
                                     <div class="progress-track"><div class="progress-fill milestone-fill" [style.width.%]="entry.milestone"></div></div>
                                 }
                                 @if (entry.protest) {

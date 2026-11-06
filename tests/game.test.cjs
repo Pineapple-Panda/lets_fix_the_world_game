@@ -593,7 +593,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, lawsuitsFiled: 0, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -623,14 +623,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, lawsuitsFiled: 0
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], lawsuit: null, lawsuitsFiled: 0
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -1141,8 +1141,14 @@ test('the solar program finishes its optimisation at 1% per second and reveals t
   assert.equal(launched.epicRevealed(live, 'data-center-green-connector'), false, 'hidden until the optimisation is done');
   live = climateAfter(live, 50);
   assert.equal(live.programs[0].milestone, 50, '1% per second');
-  live = climateAfter(live, 60);
-  assert.equal(live.programs[0].milestone, 100, 'capped at 100%');
+  live = climateAfter(live, 49);
+  assert.equal(live.programs[0].milestone, 99);
+  live = climateAfter(live, 1);
+  assert.deepEqual(live.programs, [], 'the program ends by itself at 100%');
+  assert.deepEqual(live.completedPrograms, ['renewables-optimization']);
+  assert.equal(launched.programBlocker(live, 'renewables-optimization'), 'Already completed');
+  const budgetAfter = climateAfter(live, 10);
+  assert.equal(budgetAfter.budget >= live.budget, true, 'no more upkeep once completed');
   assert.equal(launched.epicRevealed(live, 'data-center-green-connector'), true);
   assert.deepEqual(launched.infrastructureEpics(live).map(epic => epic.id), ['data-center-green-connector']);
   const blocked = launched.startProgram(greenWorldActive({ actions: 1500000, integrity: 0 }), 'renewables-optimization');
@@ -1154,12 +1160,12 @@ test('the solar program finishes its optimisation at 1% per second and reveals t
 
 test('the connector epic needs real data centres and adds 20% climate solution once', () => {
   const revealed = overrides => greenWorldActive({ actions: 1500000, budget: 5000000,
-    programs: [{ id: 'renewables-optimization', resistance: 0, milestone: 100 }], ...overrides });
+    completedPrograms: ['renewables-optimization'], ...overrides });
   assert.equal(launched.epicPerkMissing(revealed(), 'data-center-green-connector'), 'Migrate to Data Centers');
   assert.equal(launched.canStartEpic(revealed(), 'data-center-green-connector'), false, 'needs the data centre perk');
   const withDc = revealed({ perks: ['workflow-abstraction', 'network-financing', 'data-centers'] });
   assert.equal(launched.canStartEpic(withDc, 'data-center-green-connector'), true);
-  let live = launched.startEpic({ ...withDc, programs: [] , serverSlots: 2 }, 'data-center-green-connector');
+  let live = launched.startEpic({ ...withDc, completedPrograms: [], serverSlots: 2 }, 'data-center-green-connector');
   assert.equal(live, null, 'not revealed without the finished program');
   live = launched.startEpic(withDc, 'data-center-green-connector');
   assert.equal(live.budget, 5000000 - 1500000);

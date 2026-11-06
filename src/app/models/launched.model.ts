@@ -34,6 +34,8 @@ export interface LaunchedGame {
   integrity: number;
   /** Programs running in the problem solving cards (e.g. Green World). */
   programs: ProgramState[];
+  /** Programs that reached their milestone; they ended by themselves and cannot be started again. */
+  completedPrograms: string[];
   /** A lawsuit against the platform, or null. While it runs, the Green World programs are frozen. */
   lawsuit: Lawsuit | null;
   /** Lawsuits filed so far; every new one costs and takes 20% more. */

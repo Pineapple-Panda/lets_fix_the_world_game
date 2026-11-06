@@ -12,22 +12,36 @@ export const maxActionsPerSecond = 300;
 /** Every this many seconds the budget grows by the new actions times `budgetPerAction`. */
 export const budgetInterval = 5;
 export const budgetPerAction = 1;
+
+// ---------- Ids that the logic refers to ----------
+
 /** Perk that brings the server (and with it the epics) into play. */
 export const serverPerk = 'workflow-abstraction';
+/** Perk that opens the Network & Financing card. */
+export const networkPerk = 'network-financing';
+/** Perk that halves every epic's server time and makes clients 25% stronger. */
+export const dataCentersPerk = 'data-centers';
+/** The repeatable "Add Server" perk. */
+export const addServerPerkId = 'add-server';
+/** Client whose riot-control robots resolve protests automatically. */
+export const robotClient = 'edisonx';
+/** The product whose programs can be sued. */
+export const greenWorld = 'green-world';
+/** Epic that runs the data centres on green energy. */
+export const connectorEpic = 'data-center-green-connector';
 
 /** True once Earl reports full test coverage. */
 export function canLaunch(game: Game): boolean {
   return game.activatedPerks.includes('earl') && game.testCoverage >= launchCoverage;
 }
 
-/** Reduces the level 1 game to the level 2 state: only actions and budget survive, level 1 perks are gone. */
-export function launch(game: Game): LaunchedGame | null {
-  if (!canLaunch(game)) return null;
+/** A fresh level 2 state with the given actions and budget. */
+function newLaunchedState(actions: number, budget: number): LaunchedGame {
   return {
-    actions: game.actions,
-    budget: game.budget,
+    actions,
+    budget,
     seconds: 0,
-    budgetActions: game.actions,
+    budgetActions: actions,
     perks: [],
     serverSlots: 1,
     epics: [],
@@ -37,9 +51,15 @@ export function launch(game: Game): LaunchedGame | null {
     worldProgress: noProgress(),
     integrity: startIntegrity,
     programs: [],
+    completedPrograms: [],
     lawsuit: null,
     lawsuitsFiled: 0
   };
+}
+
+/** Reduces the level 1 game to the level 2 state: only actions and budget survive, level 1 perks are gone. */
+export function launch(game: Game): LaunchedGame | null {
+  return canLaunch(game) ? newLaunchedState(game.actions, game.budget) : null;
 }
 
 /** Starting values when level 1 is skipped with the dev button. */
@@ -48,23 +68,7 @@ export const skipLevelBudget = 3000;
 
 /** Dev shortcut: a fresh level 2 state without playing level 1. */
 export function skippedLevelTwo(): LaunchedGame {
-  return {
-    actions: skipLevelActions,
-    budget: skipLevelBudget,
-    seconds: 0,
-    budgetActions: skipLevelActions,
-    perks: [],
-    serverSlots: 1,
-    epics: [],
-    products: [],
-    focus: 0,
-    rentals: [],
-    worldProgress: noProgress(),
-    integrity: startIntegrity,
-    programs: [],
-    lawsuit: null,
-    lawsuitsFiled: 0
-  };
+  return newLaunchedState(skipLevelActions, skipLevelBudget);
 }
 
 /** Every problem at 0%. */
@@ -127,18 +131,15 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
   return next === state.focus ? null : { ...state, focus: next };
 }
 
-/**
- * One second in level 2: actions grow by 50–300 (scaled by the focus slider), running epics advance by one second of server time,
- * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
- */
 /** Dev mode: epics take at most this many seconds. */
 export const devEpicDuration = 5;
 export const devBoostActions = 1000000;
 export const devBoostBudget = 1000000;
 
-/** Seconds an epic needs; capped at 5 in dev mode. */
-/** Perk that halves every epic's server time. */
-export const dataCentersPerk = 'data-centers';
+/** True after migrating to data centres. */
+export function dataCentersActive(state: LaunchedGame): boolean {
+  return state.perks.includes(dataCentersPerk);
+}
 
 /** Seconds an epic needs: halved (rounded up) after migrating to data centres, capped at 5 in dev mode. */
 export function epicDuration(epic: EpicDefinition, fastEpics = false, dataCenters = false): number {
@@ -158,6 +159,11 @@ export function devBoost(state: LaunchedGame): LaunchedGame {
   };
 }
 
+/**
+ * One second in level 2: actions grow by 50–300 (scaled by the focus slider), running epics advance by one second of server time,
+ * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
+ * Then clients, finished epics, programs, lawsuits and product releases are applied.
+ */
 export function tickLaunched(
   state: LaunchedGame,
   random: () => number = Math.random,
@@ -165,6 +171,7 @@ export function tickLaunched(
 ): LaunchedGame {
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
   const gained = Math.round(base * actionBoost(state));
+  const dataCenters = dataCentersActive(state);
   const next: LaunchedGame = {
     ...state,
     actions: cap(state.actions + gained),
@@ -173,7 +180,7 @@ export function tickLaunched(
       if (epic.done) return epic;
       const progress = epic.progress + 1;
       const definition = epicDefinition(epic.id);
-      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, fastEpics, state.perks.includes(dataCentersPerk)) : 0) };
+      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, fastEpics, dataCenters) : 0) };
     })
   };
   if (next.seconds % budgetInterval === 0) {
@@ -198,9 +205,8 @@ export function tickLaunched(
     const epic = epicDefinition(entry.id);
     if (epic?.climateBoost) progress.climate = percent(progress.climate + epic.climateBoost);
     const goal = epic && worldGoals.find(candidate => candidate.id === epic.goal);
-    if (!epic || !goal) continue;
-    const share = epicProgress;
-    for (const problem of goal.problems) progress[problem] = percent(progress[problem] + share);
+    if (!goal) continue;
+    for (const problem of goal.problems) progress[problem] = percent(progress[problem] + epicProgress);
   }
   next.worldProgress = progress;
   runPrograms(next, random);
@@ -242,8 +248,7 @@ export function launchedPerkUnlocked(state: LaunchedGame, perk: LaunchedPerk): b
   return state.actions >= perk.actionsRequired;
 }
 
-/** The repeatable "Add Server" perk: bought with budget, 100,000 for the first server, 10% more for each further one. */
-export const addServerPerkId = 'add-server';
+/** Add Server is bought with budget: 100,000 for the first server, 10% more for each further one. */
 export const addServerBasePrice = 100000;
 export const addServerPriceStep = 1.1;
 
@@ -314,44 +319,30 @@ export function buyTegridy(state: LaunchedGame): LaunchedGame | null {
   };
 }
 
-/** Whether a perk can be taken right now: enough actions, enough budget for bought perks, and its prerequisites. */
+/**
+ * Whether a perk can be taken right now: it is on offer (see `openLaunchedPerks`), enough actions are reached and
+ * the budget covers its price. Adding a server only makes sense once there is a server to extend.
+ */
 export function launchedPerkAvailable(state: LaunchedGame, perk: LaunchedPerk): boolean {
-  if (perk.id === addServerPerkId) return serverOnline(state) && state.budget >= (perk.cost ?? 0);
-  if (perk.id === robotPerk.id) {
-    return state.rentals.includes(robotClient) && !state.perks.includes(robotPerk.id) &&
-      launchedPerkUnlocked(state, perk) && state.budget >= (perk.cost ?? 0);
-  }
-  if (perk.id === tegridyPerk.id) return networkOnline(state) && !tegridyActive(state) && state.budget >= (perk.cost ?? 0);
-  // Regular perks unlock by actions; some also have a budget price.
-  return launchedPerkUnlocked(state, perk) && state.budget >= (perk.cost ?? 0);
+  return openLaunchedPerks(state).some(open => open.id === perk.id) &&
+    (perk.id !== addServerPerkId || serverOnline(state)) &&
+    launchedPerkUnlocked(state, perk) &&
+    state.budget >= (perk.cost ?? 0);
 }
-
-/** Perk that opens the Network & Financing card. */
-export const networkPerk = 'network-financing';
 
 /** The Network & Financing desk (bottom left of the grid) opens with the "Who Pays for All This?" perk. */
 export function networkOnline(state: LaunchedGame): boolean {
   return state.perks.includes(networkPerk);
 }
 
+/** Takes a perk and pays its price. Add Server adds a slot; every other perk is owned from then on. */
 export function activateLaunchedPerk(state: LaunchedGame, id: string): LaunchedGame | null {
-  if (id === robotPerk.id) {
-    if (!launchedPerkAvailable(state, robotPerk)) return null;
-    return { ...state, budget: state.budget - (robotPerk.cost ?? 0), perks: [...state.perks, id] };
-  }
-  if (id === tegridyPerk.id) {
-    if (!launchedPerkAvailable(state, tegridyPerk)) return null;
-    return { ...state, budget: state.budget - (tegridyPerk.cost ?? 0), perks: [...state.perks, id] };
-  }
-  if (id === addServerPerkId) {
-    // Adding a server only makes sense once there is a server to extend.
-    const perk = addServerPerk(state);
-    if (!launchedPerkAvailable(state, perk)) return null;
-    return { ...state, budget: state.budget - (perk.cost ?? 0), serverSlots: state.serverSlots + 1 };
-  }
-  const perk = launchedPerks.find(entry => entry.id === id);
-  if (!perk || state.perks.includes(id) || !launchedPerkAvailable(state, perk)) return null;
-  return { ...state, budget: state.budget - (perk.cost ?? 0), perks: [...state.perks, id] };
+  const perk = openLaunchedPerks(state).find(entry => entry.id === id);
+  if (!perk || !launchedPerkAvailable(state, perk)) return null;
+  const budget = state.budget - (perk.cost ?? 0);
+  return id === addServerPerkId
+    ? { ...state, budget, serverSlots: state.serverSlots + 1 }
+    : { ...state, budget, perks: [...state.perks, id] };
 }
 
 /** The server and its epics appear once the workflow is abstracted. */
@@ -407,15 +398,17 @@ export const protestResistance = 20;
 export const maxResistance = 100;
 /** At 0% integrity a protest's resistance grows by this much per second (linearly less up to 50%). */
 export const maxResistanceGrowth = 2;
-/** Client whose riot-control robots resolve protests automatically. */
-export const robotClient = 'edisonx';
 /** Resistance the robots remove from every protest per second. */
 export const robotPower = 5;
 
+/** Distrust of the population, 0 at 50% integrity or more, 1 at 0%. Drives protests. */
+function distrust(state: LaunchedGame): number {
+  return state.integrity >= protestIntegrity ? 0 : (protestIntegrity - state.integrity) / protestIntegrity;
+}
+
 /** How much a protest's resistance grows per second: the lower the integrity, the faster. */
 export function resistanceGrowth(state: LaunchedGame): number {
-  if (state.integrity >= protestIntegrity) return 0;
-  return maxResistanceGrowth * (protestIntegrity - state.integrity) / protestIntegrity;
+  return maxResistanceGrowth * distrust(state);
 }
 
 /** Riot-control robots on site: available while EdisonX rents a slot. */
@@ -442,8 +435,7 @@ export function inProtest(entry: ProgramState): boolean {
 
 /** Chance per second that a running program is hit by a protest. */
 export function protestChance(state: LaunchedGame): number {
-  if (state.integrity >= protestIntegrity) return 0;
-  return maxProtestChance * (protestIntegrity - state.integrity) / protestIntegrity;
+  return maxProtestChance * distrust(state);
 }
 
 /** Multiplier on program output from product upgrades: v1.0 ×1, v1.1 ×1.25, v1.2 ×1.5 … */
@@ -458,6 +450,7 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
   if (!program) return 'Unknown program';
   if (!productActive(state, program.product)) return 'Activate the product first';
   if (state.programs.some(entry => entry.id === id)) return 'Already running';
+  if (state.completedPrograms.includes(id)) return 'Already completed';
   if (integrityBlocked(state)) return 'Integrity is 0%: nobody cooperates';
   if (program.minActions !== undefined && state.actions < program.minActions) {
     return `Needs ${program.minActions.toLocaleString('en-US')} total coding actions`;
@@ -511,17 +504,16 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
 /**
  * One second of all running programs (mutates `next`): at 0% integrity everything is frozen. Below 50%
  * protests can break out; a protested program makes no progress until the protest is resolved. A program
- * that cannot pay its upkeep pauses for that second.
+ * that cannot pay its upkeep pauses for that second. A program with a milestone ends by itself once it reaches 100%.
  */
 function runPrograms(next: LaunchedGame, random: () => number): void {
-  if (!next.programs.length || integrityBlocked(next)) return;
   // A court injunction freezes the Green World programs while a lawsuit is open.
-  if (next.lawsuit) return;
+  if (!next.programs.length || integrityBlocked(next) || next.lawsuit) return;
   const chance = protestChance(next);
   const growth = resistanceGrowth(next);
   const robots = robotsOnSite(next) ? robotPower : 0;
   const progress = { ...next.worldProgress };
-  next.programs = next.programs.map(entry => {
+  const running = next.programs.map(entry => {
     const program = programDefinition(entry.id);
     if (!program) return entry;
     // A protest grows with distrust and shrinks while robots are on site; the program waits meanwhile.
@@ -539,6 +531,9 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
     }
     return entry;
   });
+  const completed = running.filter(entry => programDefinition(entry.id)?.milestoneRate && entry.milestone >= 100);
+  next.programs = running.filter(entry => !completed.includes(entry));
+  if (completed.length) next.completedPrograms = [...next.completedPrograms, ...completed.map(entry => entry.id)];
   next.worldProgress = progress;
 }
 
@@ -575,14 +570,14 @@ export function rentalClient(id: string): RentalClient | undefined {
   return rentalClients.find(client => client.id === id);
 }
 
-/** Budget per second from all rented slots. */
 /** Data centres make every client 25% stronger: more income, and bigger effects in both directions. */
 export const dataCenterClientBoost = 1.25;
 
 export function clientFactor(state: LaunchedGame): number {
-  return state.perks.includes(dataCentersPerk) ? dataCenterClientBoost : 1;
+  return dataCentersActive(state) ? dataCenterClientBoost : 1;
 }
 
+/** Budget per second from all rented slots. */
 export function rentalIncome(state: LaunchedGame): number {
   return Math.round(state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0) * clientFactor(state));
 }
@@ -657,12 +652,11 @@ export function goalComplete(state: LaunchedGame, goal: string): boolean {
   return chain.length > 0 && chain.every(epic => epicDone(state, epic.id));
 }
 
-/** Special epics appear only once their program has finished its milestone. */
+/** Special epics appear only once their program has completed its milestone. */
 export function epicRevealed(state: LaunchedGame, id: string): boolean {
   const epic = epicDefinition(id);
   if (!epic?.requiresProgram) return !!epic;
-  return state.programs.some(entry => entry.id === epic.requiresProgram && entry.milestone >= 100) ||
-    state.epics.some(entry => entry.id === id);
+  return state.completedPrograms.includes(epic.requiresProgram) || state.epics.some(entry => entry.id === id);
 }
 
 /** Why a revealed special epic cannot start yet (missing perk), or null. */
@@ -679,7 +673,7 @@ export function infrastructureEpics(state: LaunchedGame): EpicDefinition[] {
 
 /** True once the data centres run on green energy (the connector epic is done). */
 export function greenDataCenters(state: LaunchedGame): boolean {
-  return state.perks.includes(dataCentersPerk) && epicDone(state, 'data-center-green-connector');
+  return dataCentersActive(state) && epicDone(state, connectorEpic);
 }
 
 export function canStartEpic(state: LaunchedGame, id: string): boolean {
@@ -734,7 +728,7 @@ export function courtDuration(state: LaunchedGame): number {
 /** Whether companies feel threatened enough to sue. */
 export function lawsuitRisk(state: LaunchedGame): boolean {
   return state.worldProgress.climate >= lawsuitClimate && state.integrity > lawsuitIntegrity &&
-    productActive(state, 'green-world');
+    productActive(state, greenWorld);
 }
 
 /** One second of lawsuit logic (mutates `next`): a new case may be filed, a fought case counts down. */
