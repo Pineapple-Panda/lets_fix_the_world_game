@@ -853,6 +853,51 @@ app-level-two {
     font-weight: 600;
 }
 
+.goal + .goal {
+    margin-top: 10px;
+}
+
+.goal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+}
+
+.goal-head span {
+    color: var(--faint);
+    font: 10px var(--mono);
+}
+
+.goal-track {
+    margin: 4px 0 6px;
+}
+
+.goal .progress-fill {
+    background: var(--green);
+}
+
+.goal .epic .progress-fill {
+    background: var(--blue);
+}
+
+.epic-shipped {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--green);
+    font-size: 10px;
+}
+
+.goal-feature {
+    padding: 8px;
+    border: 1px solid rgba(95, 184, 101, .35);
+    border-radius: 5px;
+    background: var(--green-soft);
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 600;
+}
+
 @media (max-width: 950px) {
     .ops-grid {
         grid-template-columns: 1fr;

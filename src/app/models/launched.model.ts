@@ -29,8 +29,18 @@ export interface LaunchedPerk {
   actionsRequired: number;
 }
 
+/** A world goal; it is reached once all of its epics are done. */
+export interface WorldGoal {
+  id: string;
+  name: string;
+  /** What the platform gains once every epic of the goal is shipped. */
+  feature: string;
+}
+
 export interface EpicDefinition {
   id: string;
+  /** World goal this epic belongs to. Epics of a goal build on each other in list order. */
+  goal: string;
   title: string;
   detail: string;
   /** Budget needed to start the epic. */

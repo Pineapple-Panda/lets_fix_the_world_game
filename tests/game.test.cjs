@@ -716,6 +716,34 @@ test('epics cost budget, take server time and need a free server slot', () => {
   assert.equal(live.epics[0].progress, 20, 'finished epics stop counting');
 });
 
+test('climate epics build on each other and unlock the feature at the end', () => {
+  const chain = launched.goalEpics('climate');
+  assert.deepEqual(chain.map(epic => [epic.id, epic.cost, epic.duration]), [
+    ['climate-algorithm', 5000, 20],
+    ['climate-collect-measurements', 10000, 120],
+    ['climate-aggregate-measurements', 15000, 60],
+    ['climate-clean-data', 20000, 60],
+    ['climate-feed-algorithm', 25000, 180]
+  ]);
+  let live = liveState({ budget: 1000000, perks: ['workflow-abstraction'], serverSlots: 5 });
+  assert.equal(launched.epicUnlocked(live, 'climate-algorithm'), true);
+  assert.equal(launched.epicUnlocked(live, 'climate-collect-measurements'), false);
+  assert.equal(launched.startEpic(live, 'climate-collect-measurements'), null, 'needs the previous epic first');
+  for (const [index, epic] of chain.entries()) {
+    assert.equal(launched.goalComplete(live, 'climate'), false);
+    if (index + 1 < chain.length) assert.equal(launched.canStartEpic(live, chain[index + 1].id), false, 'one step at a time');
+    const budget = live.budget;
+    live = launched.startEpic(live, epic.id);
+    assert.ok(live, epic.id);
+    assert.equal(live.budget, budget - epic.cost);
+    assert.equal(launched.canStartEpic(live, chain[index + 1]?.id ?? 'none'), false, 'a running epic does not unlock the next one');
+    for (let second = 0; second < epic.duration; second++) live = launched.tickLaunched(live, () => 0);
+    assert.equal(launched.epicDone(live, epic.id), true, epic.id);
+  }
+  assert.equal(launched.goalComplete(live, 'climate'), true);
+  assert.equal(launched.goalComplete(live, 'war'), false, 'goals without epics are never complete');
+});
+
 test('more server slots allow more epics at the same time', () => {
   const twoSlots = liveState({ budget: 100000, perks: ['workflow-abstraction'], serverSlots: 2,
     epics: [{ id: 'other-epic', progress: 0, done: false }] });

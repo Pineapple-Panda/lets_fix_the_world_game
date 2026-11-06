@@ -84,26 +84,36 @@
             </div>
 
             <h3 class="tool-heading ops-subheading">Epics</h3>
-            @for (entry of v.epics; track entry.epic.id) {
-                <div class="epic" [class.running]="entry.status === 'running'" [class.done]="entry.status === 'done'">
-                    <strong>{{ entry.epic.title }}</strong>
-                    <small>{{ entry.epic.detail }}</small>
-                    <small>{{ format(entry.epic.cost) }} budget · {{ entry.epic.duration }}s server time</small>
-                    @switch (entry.status) {
-                        @case ('open') {
-                            <button class="tool-button" type="button" [disabled]="!entry.canStart"
-                                    [attr.aria-label]="'Start epic ' + entry.epic.title + ' for ' + entry.epic.cost + ' budget'"
-                                    (click)="epicStarted.emit(entry.epic.id)">Start epic</button>
-                        }
-                        @case ('running') {
-                            <div class="progress-track"><div class="progress-fill" [style.width.%]="entry.progress / entry.epic.duration * 100"></div></div>
-                            <small>Running · {{ entry.progress }} / {{ entry.epic.duration }}s</small>
-                        }
-                        @case ('done') {
-                            <small class="epic-done">✓ Shipped</small>
-                        }
+            @for (entry of v.goals; track entry.goal.id) {
+                <section class="goal" [class.complete]="entry.complete" [attr.aria-label]="entry.goal.name">
+                    <div class="goal-head">
+                        <strong>{{ entry.goal.name }}</strong>
+                        <span>{{ entry.shipped.length }}/{{ entry.total }} epics</span>
+                    </div>
+                    <div class="progress-track goal-track">
+                        <div class="progress-fill" [style.width.%]="entry.shipped.length / entry.total * 100"></div>
+                    </div>
+                    @for (epic of entry.shipped; track epic.id) {
+                        <small class="epic-shipped">✓ {{ epic.title }}</small>
                     }
-                </div>
+                    @if (entry.next; as next) {
+                        <div class="epic" [class.running]="next.running">
+                            <strong>{{ next.epic.title }}</strong>
+                            <small>{{ next.epic.detail }}</small>
+                            <small>{{ format(next.epic.cost) }} budget · {{ duration(next.epic.duration) }} server time</small>
+                            @if (next.running) {
+                                <div class="progress-track"><div class="progress-fill" [style.width.%]="next.progress / next.epic.duration * 100"></div></div>
+                                <small>Running · {{ clock(next.progress) }} / {{ clock(next.epic.duration) }}</small>
+                            } @else {
+                                <button class="tool-button" type="button" [disabled]="!next.canStart"
+                                        [attr.aria-label]="'Start epic ' + next.epic.title + ' for ' + next.epic.cost + ' budget'"
+                                        (click)="epicStarted.emit(next.epic.id)">Start epic</button>
+                            }
+                        </div>
+                    } @else {
+                        <div class="goal-feature">Feature unlocked: {{ entry.goal.feature }}</div>
+                    }
+                </section>
             }
         </article>
     } @else {

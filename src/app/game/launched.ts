@@ -132,10 +132,35 @@ export function serverLoad(state: LaunchedGame): number {
   return state.serverSlots > 0 ? Math.min(1, runningEpics(state) / state.serverSlots) : 1;
 }
 
+/** The epics of a world goal, in the order they build on each other. */
+export function goalEpics(goal: string): EpicDefinition[] {
+  return epics.filter(epic => epic.goal === goal);
+}
+
+export function epicDone(state: LaunchedGame, id: string): boolean {
+  return state.epics.some(entry => entry.id === id && entry.done);
+}
+
+/** An epic becomes available once the previous epic of its goal is done (the first one right away). */
+export function epicUnlocked(state: LaunchedGame, id: string): boolean {
+  const epic = epicDefinition(id);
+  if (!epic) return false;
+  const chain = goalEpics(epic.goal);
+  const previous = chain[chain.indexOf(epic) - 1];
+  return !previous || epicDone(state, previous.id);
+}
+
+/** A world goal is reached once all of its epics are done. Goals without epics are never reached. */
+export function goalComplete(state: LaunchedGame, goal: string): boolean {
+  const chain = goalEpics(goal);
+  return chain.length > 0 && chain.every(epic => epicDone(state, epic.id));
+}
+
 export function canStartEpic(state: LaunchedGame, id: string): boolean {
   const epic = epicDefinition(id);
   return !!epic &&
     serverOnline(state) &&
+    epicUnlocked(state, id) &&
     !state.epics.some(entry => entry.id === id) &&
     runningEpics(state) < state.serverSlots &&
     state.budget >= epic.cost;
