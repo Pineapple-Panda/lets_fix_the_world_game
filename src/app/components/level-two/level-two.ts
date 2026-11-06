@@ -1,15 +1,18 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, focusPower, budgetInterval, budgetPerAction, canStartEpic, epicDone, epicUnlocked,
-  goalComplete, goalEpics, launchedPerkUnlocked, openLaunchedPerks, previousEpic, product, productForGoal, productTitle,
-  networkOnline, runningEpics, serverLoad, serverOnline
+  actionBoost, addedServers, addServerPerk, addServerPerkId, budgetBoost, budgetInterval, budgetPerAction, canRentSlot,
+  canStartEpic, epicDone, epicUnlocked, focusPower, goalComplete, goalEpics, launchedPerkUnlocked, networkOnline,
+  openLaunchedPerks, previousEpic, product, productForGoal, productTitle, rentalIncome, runningEpics, serverLoad,
+  serverOnline
 } from '../../game/launched';
-import { launchedPerks, products, worldGoals } from '../../game/launched-content';
+import { launchedPerks, products, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
 import type { LaunchedGame } from '../../models/launched.model';
 
 /** Level 2: a 3×2 grid of cards. The development card sits bottom centre; the others unlock over time. */
 @Component({
   selector: 'app-level-two',
+  imports: [DecimalPipe],
   templateUrl: './level-two.html'
 })
 export class LevelTwoComponent {
@@ -18,6 +21,8 @@ export class LevelTwoComponent {
   readonly epicStarted = output<string>();
   readonly productActivated = output<string>();
   readonly focusChanged = output<number>();
+  readonly slotRented = output<string>();
+  readonly rentalEnded = output<string>();
 
   protected readonly view = computed(() => {
     const state = this.state();
@@ -48,6 +53,18 @@ export class LevelTwoComponent {
       serverOnline: serverOnline(state),
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
+      rented: state.rentals.length,
+      rentalIncome: rentalIncome(state),
+      worldProgress: worldProblems.map(problem => ({ ...problem, value: state.worldProgress[problem.id] })),
+      clients: rentalClients.map(client => ({
+        client,
+        rented: state.rentals.includes(client.id),
+        canRent: canRentSlot(state, client.id),
+        effects: Object.entries(client.effects).map(([problem, factor]) => ({
+          name: worldProblems.find(entry => entry.id === problem)?.name ?? problem,
+          percent: Math.round((factor - 1) * 100)
+        }))
+      })),
       slots: state.serverSlots,
       // One block per world goal that has epics: finished epics, then the next one in the chain.
       goals: worldGoals.filter(goal => goalEpics(goal.id).length).map(goal => {

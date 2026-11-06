@@ -8,7 +8,8 @@
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
             <app-level-two [state]="live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
-                           (productActivated)="activateProduct($event)" (focusChanged)="setFocus($event)" />
+                           (productActivated)="activateProduct($event)" (focusChanged)="setFocus($event)"
+                           (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)" />
             <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
                 <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
             </footer>

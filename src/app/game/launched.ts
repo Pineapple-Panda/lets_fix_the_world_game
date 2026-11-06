@@ -1,6 +1,8 @@
 import type { Game } from '../models/game.model.ts';
-import type { EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition } from '../models/launched.model.ts';
-import { epics, launchedPerks, products } from './launched-content.ts';
+import type {
+  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedProduct, ProductDefinition, RentalClient, WorldProblem
+} from '../models/launched.model.ts';
+import { epics, launchedPerks, products, rentalClients, worldGoals } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -29,7 +31,9 @@ export function launch(game: Game): LaunchedGame | null {
     serverSlots: 1,
     epics: [],
     products: [],
-    focus: 0
+    focus: 0,
+    rentals: [],
+    worldProgress: noProgress()
   };
 }
 
@@ -48,9 +52,19 @@ export function skippedLevelTwo(): LaunchedGame {
     serverSlots: 1,
     epics: [],
     products: [],
-    focus: 0
+    focus: 0,
+    rentals: [],
+    worldProgress: noProgress()
   };
 }
+
+/** Every problem at 0%. */
+export function noProgress(): Record<WorldProblem, number> {
+  return { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 };
+}
+
+/** A complete epic chain fills this much of its problems' progress bars; the rest is left for later features. */
+export const chainProgress = 50;
 
 const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
 
@@ -72,9 +86,9 @@ export const maxBudgetPenalty = 1;
 
 const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
 
-/** How strong the slider's bonuses are: doubled by every server added with the Add Server perk. */
+/** How strong the slider's bonuses are: every server added with Add Server adds one step (×2, ×3, ×4, …). */
 export function focusPower(state: LaunchedGame): number {
-  return 2 ** addedServers(state);
+  return 1 + addedServers(state);
 }
 
 /** Multiplier for actions per second: ×1.5 fully left (more with Add Server), ×0.5 fully right. */
@@ -120,6 +134,23 @@ export function tickLaunched(state: LaunchedGame, random: () => number = Math.ra
   if (next.seconds % budgetInterval === 0) {
     next.budget = cap(next.budget + Math.round((next.actions - next.budgetActions) * budgetPerAction * budgetBoost(next)));
     next.budgetActions = next.actions;
+  }
+  // Rented slots pay every second.
+  next.budget = cap(next.budget + rentalIncome(next));
+  // Epics that just finished add world progress, scaled by the clients renting slots right now.
+  const finished = next.epics.filter(epic => epic.done && !state.epics.find(before => before.id === epic.id)?.done);
+  if (finished.length) {
+    const progress = { ...next.worldProgress };
+    for (const entry of finished) {
+      const epic = epicDefinition(entry.id);
+      const goal = epic && worldGoals.find(candidate => candidate.id === epic.goal);
+      if (!epic || !goal) continue;
+      const share = chainProgress / goalEpics(goal.id).length;
+      for (const problem of goal.problems) {
+        progress[problem] = Math.min(100, progress[problem] + share * progressMultiplier(next, problem));
+      }
+    }
+    next.worldProgress = progress;
   }
   // A product is released (at version 1.0) once all of its world goals are reached.
   const released = products
@@ -217,9 +248,44 @@ export function runningEpics(state: LaunchedGame): number {
   return state.epics.filter(epic => !epic.done).length;
 }
 
+/** Server slots taken by running epics and rented clients. */
+export function usedSlots(state: LaunchedGame): number {
+  return runningEpics(state) + state.rentals.length;
+}
+
 /** Share of server slots in use, 0–1. */
 export function serverLoad(state: LaunchedGame): number {
-  return state.serverSlots > 0 ? Math.min(1, runningEpics(state) / state.serverSlots) : 1;
+  return state.serverSlots > 0 ? Math.min(1, usedSlots(state) / state.serverSlots) : 1;
+}
+
+export function rentalClient(id: string): RentalClient | undefined {
+  return rentalClients.find(client => client.id === id);
+}
+
+/** Budget per second from all rented slots. */
+export function rentalIncome(state: LaunchedGame): number {
+  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0);
+}
+
+/** How much the current clients scale the progress finished epics add to a problem (1 = unchanged). */
+export function progressMultiplier(state: LaunchedGame, problem: WorldProblem): number {
+  return state.rentals.reduce((factor, id) => factor * (rentalClient(id)?.effects[problem] ?? 1), 1);
+}
+
+/** Renting needs Network & Financing and a free server slot; each client rents at most one slot. */
+export function canRentSlot(state: LaunchedGame, id: string): boolean {
+  return !!rentalClient(id) && networkOnline(state) && !state.rentals.includes(id) && usedSlots(state) < state.serverSlots;
+}
+
+export function rentSlot(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (!canRentSlot(state, id)) return null;
+  return { ...state, rentals: [...state.rentals, id] };
+}
+
+/** Ends a rental contract and frees its slot. */
+export function endRental(state: LaunchedGame, id: string): LaunchedGame | null {
+  if (!state.rentals.includes(id)) return null;
+  return { ...state, rentals: state.rentals.filter(entry => entry !== id) };
 }
 
 /** The epics of a world goal, in the order they build on each other. */
@@ -267,7 +333,7 @@ export function canStartEpic(state: LaunchedGame, id: string): boolean {
     serverOnline(state) &&
     epicUnlocked(state, id) &&
     !state.epics.some(entry => entry.id === id) &&
-    runningEpics(state) < state.serverSlots &&
+    usedSlots(state) < state.serverSlots &&
     state.budget >= epic.cost;
 }
 

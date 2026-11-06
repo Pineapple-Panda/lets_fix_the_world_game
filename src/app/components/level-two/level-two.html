@@ -22,8 +22,43 @@
     @if (v.networkOnline) {
         <article class="ops-card ops-network" aria-labelledby="network-title">
             <h2 class="tool-heading" id="network-title">Network &amp; Financing</h2>
-            <p class="network-intro">Partners, sponsors and financing to keep the systems running. Power and data centres are not cheap.</p>
-            <small class="upgrade-hint">More is on the way: partners, funding and data centres.</small>
+            <h3 class="tool-heading ops-subheading">World progress</h3>
+            @for (problem of v.worldProgress; track problem.id) {
+                <div class="world-row">
+                    <span>{{ problem.name }}</span>
+                    <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' progress'" aria-valuemin="0" aria-valuemax="100"
+                         [attr.aria-valuenow]="problem.value | number: '1.0-0'">
+                        <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
+                    </div>
+                    <b>{{ problem.value | number: '1.0-1' }}%</b>
+                </div>
+            }
+
+            <h3 class="tool-heading ops-subheading">Rent out server slots</h3>
+            <small class="upgrade-hint">A rented slot pays every second but is not available for epics. Clients change how much progress your epics bring.</small>
+            @if (v.rentalIncome) {
+                <small class="upgrade-hint">Rental income: +{{ format(v.rentalIncome) }} budget/sec</small>
+            }
+            @for (entry of v.clients; track entry.client.id) {
+                <div class="client" [class.rented]="entry.rented">
+                    <strong>{{ entry.client.name }}</strong>
+                    <small>{{ entry.client.description }}</small>
+                    <small class="client-terms">
+                        +{{ format(entry.client.income) }} budget/sec
+                        @for (effect of entry.effects; track effect.name) {
+                            · <span [class.good]="effect.percent > 0" [class.bad]="effect.percent < 0">{{ effect.name }} {{ signed(effect.percent) }}%</span>
+                        }
+                    </small>
+                    @if (entry.rented) {
+                        <button class="tool-button client-end" type="button" [attr.aria-label]="'End contract with ' + entry.client.name"
+                                (click)="rentalEnded.emit(entry.client.id)">End contract</button>
+                    } @else {
+                        <button class="tool-button" type="button" [disabled]="!entry.canRent"
+                                [attr.aria-label]="'Rent a server slot to ' + entry.client.name"
+                                (click)="slotRented.emit(entry.client.id)">Rent a slot</button>
+                    }
+                </div>
+            }
         </article>
     } @else {
         <div class="ops-card ops-locked" aria-hidden="true"><span>Locked</span></div>
@@ -113,7 +148,7 @@
             <h2 class="tool-heading" id="server-title">Server</h2>
             <div class="upgrade-row">
                 <span>Server load</span>
-                <strong id="server-load">{{ v.load }}% · {{ v.running }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}</strong>
+                <strong id="server-load">{{ v.load }}% · {{ v.running + v.rented }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}@if (v.rented) { ({{ v.rented }} rented) }</strong>
             </div>
             <div class="load-track" role="meter" aria-label="Server load" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.load">
                 <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>

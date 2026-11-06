@@ -699,6 +699,80 @@ app-level-two {
     text-transform: uppercase;
 }
 
+.world-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+    font-size: 11px;
+}
+
+.world-row b {
+    font: 500 10px var(--mono);
+    text-align: right;
+}
+
+.world-track {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-2);
+}
+
+.world-fill {
+    height: 100%;
+    background: var(--blue);
+    transition: width .4s;
+}
+
+.world-climate { background: var(--green); }
+.world-war { background: var(--red); }
+.world-hunger { background: var(--yellow); }
+.world-poverty { background: #e5a050; }
+.world-corruption { background: var(--purple); }
+
+.client {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 6px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--bg);
+}
+
+.client strong {
+    font-size: 12px;
+}
+
+.client small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.client.rented {
+    border-color: var(--green);
+}
+
+.client .tool-button {
+    align-self: flex-start;
+}
+
+.client-terms .good {
+    color: var(--green);
+}
+
+.client-terms .bad {
+    color: var(--red);
+}
+
+.client-end {
+    background: var(--surface-2) !important;
+    color: var(--ink) !important;
+}
+
 .network-intro {
     color: var(--muted);
     font-size: 12px;

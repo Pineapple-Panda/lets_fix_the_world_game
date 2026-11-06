@@ -26,6 +26,24 @@ export interface LaunchedGame {
    * positive monetises (more budget per new action), 0 is neutral.
    */
   focus: number;
+  /** Clients currently renting a server slot (one slot each). */
+  rentals: string[];
+  /** Progress per world problem in percent (0–100). */
+  worldProgress: Record<WorldProblem, number>;
+}
+
+/** The five problems the platform sets out to fix. */
+export type WorldProblem = 'climate' | 'war' | 'hunger' | 'poverty' | 'corruption';
+
+/** An organisation, government or billionaire that can rent a server slot. */
+export interface RentalClient {
+  id: string;
+  name: string;
+  description: string;
+  /** Budget per second while the slot is rented. */
+  income: number;
+  /** Multipliers on the progress that finished epics add to these problems while the slot is rented. */
+  effects: Partial<Record<WorldProblem, number>>;
 }
 
 /** A released product (e.g. Green World). Its version can be raised later. */
@@ -57,6 +75,8 @@ export interface LaunchedPerk {
 export interface WorldGoal {
   id: string;
   name: string;
+  /** World problems this goal makes progress on. */
+  problems: WorldProblem[];
 }
 
 export interface EpicDefinition {

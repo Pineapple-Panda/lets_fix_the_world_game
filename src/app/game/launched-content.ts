@@ -1,4 +1,6 @@
-import type { EpicDefinition, LaunchedPerk, ProductDefinition, WorldGoal } from '../models/launched.model.ts';
+import type {
+  EpicDefinition, LaunchedPerk, ProductDefinition, RentalClient, WorldGoal, WorldProblem
+} from '../models/launched.model.ts';
 
 /** Perks of level 2. Level 1 perks that were never activated are gone after the launch. */
 export const launchedPerks: LaunchedPerk[] = [
@@ -18,12 +20,56 @@ export const launchedPerks: LaunchedPerk[] = [
   }
 ];
 
-/** The problems the platform sets out to fix. Hunger and poverty are tackled together. */
-export const worldGoals: WorldGoal[] = [
-  { id: 'climate', name: 'Climate Change' },
+/** The five world problems, in the order of the progress bars. */
+export const worldProblems: { id: WorldProblem; name: string }[] = [
+  { id: 'climate', name: 'Climate change' },
   { id: 'war', name: 'War' },
-  { id: 'corruption', name: 'Corruption' },
-  { id: 'hunger-poverty', name: 'Hunger & Poverty' }
+  { id: 'hunger', name: 'Hunger' },
+  { id: 'poverty', name: 'Poverty' },
+  { id: 'corruption', name: 'Corruption' }
+];
+
+/** The goals epics are grouped into. Hunger and poverty are tackled together. */
+export const worldGoals: WorldGoal[] = [
+  { id: 'climate', name: 'Climate Change', problems: ['climate'] },
+  { id: 'war', name: 'War', problems: ['war'] },
+  { id: 'corruption', name: 'Corruption', problems: ['corruption'] },
+  { id: 'hunger-poverty', name: 'Hunger & Poverty', problems: ['hunger', 'poverty'] }
+];
+
+/**
+ * Clients that rent a server slot through Network & Financing. Each pays a steady income and changes how much
+ * world progress finished epics bring (multipliers above 1 help, below 1 hurt) while its contract runs.
+ */
+export const rentalClients: RentalClient[] = [
+  {
+    id: 'green-left-union',
+    name: 'United Green-Left Federation of Europe',
+    description: 'Seventeen committees, one shared spreadsheet, endless good intentions. Pays in fair-trade coffee vouchers, mostly.',
+    income: 40,
+    effects: { climate: 1.5 }
+  },
+  {
+    id: 'blue-helmets',
+    name: 'Office for Extremely Polite Peacekeeping',
+    description: 'Brings biscuits to every negotiation. Small budget, big patience.',
+    income: 60,
+    effects: { war: 1.5 }
+  },
+  {
+    id: 'ministry-digital',
+    name: 'Ministry of Digital Transformation of Lower Bureaucratia',
+    description: 'Wants a portal. Then another portal for the first portal. Pays reliably, eventually.',
+    income: 150,
+    effects: { hunger: 1.25, poverty: 1.25 }
+  },
+  {
+    id: 'edisonx',
+    name: 'EdisonX',
+    description: 'A billionaire’s rocket-car-tunnel-AI conglomerate. Pays brilliantly. Asks no questions you would like to answer.',
+    income: 400,
+    effects: { climate: 0.5, corruption: 0.5 }
+  }
 ];
 
 /**

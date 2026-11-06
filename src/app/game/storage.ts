@@ -92,7 +92,13 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
     !Array.isArray(game.epics) || !game.epics.every(isEpic) ||
     !Array.isArray(game.products) || !game.products.every(isProduct) ||
-    typeof game.focus !== 'number' || !Number.isInteger(game.focus) || game.focus < -100 || game.focus > 100
+    typeof game.focus !== 'number' || !Number.isInteger(game.focus) || game.focus < -100 || game.focus > 100 ||
+    !Array.isArray(game.rentals) || !game.rentals.every(id => typeof id === 'string') ||
+    !isObject(game.worldProgress) ||
+    !['climate', 'war', 'hunger', 'poverty', 'corruption'].every(problem => {
+      const value = (game.worldProgress as Snapshot)[problem];
+      return typeof value === 'number' && value >= 0 && value <= 100;
+    })
   ) return null;
   return game as unknown as LaunchedGame;
 }

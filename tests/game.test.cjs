@@ -592,7 +592,8 @@ test('incompatible or corrupt saves are ignored', () => {
 });
 
 const liveState = overrides => ({
-  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, ...overrides
+  actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -600,7 +601,7 @@ test('level 2 saves are small and separate from level 1', () => {
   const state = liveState({ budget: 42, perks: ['workflow-abstraction'], epics: [{ id: 'climate-algorithm', progress: 3, done: false }] });
   const raw = storage.saveLaunched(store, state);
   assert.deepEqual(JSON.parse(raw), { level: 2, game: state });
-  assert.ok(raw.length < 300);
+  assert.ok(raw.length < 500);
   assert.deepEqual(storage.loadLaunched(store), state);
   assert.equal(storage.loadGame(store), null);
   store.data.set(storage.saveKey, JSON.stringify({ level: 2, game: { actions: 5000, budget: 42 } }));
@@ -621,13 +622,15 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.testCoverage = 100000;
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
-    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0
+    actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
-    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0
+    actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -691,14 +694,15 @@ test('the focus slider trades actions against budget', () => {
   assert.equal(storage.loadLaunched(store), null, 'focus out of range');
 });
 
-test('every Add Server doubles the focus effect', () => {
+test('every Add Server adds one step to the focus effect (x2, x3, x4, ...)', () => {
   assert.equal(launched.focusPower(liveState()), 1);
   const oneServer = liveState({ serverSlots: 2, focus: -100 });
   assert.equal(launched.focusPower(oneServer), 2);
   assert.equal(launched.actionBoost(oneServer), 2, '+100% actions with one extra server');
   const twoServers = liveState({ serverSlots: 3, focus: 100 });
-  assert.equal(launched.focusPower(twoServers), 4);
-  assert.equal(launched.budgetBoost(twoServers), 5, '+400% budget with two extra servers');
+  assert.equal(launched.focusPower(twoServers), 3);
+  assert.equal(launched.budgetBoost(twoServers), 4, '+300% budget with two extra servers');
+  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 11, 'ten extra servers: x11, not x1024');
   assert.equal(launched.actionBoost(twoServers), 0.5, 'the penalty does not grow with servers');
   assert.equal(launched.budgetBoost(liveState({ serverSlots: 3, focus: -100 })), 0, 'budget never goes below 0');
   const half = liveState({ serverSlots: 2, focus: 50 });
@@ -881,6 +885,73 @@ test('systems run in parallel, but within a system epics follow one order', () =
   assert.ok(running, 'one epic per system at the same time');
   assert.equal(launched.runningEpics(running), 3);
   assert.equal(launched.serverLoad(running), 1);
+});
+
+test('rented slots pay every second and take a server slot', () => {
+  const offline = liveState({ budget: 0 });
+  assert.equal(launched.rentSlot(offline, 'edisonx'), null, 'needs Network & Financing');
+  let live = liveState({ budget: 0, perks: ['workflow-abstraction', 'network-financing'], serverSlots: 2 });
+  live = launched.rentSlot(live, 'edisonx');
+  assert.deepEqual(live.rentals, ['edisonx']);
+  assert.equal(launched.rentSlot(live, 'edisonx'), null, 'one slot per client');
+  assert.equal(launched.usedSlots(live), 1);
+  assert.equal(launched.serverLoad(live), 0.5);
+  live = launched.rentSlot(live, 'green-left-union');
+  assert.equal(launched.serverLoad(live), 1);
+  assert.equal(launched.rentSlot(live, 'blue-helmets'), null, 'no free slot left');
+  assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), false, 'rented slots block epics too');
+  assert.equal(launched.rentalIncome(live), 440);
+  assert.equal(launched.tickLaunched(live, () => 0).budget, 440);
+  live = launched.endRental(live, 'edisonx');
+  assert.deepEqual(live.rentals, ['green-left-union']);
+  assert.equal(launched.endRental(live, 'edisonx'), null);
+  assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), true);
+});
+
+test('finished epics fill the world progress bars, scaled by the clients', () => {
+  const ship = (state, id) => {
+    let live = launched.startEpic({ ...state, budget: state.budget + 10000000, serverSlots: state.serverSlots + 1 }, id);
+    for (let second = 0; second < launched.epicDefinition(id).duration; second++) live = launched.tickLaunched(live, () => 0);
+    return live;
+  };
+  const base = liveState({ perks: ['workflow-abstraction', 'network-financing'] });
+  const plain = ship(base, 'climate-algorithm');
+  assert.ok(Math.abs(plain.worldProgress.climate - 50 / 6) < 1e-9, 'one of six climate epics: 1/6 of 50%');
+  assert.equal(plain.worldProgress.war, 0);
+
+  const green = ship(launched.rentSlot({ ...base, serverSlots: 1 }, 'green-left-union'), 'climate-algorithm');
+  assert.ok(Math.abs(green.worldProgress.climate - 50 / 6 * 1.5) < 1e-9, 'the Green-Left Federation boosts climate');
+
+  const edison = launched.rentSlot({ ...base, serverSlots: 1 }, 'edisonx');
+  assert.equal(launched.progressMultiplier(edison, 'climate'), 0.5);
+  assert.equal(launched.progressMultiplier(edison, 'corruption'), 0.5);
+  assert.equal(launched.progressMultiplier(edison, 'war'), 1);
+  const slowed = ship(edison, 'climate-algorithm');
+  assert.ok(Math.abs(slowed.worldProgress.climate - 50 / 6 * 0.5) < 1e-9, 'EdisonX slows climate progress');
+
+  const both = launched.rentSlot(launched.rentSlot({ ...base, serverSlots: 2 }, 'edisonx'), 'green-left-union');
+  assert.equal(launched.progressMultiplier(both, 'climate'), 0.75, 'effects multiply');
+
+  const hunger = ship(base, 'hunger-poverty-hotspots');
+  assert.ok(Math.abs(hunger.worldProgress.hunger - 50 / 7) < 1e-9);
+  assert.equal(hunger.worldProgress.hunger, hunger.worldProgress.poverty, 'hunger & poverty epics help both');
+
+  let full = liveState({ perks: ['workflow-abstraction'], serverSlots: 1 });
+  for (const epic of launched.goalEpics('climate')) full = ship(full, epic.id);
+  assert.ok(Math.abs(full.worldProgress.climate - 50) < 1e-9, 'a complete chain fills half the bar');
+  const capped = launched.tickLaunched(liveState({ worldProgress: { ...liveState().worldProgress, climate: 100 } }), () => 0);
+  assert.equal(capped.worldProgress.climate, 100);
+});
+
+test('rental clients and world problems are defined', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
+  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'edisonx']);
+  const green = content.rentalClients[0];
+  const edison = content.rentalClients[3];
+  assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
+  assert.ok(green.effects.climate > 1);
+  assert.ok(edison.effects.climate < 1 && edison.effects.corruption < 1);
 });
 
 test('more server slots allow more epics at the same time', () => {
