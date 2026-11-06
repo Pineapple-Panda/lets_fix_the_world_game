@@ -100,11 +100,11 @@ export function budgetPerSecond(state: LaunchedGame): number {
 }
 
 /**
- * Budget for one "Pitch to investors" click: 20% of the income per second (at least 100), times the server
- * multiplier (1 + servers added with Add Server). Grows with the platform.
+ * Budget for one "Pitch to investors" click: 20% of the income per second (at least 100), times the number of
+ * server slots. Grows with the platform.
  */
 export function pitchValue(state: LaunchedGame): number {
-  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * focusPower(state));
+  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * state.serverSlots);
 }
 
 /** One click on "Pitch to investors" (needs the Pitch Deck Generator). */
