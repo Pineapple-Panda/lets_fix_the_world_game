@@ -402,7 +402,11 @@ test('the perk list previews the next perks in unlock order', () => {
   assert.deepEqual(openPerks(state), perks.slice(0, 3));
   state.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
   state.actions = 16999;
-  assert.deepEqual(openPerks(state), [byId('ai-testing-subscription'), byId('auto-deploy')], 'testing perks hidden until Earl unlocks');
+  assert.deepEqual(openPerks(state), [byId('earl'), byId('testing-skills'), byId('auto-testing')], 'locked testing perks are previewed like any other perk');
+  state.activatedPerks = perks.slice(0, 6).map(perk => perk.id);
+  state.actions = 7000;
+  assert.deepEqual(openPerks(state), [byId('auto-assigner'), byId('bug-fix-agent'), byId('earl')], 'Earl shows up as soon as it is among the next three');
+  state.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
   state.actions = 21000;
   assert.deepEqual(openPerks(state), [byId('auto-testing'), byId('earl'), byId('testing-skills')], 'unlocked testing perks are promoted');
   state.activatedPerks.push('earl', 'testing-skills');
