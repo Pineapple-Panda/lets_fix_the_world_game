@@ -51,11 +51,11 @@ export class LevelTwoComponent {
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
       pitchValue: pitchValue(state),
       canPitch: canPitch(state),
-      // Only the next three perks (by unlock threshold) are offered at a time.
-      openPerks: openLaunchedPerks(state).slice(0, 3).map(perk => ({
-        perk,
-        unlocked: launchedPerkAvailable(state, perk)
-      })),
+      // At most five perks: the ones that can be taken right now first, then the next by unlock threshold.
+      openPerks: openLaunchedPerks(state)
+        .map(perk => ({ perk, unlocked: launchedPerkAvailable(state, perk) }))
+        .sort((a, b) => Number(b.unlocked) - Number(a.unlocked))
+        .slice(0, 5),
       // Top row of the grid, left to right. Each card stays locked until its product is released.
       productCards: products.map(definition => {
         const released = product(state, definition.id);
