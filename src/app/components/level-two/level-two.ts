@@ -9,7 +9,7 @@ import {
   serverOnline, tegridyActive, tegridyBagCost, tegridyPerk
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
-import type { LaunchedGame } from '../../models/launched.model';
+import type { LaunchedGame, LaunchedPerk } from '../../models/launched.model';
 
 /** Level 2: a 3×2 grid of cards. The development card sits bottom centre; the others unlock over time. */
 @Component({
@@ -76,7 +76,7 @@ export class LevelTwoComponent {
       tegridy: tegridyActive(state),
       canBuyTegridy: canBuyTegridy(state),
       tegridyBagCost,
-      activePerks: [
+      activePerks: <(LaunchedPerk & { badge?: number })[]>[
         ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
         ...(tegridyActive(state) ? [tegridyPerk] : []),
         ...(state.perks.includes(robotPerk.id)
@@ -84,7 +84,7 @@ export class LevelTwoComponent {
           : []),
         // Add Server can be taken many times; show it once with its count.
         ...(addedServers(state) > 0
-          ? [{ ...addServerPerk(state), name: `Add Server ×${addedServers(state)}`, description: `${state.serverSlots} server slots in total.` }]
+          ? [{ ...addServerPerk(state), name: `Add Server ×${addedServers(state)}`, description: `${state.serverSlots} servers in total.`, badge: state.serverSlots }]
           : [])
       ],
       slots: state.serverSlots,
@@ -119,6 +119,9 @@ export class LevelTwoComponent {
       })
     };
   });
+
+  /** Epic categories that still have work left; finished ones are hidden. */
+  protected readonly openGoals = computed(() => this.view().goals.filter(goal => !goal.complete));
 
   /** The control panel of an active product card (programs, protests, upgrade). */
   private panel(state: LaunchedGame, productId: string) {

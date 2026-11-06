@@ -84,39 +84,6 @@
     @if (v.networkOnline) {
         <article class="ops-card ops-network" aria-labelledby="network-title">
             <h2 class="tool-heading" id="network-title">Network &amp; Financing</h2>
-            <h3 class="tool-heading ops-subheading">World Problem Solution Progress</h3>
-            @for (problem of v.worldProgress; track problem.id) {
-                <div class="world-row">
-                    <span>{{ problem.name }}</span>
-                    <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' solution progress'" aria-valuemin="0" aria-valuemax="100"
-                         [attr.aria-valuenow]="problem.value | number: '1.0-0'">
-                        <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
-                    </div>
-                    <b>{{ problem.value | number: '1.3-3' }}%</b>
-                </div>
-            }
-
-            <h3 class="tool-heading ops-subheading">Integrity</h3>
-            <div class="world-row integrity-row">
-                <span>Integrity</span>
-                <div class="world-track" role="meter" aria-label="Integrity" aria-valuemin="0" aria-valuemax="100"
-                     [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
-                    <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
-                         [style.width.%]="v.integrity"></div>
-                </div>
-                <b>{{ v.integrity | number: '1.3-3' }}%</b>
-            </div>
-            <small class="upgrade-hint">Who you work with changes how the world sees you. Some clients only sign at the right level.</small>
-            @if (v.tegridy) {
-                <div class="upgrade-row">
-                    <span>Tegridy Farms delivers by the bag.</span>
-                    <button class="tool-button tegridy-button" type="button" [disabled]="!v.canBuyTegridy"
-                            [attr.aria-label]="'Buy some Tegridy: +1 integrity for ' + v.tegridyBagCost + ' budget'"
-                            (click)="tegridyBought.emit()">Buy some Tegridy</button>
-                </div>
-                <small class="upgrade-hint">+1 integrity for {{ format(v.tegridyBagCost) }} budget.</small>
-            }
-
             <h3 class="tool-heading ops-subheading">Rent out server slots</h3>
             <small class="upgrade-hint">A rented slot pays every second but is not available for epics. Every second, clients nudge the solution progress and your integrity.</small>
             @if (v.rentalIncome) {
@@ -154,25 +121,59 @@
     <!-- Bottom centre: development keeps running on its own. -->
     <article class="ops-card ops-dev" aria-labelledby="dev-title">
         <h2 class="tool-heading" id="dev-title">Development</h2>
-        <svg class="monitor" viewBox="0 0 240 160" role="img" aria-label="The board keeps working itself off: tasks move from to do to done">
-            <rect class="monitor-frame" x="6" y="6" width="228" height="128" rx="8" />
-            <rect class="monitor-screen" x="16" y="16" width="208" height="108" rx="3" />
-            <path class="monitor-stand" d="M104 134 L98 152 H142 L136 134 Z" />
-            <rect class="monitor-foot" x="84" y="150" width="72" height="5" rx="2" />
-            <!-- three board columns -->
-            <line class="monitor-divider" x1="85" y1="22" x2="85" y2="118" />
-            <line class="monitor-divider" x1="155" y1="22" x2="155" y2="118" />
-            <rect class="monitor-heading" x="24" y="24" width="30" height="4" rx="2" />
-            <rect class="monitor-heading" x="93" y="24" width="38" height="4" rx="2" />
-            <rect class="monitor-heading" x="163" y="24" width="24" height="4" rx="2" />
-            <!-- tasks flowing from left to right -->
-            @for (task of [0, 1, 2, 3, 4, 5]; track task) {
-                <rect class="monitor-task" [class]="'monitor-task-' + task" x="22" [attr.y]="36 + (task % 3) * 26" width="56" height="18" rx="3" />
+            <h3 class="tool-heading">World Problem Solution Progress</h3>
+            @for (problem of v.worldProgress; track problem.id) {
+                <div class="world-row">
+                    <span>{{ problem.name }}</span>
+                    <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' solution progress'" aria-valuemin="0" aria-valuemax="100"
+                         [attr.aria-valuenow]="problem.value | number: '1.0-0'">
+                        <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
+                    </div>
+                    <b>{{ problem.value | number: '1.3-3' }}%</b>
+                </div>
             }
-        </svg>
 
-        <div class="live-stats">
+            <h3 class="tool-heading ops-subheading">Integrity</h3>
+            <div class="world-row integrity-row">
+                <span>Integrity</span>
+                <div class="world-track" role="meter" aria-label="Integrity" aria-valuemin="0" aria-valuemax="100"
+                     [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
+                    <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
+                         [style.width.%]="v.integrity"></div>
+                </div>
+                <b>{{ v.integrity | number: '1.3-3' }}%</b>
+            </div>
+            <small class="upgrade-hint">Who you work with changes how the world sees you. Some clients only sign at the right level.</small>
+            @if (v.tegridy) {
+                <div class="upgrade-row">
+                    <span>Tegridy Farms delivers by the bag.</span>
+                    <button class="tool-button tegridy-button" type="button" [disabled]="!v.canBuyTegridy"
+                            [attr.aria-label]="'Buy some Tegridy: +1 integrity for ' + v.tegridyBagCost + ' budget'"
+                            (click)="tegridyBought.emit()">Buy some Tegridy</button>
+                </div>
+                <small class="upgrade-hint">+1 integrity for {{ format(v.tegridyBagCost) }} budget.</small>
+            }
+
+        <div class="live-stats live-stats-monitor">
             <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong></div>
+            <div class="live-monitor">
+    <svg class="monitor" viewBox="0 0 240 160" role="img" aria-label="The board keeps working itself off: tasks move from to do to done">
+                <rect class="monitor-frame" x="6" y="6" width="228" height="128" rx="8" />
+                <rect class="monitor-screen" x="16" y="16" width="208" height="108" rx="3" />
+                <path class="monitor-stand" d="M104 134 L98 152 H142 L136 134 Z" />
+                <rect class="monitor-foot" x="84" y="150" width="72" height="5" rx="2" />
+                <!-- three board columns -->
+                <line class="monitor-divider" x1="85" y1="22" x2="85" y2="118" />
+                <line class="monitor-divider" x1="155" y1="22" x2="155" y2="118" />
+                <rect class="monitor-heading" x="24" y="24" width="30" height="4" rx="2" />
+                <rect class="monitor-heading" x="93" y="24" width="38" height="4" rx="2" />
+                <rect class="monitor-heading" x="163" y="24" width="24" height="4" rx="2" />
+                <!-- tasks flowing from left to right -->
+                @for (task of [0, 1, 2, 3, 4, 5]; track task) {
+                    <rect class="monitor-task" [class]="'monitor-task-' + task" x="22" [attr.y]="36 + (task % 3) * 26" width="56" height="18" rx="3" />
+                }
+            </svg>
+            </div>
             <div class="live-stat">
                 <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
                 <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
@@ -198,7 +199,7 @@
                     <div class="active-tools">
                         @for (perk of v.activePerks; track perk.id) {
                             <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
-                                  [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
+                                  [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}@if (perk.badge) {<b class="perk-badge">{{ perk.badge }}</b>}</span>
                         }
                     </div>
                 } @else {
@@ -257,7 +258,7 @@
             </small>
 
             <h3 class="tool-heading ops-subheading">Epics</h3>
-            @for (entry of v.goals; track entry.goal.id) {
+            @for (entry of openGoals(); track entry.goal.id) {
                 <section class="goal" [class.complete]="entry.complete" [attr.aria-label]="entry.goal.name">
                     <div class="goal-head">
                         <strong>{{ entry.goal.name }}</strong>
@@ -289,6 +290,8 @@
                         <div class="goal-feature">{{ entry.outcome }}</div>
                     }
                 </section>
+            } @empty {
+                <div class="goal-feature">All epics shipped.</div>
             }
         </article>
     } @else {

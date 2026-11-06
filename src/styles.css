@@ -946,6 +946,42 @@ app-level-two {
     margin-top: 4px;
 }
 
+.live-stats-monitor {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    align-items: stretch;
+    margin-top: 10px;
+}
+
+.live-monitor {
+    display: grid;
+    place-items: center;
+}
+
+.live-monitor .monitor {
+    width: auto;
+    height: 64px;
+    max-width: none;
+    margin: 0;
+}
+
+.active-tool {
+    position: relative;
+}
+
+.perk-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: var(--yellow);
+    color: #1e1f22;
+    font: 700 9px/15px var(--mono);
+    text-align: center;
+}
+
 .live-stat {
     min-width: 0;
     padding: 8px 10px;
