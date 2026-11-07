@@ -7,6 +7,7 @@ import { LaunchComponent } from './components/launch/launch';
 import { LevelTwoComponent } from './components/level-two/level-two';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
+import { VictoryComponent } from './components/victory/victory';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
   assistantOutput, autoCoverageRate, clicksPerPress, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
@@ -16,8 +17,9 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
+import { newsFeed } from './game/news';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
@@ -31,7 +33,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -48,6 +50,16 @@ export class AppComponent {
   readonly devMode = signal(false);
   /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
   readonly launched = signal<LaunchedGame | null>(null);
+  /** Level 2 news ticker. */
+  readonly news = computed(() => {
+    const live = this.launched();
+    return live ? newsFeed(live) : [];
+  });
+  /** The "world fixed" summary while its dialog is due. */
+  readonly victory = computed(() => {
+    const live = this.launched();
+    return live && worldFixed(live) && !live.victorySeen ? victorySummary(live) : null;
+  });
   readonly game = signal(this.restoreGame());
 
   readonly view = computed((): AppView => {
@@ -273,6 +285,22 @@ export class AppComponent {
 
   activateProduct(goal: string): void {
     this.updateLaunched(state => activateProduct(state, goal));
+  }
+
+  pitch(): void {
+    this.updateLaunched(state => pitch(state));
+  }
+
+  dismissVictory(): void {
+    this.updateLaunched(state => dismissVictory(state));
+  }
+
+  settleLawsuit(): void {
+    this.updateLaunched(state => settleLawsuit(state));
+  }
+
+  fightLawsuit(): void {
+    this.updateLaunched(state => fightLawsuit(state));
   }
 
   startProgram(id: string): void {

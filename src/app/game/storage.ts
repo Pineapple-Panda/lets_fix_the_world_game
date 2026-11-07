@@ -86,6 +86,13 @@ const isEpic = (value: unknown): boolean =>
 /** The level 2 state, or null when there is no compatible level 2 save. */
 export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | null {
   const game = readSnapshot(storage, 2);
+  // Saves from before completed programs existed simply have none.
+  if (game && game.completedPrograms === undefined) game.completedPrograms = [];
+  if (game && game.verdict === undefined) game.verdict = null;
+  if (game && game.stats === undefined) game.stats = { lawsuits: game.lawsuitsFiled ?? 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0,
+    protestClicks: 0, dirtySeconds: 0, tegridyBags: 0 };
+  if (game && game.victorySeen === undefined) game.victorySeen = false;
+  if (game && isObject(game.stats) && game.stats.pitches === undefined) game.stats = { ...game.stats, pitches: 0 };
   if (
     !game ||
     !['actions', 'budget', 'seconds', 'budgetActions', 'serverSlots'].every(key => isCount(game[key])) ||
@@ -96,7 +103,17 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.rentals) || !game.rentals.every(id => typeof id === 'string') ||
     typeof game.integrity !== 'number' || game.integrity < 0 || game.integrity > 100 ||
     !Array.isArray(game.programs) ||
-    !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0) ||
+    !Array.isArray(game.completedPrograms) || !game.completedPrograms.every(id => typeof id === 'string') ||
+    !isCount(game.lawsuitsFiled) ||
+    typeof game.victorySeen !== 'boolean' ||
+    !isObject(game.stats) || !['lawsuits', 'lawsuitsWon', 'lawsuitsLost', 'lawsuitsSettled', 'protestClicks', 'dirtySeconds', 'tegridyBags', 'pitches']
+      .every(key => isCount((game.stats as Snapshot)[key])) ||
+    !(game.verdict === null || (isObject(game.verdict) && typeof game.verdict.product === 'string' &&
+      typeof game.verdict.plaintiff === 'string' && typeof game.verdict.won === 'boolean' && isCount(game.verdict.damages))) ||
+    !(game.lawsuit === null || (isObject(game.lawsuit) && isCount(game.lawsuit.caseId) &&
+      (game.lawsuit.courtSeconds === null || isCount(game.lawsuit.courtSeconds)))) ||
+    !game.programs.every(entry => isObject(entry) && typeof entry.id === 'string' && typeof entry.resistance === 'number' && entry.resistance >= 0 &&
+      typeof entry.milestone === 'number' && entry.milestone >= 0 && entry.milestone <= 100) ||
     !isObject(game.worldProgress) ||
     !['climate', 'war', 'hunger', 'poverty', 'corruption'].every(problem => {
       const value = (game.worldProgress as Snapshot)[problem];

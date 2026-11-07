@@ -1095,23 +1095,52 @@ app-level-two {
     font-size: 10px;
 }
 
+.program-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
 .program {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 8px;
+    gap: 2px;
+    min-width: 0;
+    padding: 6px 7px;
     border: 1px solid var(--line);
     border-radius: 5px;
     background: var(--bg);
 }
 
 .program strong {
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.3;
 }
 
 .program small {
     color: var(--muted);
+    font-size: 9.5px;
+    line-height: 1.35;
+}
+
+/* Keep the flavour text short so two cards fit side by side. */
+.program > small:nth-of-type(1) {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.program .tool-button {
+    margin-top: 3px;
+    padding: 3px 8px;
     font-size: 10px;
+}
+
+@media (max-width: 600px) {
+    .program-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .program.running {
@@ -1354,4 +1383,147 @@ footer {
     .column {
         min-height: 0;
     }
+}
+
+/* ---------- Lawsuits (Green World) ---------- */
+
+.lawsuit {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--purple);
+    border-radius: 5px;
+    background: rgba(199, 125, 187, .12);
+}
+
+.lawsuit strong {
+    color: var(--purple);
+    font-size: 12px;
+}
+
+.lawsuit small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.lawsuit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.lawsuit-actions .tool-button {
+    margin-top: 3px;
+}
+
+.court-button {
+    border: 1px solid var(--purple) !important;
+    background: transparent !important;
+    color: var(--purple) !important;
+}
+
+.court-button:hover {
+    background: rgba(199, 125, 187, .18) !important;
+}
+
+.milestone-fill {
+    background: var(--yellow) !important;
+}
+
+/* Product cards pulse while a lawsuit is open (purple) or a protest runs (red; wins when both). */
+.ops-card.alert-lawsuit {
+    animation: pulse-lawsuit 1.6s ease-in-out infinite;
+}
+
+.ops-card.alert-protest {
+    animation: pulse-protest 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-lawsuit {
+    0%, 100% { border-color: var(--line); box-shadow: 0 0 0 0 rgba(199, 125, 187, 0); }
+    50% { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(199, 125, 187, .35); }
+}
+
+@keyframes pulse-protest {
+    0%, 100% { border-color: var(--line); box-shadow: 0 0 0 0 rgba(247, 84, 100, 0); }
+    50% { border-color: var(--red); box-shadow: 0 0 0 3px rgba(247, 84, 100, .35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ops-card.alert-lawsuit { animation: none; border-color: var(--purple); }
+    .ops-card.alert-protest { animation: none; border-color: var(--red); }
+}
+
+/* ---------- Level 2: news ticker and the end of the level ---------- */
+
+.console-line.news::before {
+    content: '[NEWS ]';
+    color: var(--yellow);
+}
+
+.console-line.error.news-breaking::before,
+.news-ticker .console-line.error::before {
+    content: '[ALERT]';
+}
+
+.victory-facts {
+    display: grid;
+    gap: 4px;
+    margin: 14px 0;
+    font-size: 13px;
+}
+
+.victory-facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 3px;
+}
+
+.victory-facts dt {
+    color: var(--muted);
+}
+
+.victory-facts dd {
+    margin: 0;
+    font: 600 13px var(--mono);
+    text-align: right;
+}
+
+.victory-verdict {
+    font-style: italic;
+}
+
+.victory-teaser {
+    color: var(--purple);
+}
+
+/* Development card: progress rows with the time until the problem is solved. */
+.world-row:has(.world-eta) {
+    grid-template-columns: 96px 1fr 62px 54px;
+}
+
+.world-eta {
+    color: var(--muted);
+    font-size: 10px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Level 2 clicker: pitch to investors for budget. */
+.pitch-button {
+    width: 100%;
+    margin-top: 8px;
+    background: var(--green);
+    color: #1e1f22;
+}
+
+.code-button.pitch-button:hover {
+    background: #7fd88f;
+}
+
+.pitch-button:active {
+    transform: translateY(1px);
 }

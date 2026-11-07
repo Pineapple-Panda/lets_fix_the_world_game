@@ -5,49 +5,90 @@
     @for (card of v.productCards; track card.definition.id) {
         @if (card.released; as released) {
             <article class="ops-card ops-product" [class.active]="released.active" [class.with-panel]="!!card.panel"
+                     [class.alert-lawsuit]="!!card.panel?.lawsuit" [class.alert-protest]="!!card.panel?.protest"
                      [attr.aria-labelledby]="'product-' + released.id">
                 <h2 class="product-title" [id]="'product-' + released.id">{{ card.title }}</h2>
                 @if (card.panel; as panel) {
                     <div class="panel-body">
-                        <div class="world-row">
-                            <span>{{ panel.problemName }}</span>
-                            <div class="world-track" role="progressbar" [attr.aria-label]="panel.problemName + ' solution progress'"
-                                 aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="panel.progress | number: '1.0-0'">
-                                <div class="world-fill world-climate" [style.width.%]="panel.progress"></div>
+                        @for (problem of panel.problems; track problem.id) {
+                            <div class="world-row">
+                                <span>{{ problem.name }}</span>
+                                <div class="world-track" role="progressbar" [attr.aria-label]="problem.name + ' solution progress'"
+                                     aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="problem.progress | number: '1.0-0'">
+                                    <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.progress"></div>
+                                </div>
+                                <b>@if (problem.solved) {<span class="epic-done">Solved ✓</span>} @else {{{ problem.progress | number: '1.3-3' }}%}</b>
                             </div>
-                            <b>{{ panel.progress | number: '1.3-3' }}%</b>
+                        }
+                        <div class="upgrade-row">
+                            <span>Programs +{{ panel.boostPercent }}%</span>
+                            <button class="tool-button" type="button" [disabled]="!panel.canUpgrade"
+                                    [attr.aria-label]="'Upgrade ' + card.title + ' for ' + panel.upgradeCost + ' budget'"
+                                    (click)="productUpgraded.emit(released.id)">Upgrade version</button>
                         </div>
+                        <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
+                        @if (panel.lawsuit; as lawsuit) {
+                            <div class="lawsuit" role="alert">
+                                <strong>⚖️ Sued by {{ lawsuit.plaintiff }}</strong>
+                                <small>{{ lawsuit.plaintiff }} {{ lawsuit.accusation }}</small>
+                                <small class="panel-warning">A court injunction freezes all {{ panel.productName }} programs.</small>
+                                @if (lawsuit.courtSeconds !== null) {
+                                    <small>@if (panel.lawyer) {Your lawyer took the case to court. }In court: verdict in {{ clock(lawsuit.courtSeconds) }}. {{ panel.winChance }}% chance to win; if you lose, you pay up to {{ format(panel.courtDamages) }} in damages.</small>
+                                } @else {
+                                    <div class="lawsuit-actions">
+                                        <button class="tool-button" type="button" [disabled]="!lawsuit.canSettle"
+                                                [attr.aria-label]="'Settle out of court for ' + panel.settlementCost + ' budget'"
+                                                (click)="lawsuitSettled.emit()">Settle ({{ format(panel.settlementCost) }})</button>
+                                        <button class="tool-button court-button" type="button"
+                                                [attr.aria-label]="'Fight in court for ' + panel.courtDuration + ' seconds, ' + panel.winChance + ' percent chance to win'"
+                                                (click)="lawsuitFought.emit()">Fight in court ({{ panel.courtDuration }}s)</button>
+                                    </div>
+                                    <small>Court: {{ panel.winChance }}% chance to win. If you lose, you pay up to {{ format(panel.courtDamages) }} in damages.</small>
+                                }
+                            </div>
+                        }
+                        @if (panel.verdict; as verdict) {
+                            @if (verdict.won) {
+                                <small class="epic-done">⚖️ Won in court against {{ verdict.plaintiff }}.</small>
+                            } @else {
+                                <small class="panel-warning">⚖️ Lost in court against {{ verdict.plaintiff }}: {{ format(verdict.damages) }} paid in damages.</small>
+                            }
+                        }
                         @if (panel.frozen) {
                             <small class="panel-alert">Integrity is 0%. Nobody cooperates, every program is frozen.</small>
                         } @else if (panel.protestRisk > 0) {
                             <small class="panel-warning">Integrity below 50%: people distrust you. Protest risk {{ panel.protestRisk }}% per program and second.</small>
                         }
 
+                        <div class="program-grid">
                         @for (entry of panel.programs; track entry.program.id) {
                             <div class="program" [class.running]="entry.running" [class.protest]="entry.protest">
                                 <strong>{{ entry.program.name }}</strong>
                                 <small>{{ entry.program.detail }}</small>
                                 <small class="client-terms">
-                                    @if (entry.program.cost) { {{ format(entry.program.cost) }} to start · }
-                                    @if (entry.program.upkeep > 0) { −{{ format(entry.program.upkeep) }} budget/sec · }
-                                    @if (entry.program.upkeep < 0) { <span class="good">+{{ format(-entry.program.upkeep) }} budget/sec</span> · }
-                                    <span class="good">{{ panel.problemName }} +{{ entry.rate }}%/sec</span>
-                                    @if (entry.program.integrity) { · <span class="bad">Integrity {{ rate(entry.program.integrity) }}/sec</span> }
-                                    @if (entry.program.slots) { · {{ entry.program.slots }} server slot }
+                                    @for (term of entry.terms; track $index) {<span [class]="term.tone">{{ term.text }}</span>@if (!$last) { · }}
                                 </small>
+                                @if (entry.milestone !== null) {
+                                    <small>{{ entry.milestoneLabel }} {{ entry.milestone | number: '1.0-0' }}% · at 100% the program ends and unlocks “{{ entry.unlocksEpic }}”</small>
+                                    <div class="progress-track"><div class="progress-fill milestone-fill" [style.width.%]="entry.milestone"></div></div>
+                                }
                                 @if (entry.protest) {
                                     <small class="panel-alert">✊ Protest! People are blocking this program.</small>
                                     <small class="protest-status">
                                         Resistance: {{ entry.clicksLeft }} {{ entry.clicksLeft === 1 ? 'click' : 'clicks' }} left
                                         @if (panel.resistanceGrowth > 0) { · <span class="bad">+{{ panel.resistanceGrowth }}/sec from distrust</span> }
                                         @if (panel.robots) { · <span class="good">EdisonX robots −{{ panel.robotPower }}/sec</span> }
+                                        @if (panel.mediators) { · <span class="good">Mediators −{{ panel.mediationPower }}/sec</span> }
                                     </small>
-                                    <div class="protest-track"><div class="protest-fill" [style.width.%]="entry.clicksLeft"></div></div>
+                                    <div class="protest-track"><div class="protest-fill" [style.width.%]="entry.clicksLeft / panel.maxResistance * 100"></div></div>
                                     <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
                                             (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
                                 } @else if (entry.running) {
-                                    <small [class.panel-warning]="entry.unfunded" [class.epic-done]="!entry.unfunded && !panel.frozen">
-                                        {{ panel.frozen ? 'Frozen' : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
+                                    @let paused = entry.unfunded || entry.waitingFor.length > 0;
+                                    <small [class.panel-warning]="paused" [class.epic-done]="!paused && !panel.frozen">
+                                        {{ panel.frozen ? 'Frozen'
+                                            : entry.waitingFor.length ? 'Paused: needs ' + entry.waitingFor.join(' and ') + ' running'
+                                            : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
                                     </small>
                                     <button class="tool-button client-end" type="button" [attr.aria-label]="'Stop ' + entry.program.name"
                                             (click)="programStopped.emit(entry.program.id)">Stop</button>
@@ -59,14 +100,8 @@
                                 }
                             </div>
                         }
-
-                        <div class="upgrade-row">
-                            <span>Programs +{{ panel.boostPercent }}%</span>
-                            <button class="tool-button" type="button" [disabled]="!panel.canUpgrade"
-                                    [attr.aria-label]="'Upgrade ' + card.title + ' for ' + panel.upgradeCost + ' budget'"
-                                    (click)="productUpgraded.emit(released.id)">Upgrade version</button>
                         </div>
-                        <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
+
                     </div>
                 } @else if (released.active) {
                     <span class="product-status">Active</span>
@@ -94,7 +129,7 @@
                     <strong>{{ entry.client.name }}</strong>
                     <small>{{ entry.client.description }}</small>
                     <small class="client-terms">
-                        +{{ format(entry.client.income) }} budget/sec
+                        +{{ format(entry.income) }} budget/sec
                         @for (effect of entry.effects; track effect.name) {
                             · <span [class.good]="effect.delta > 0" [class.bad]="effect.delta < 0">{{ effect.name }} {{ rate(effect.delta) }}%/sec</span>
                         }
@@ -130,6 +165,7 @@
                         <div class="world-fill" [class]="'world-' + problem.id" [style.width.%]="problem.value"></div>
                     </div>
                     <b>{{ problem.value | number: '1.3-3' }}%</b>
+                    <small class="world-eta" [class.epic-done]="problem.eta === 'solved'">{{ problem.eta }}</small>
                 </div>
             }
 
@@ -179,6 +215,10 @@
                 <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
             </div>
         </div>
+        @if (v.canPitch) {
+            <button class="code-button pitch-button" type="button" [attr.aria-label]="'Pitch to investors for ' + v.pitchValue + ' budget'"
+                    (click)="pitched.emit()">Pitch to investors <span>+{{ format(v.pitchValue) }} budget</span></button>
+        }
 
         <div class="focus" role="group" aria-labelledby="focus-title">
             <div class="focus-labels">
@@ -256,6 +296,28 @@
                     No slots rented
                 }
             </small>
+
+            @if (v.infrastructure.length) {
+                <h3 class="tool-heading ops-subheading">Special Epics</h3>
+                @for (entry of v.infrastructure; track entry.epic.id) {
+                    <div class="epic" [class.running]="entry.running">
+                        <strong>{{ entry.epic.title }}</strong>
+                        <small>{{ entry.epic.detail }}</small>
+                        <small>{{ format(entry.epic.cost) }} budget · {{ duration(entry.epic.duration) }} server time
+                            @if (entry.epic.climateBoost) { · <span class="epic-done">Climate change +{{ entry.epic.climateBoost }}% once</span> }</small>
+                        @if (entry.running) {
+                            <div class="progress-track"><div class="progress-fill" [style.width.%]="entry.progress / entry.epic.duration * 100"></div></div>
+                            <small>Running · {{ clock(entry.progress) }} / {{ clock(entry.epic.duration) }}</small>
+                        } @else if (entry.missingPerk) {
+                            <small class="epic-waiting">Needs the perk “{{ entry.missingPerk }}”</small>
+                        } @else {
+                            <button class="tool-button" type="button" [disabled]="!entry.canStart"
+                                    [attr.aria-label]="'Start epic ' + entry.epic.title + ' for ' + entry.epic.cost + ' budget'"
+                                    (click)="epicStarted.emit(entry.epic.id)">Start epic</button>
+                        }
+                    </div>
+                }
+            }
 
             <h3 class="tool-heading ops-subheading">Epics</h3>
             @for (entry of openGoals(); track entry.goal.id) {
