@@ -1625,7 +1625,9 @@ test('pitching to investors adds budget per click and grows with the income', ()
   assert.equal(pitched.stats.pitches, 1);
   const rich = liveState({ rentals: ['edisonx', 'nsa'], perks: ['network-financing'] });
   assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.2), '20% of the income per second');
-  assert.equal(launched.pitchValue(liveState({ focus: -100 })), 100, 'no budget payout while shipping features');
+  const rentOnly = { rentals: ['edisonx', 'nsa'], perks: ['network-financing'] };
+  assert.equal(launched.pitchValue(liveState({ ...rentOnly, focus: 100 })), launched.pitchValue(liveState(rentOnly)), 'the focus slider does not change it');
+  assert.equal(launched.pitchValue(liveState({ ...rentOnly, focus: -100 })), launched.pitchValue(liveState(rentOnly)));
   assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 400, 'four server slots: ×4');
 });
 

@@ -89,19 +89,22 @@ export const pitchBase = 100;
 /** A pitch is worth this share of the current budget income per second. */
 export const pitchShare = 0.2;
 
-/** Budget per second right now on average: the payout for new actions (with focus) plus client rent and program income. */
+/**
+ * Budget per second on average, ignoring the focus slider: the payout for new actions at the centre position plus
+ * client rent and program income. The base for pitching, so the slider does not inflate it.
+ */
 export function budgetPerSecond(state: LaunchedGame): number {
-  const averageActions = (minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state);
+  const averageActions = (minActionsPerSecond + maxActionsPerSecond) / 2;
   const programIncome = state.programs.reduce((total, entry) => {
     const program = programDefinition(entry.id);
     return total + (program && program.upkeep < 0 ? -program.upkeep : 0);
   }, 0);
-  return averageActions * budgetPerAction * budgetBoost(state) + rentalIncome(state) + programIncome;
+  return averageActions * budgetPerAction + rentalIncome(state) + programIncome;
 }
 
 /**
- * Budget for one "Pitch to investors" click: 20% of the income per second (at least 100), times the number of
- * server slots. Grows with the platform.
+ * Budget for one "Pitch to investors" click: 20% of the income per second without the focus slider (at least 100),
+ * times the number of server slots. Grows with the platform.
  */
 export function pitchValue(state: LaunchedGame): number {
   return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * state.serverSlots);
