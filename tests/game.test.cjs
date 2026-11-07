@@ -713,7 +713,7 @@ test('every Add Server makes the focus effect stronger, a little faster than lin
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -721,7 +721,7 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
@@ -754,7 +754,7 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'],
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'],
     'perks are listed by unlock threshold; Add Server needs no actions');
 });
 
@@ -1612,6 +1612,17 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
   const calm = launched.tickLaunched(assembly, () => 0);
   assert.equal(calm.integrity, 40, 'never below 40%');
   assert.equal(calm.programs[0].resistance, 0, 'no new protests');
+});
+
+test('Premium Hosting Contracts make clients pay ten times the rent', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  assert.equal(content.launchedPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
+  const online = { perks: ['workflow-abstraction', 'network-financing'], rentals: ['blue-helmets'] };
+  assert.equal(launched.rentalIncome(liveState(online)), 500);
+  const premium = liveState({ ...online, perks: [...online.perks, 'premium-hosting'] });
+  assert.equal(launched.rentalIncome(premium), 5000);
+  assert.equal(launched.clientIncome(premium, content.rentalClients.find(client => client.id === 'blue-helmets')), 5000);
+  assert.equal(launched.rentalProgress(premium, 'war'), launched.rentalProgress(liveState(online), 'war'), 'only the money, not the effects');
 });
 
 test('pitching to investors adds budget per click and grows with the income', () => {

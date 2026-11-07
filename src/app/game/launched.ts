@@ -780,14 +780,22 @@ export function serverRentFactor(state: LaunchedGame): number {
   return 1 + serverRentBonus * addedServers(state);
 }
 
-/** Budget per second a client pays right now (data centres and added servers included). */
+/** Perk that multiplies client rent by ten. */
+export const premiumHostingPerk = 'premium-hosting';
+export const premiumHostingFactor = 10;
+
+/** Multiplier on client rent: data centres ×1.25, +3% per added server, premium hosting ×10. */
+export function rentFactor(state: LaunchedGame): number {
+  return clientFactor(state) * serverRentFactor(state) * (state.perks.includes(premiumHostingPerk) ? premiumHostingFactor : 1);
+}
+
+/** Budget per second a client pays right now (all rent multipliers included). */
 export function clientIncome(state: LaunchedGame, client: RentalClient): number {
-  return Math.round(client.income * clientFactor(state) * serverRentFactor(state));
+  return Math.round(client.income * rentFactor(state));
 }
 
 export function rentalIncome(state: LaunchedGame): number {
-  return Math.round(state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0) *
-    clientFactor(state) * serverRentFactor(state));
+  return Math.round(state.rentals.reduce((total, id) => total + (rentalClient(id)?.income ?? 0), 0) * rentFactor(state));
 }
 
 /** Solution progress per second the current clients add to a problem (negative slows it down). */

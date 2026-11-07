@@ -50,6 +50,13 @@ export const launchedPerks: LaunchedPerk[] = [
     cost: 3000000
   },
   {
+    id: 'premium-hosting',
+    name: 'Premium Hosting Contracts',
+    description: 'Same servers, new invoices: "enterprise-grade", "mission-critical", "carbon-aware". Clients pay ten times the rent.',
+    icon: 'PH',
+    actionsRequired: 30000000
+  },
+  {
     id: 'decent-lawyer',
     name: 'Decent Lawyer',
     description: 'Takes every lawsuit to court the moment it is filed. You no longer have to deal with it yourself.',
