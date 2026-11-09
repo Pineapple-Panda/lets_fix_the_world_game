@@ -664,7 +664,8 @@ app-board {
 
 /* ---------- Level 2: operations grid ---------- */
 
-app-level-two {
+app-level-two,
+app-level-three {
     display: block;
     flex: 1;
     min-height: 0;
@@ -1593,11 +1594,8 @@ footer {
 .utopia {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
-    grid-template-rows: minmax(260px, 1fr) auto;
+    grid-template-rows: minmax(260px, auto) auto;
     gap: 10px;
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
 }
 
 .arena {
