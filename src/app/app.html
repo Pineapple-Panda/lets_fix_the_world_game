@@ -17,7 +17,7 @@
                 <app-duel-dialog [duel]="duel" [clickGain]="duelGain()" [boosts]="duelBoosts()" (boosted)="playCard($event)"
                                  (finished)="finishDuel($event)" (closed)="closeDuel()" />
             }
-            <app-level-three [state]="world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (effectCancelled)="cancelEffect($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
+            <app-level-three [state]="utopiaDisplay() ?? world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (effectCancelled)="cancelEffect($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
                              (perkActivated)="activateUtopiaPerk($event)" />
             <footer><span>LET’S FIX THE WORLD GAME / LEVEL 3</span>
                 <span class="footer-actions">
@@ -45,7 +45,7 @@
                     }
                 </div>
             </section>
-            <app-level-two [state]="live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
+            <app-level-two [state]="launchedDisplay() ?? live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
                            (productActivated)="activateProduct($event)" (focusChanged)="setFocus($event)"
                            (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)"
                            (tegridyBought)="buyTegridy()" (programStarted)="startProgram($event)"

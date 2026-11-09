@@ -2112,6 +2112,49 @@ test('level 3 saves and loads', () => {
   assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');
 });
 
+// ---------- smoothing ----------
+
+const smoothing = require('../src/app/shared/game/smoothing.ts');
+
+test('smoothing: shown values glide from the last tick to the new state', () => {
+  const before = liveState({ actions: 1000, budget: 500, integrity: 50 });
+  const after = { ...before, actions: 2000, budget: 300, integrity: 60, worldProgress: { ...before.worldProgress, climate: 10 } };
+  const from = launched.launchedSmoothing.read(before);
+  const half = smoothing.blend(launched.launchedSmoothing, from, after, 0.5);
+  assert.equal(half.actions, 1500);
+  assert.equal(half.budget, 400);
+  assert.equal(half.integrity, 55);
+  assert.equal(half.worldProgress.climate, (before.worldProgress.climate + 10) / 2);
+  assert.equal(half.seconds, after.seconds, 'everything else is the new state');
+  assert.equal(smoothing.blend(launched.launchedSmoothing, from, after, 1), after, 'at the next tick the real state shows');
+  assert.equal(smoothing.blend(launched.launchedSmoothing, null, after, 0.2), after, 'nothing to glide from');
+  assert.equal(smoothing.blend(launched.launchedSmoothing, from, after, 0).actions, 1000);
+});
+
+test('smoothing: a player action shows at once and keeps gliding', () => {
+  const before = liveState({ actions: 1000, budget: 5000 });
+  const from = { ...launched.launchedSmoothing.read(before), budget: 4000 };
+  const bought = { ...before, budget: 3000 };
+  const shifted = smoothing.shifted(launched.launchedSmoothing, from, before, bought);
+  assert.equal(shifted.budget, 2000, 'the shown start value drops by the price too');
+  assert.equal(shifted.actions, 1000);
+  assert.equal(smoothing.shifted(launched.launchedSmoothing, null, before, bought), null);
+});
+
+test('smoothing: level 1 and level 3 glide their headline numbers', () => {
+  const start = game.newGame();
+  const later = { ...start, actions: start.actions + 10, budget: start.budget + 20 };
+  const shown = smoothing.blend(game.gameSmoothing, game.gameSmoothing.read(start), later, 0.5);
+  assert.equal(shown.actions, start.actions + 5);
+  assert.equal(shown.budget, start.budget + 10);
+
+  const world = utopia.newUtopia();
+  const next = { ...world, metrics: { ...world.metrics, housing: world.metrics.housing + 2 } };
+  const glide = smoothing.blend(utopia.utopiaSmoothing, utopia.utopiaSmoothing.read(world), next, 0.25);
+  assert.equal(glide.metrics.housing, world.metrics.housing + 0.5);
+  assert.deepEqual(glide.corpPower, next.corpPower);
+});
+
 // ---------- report ----------
 
 for (const { name, error } of failures) {

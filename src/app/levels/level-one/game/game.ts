@@ -1,3 +1,4 @@
+import type { Smoothing } from '../../../shared/game/smoothing.ts';
 import type { BoardColumn } from '../models/board.model.ts';
 import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
@@ -596,3 +597,9 @@ export function addBug(game: Game): Item | null {
   game.selected = bug.id;
   return bug;
 }
+
+/** Numbers that glide between ticks in level 1: actions and budget. */
+export const gameSmoothing: Smoothing<Game> = {
+  read: state => ({ actions: state.actions, budget: state.budget }),
+  write: (state, values) => ({ ...state, actions: Math.round(values['actions'] ?? state.actions), budget: Math.round(values['budget'] ?? state.budget) })
+};

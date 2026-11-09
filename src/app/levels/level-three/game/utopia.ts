@@ -1,3 +1,4 @@
+import { prefixed, unprefixed, type Smoothing } from '../../../shared/game/smoothing.ts';
 import type { LevelSummary } from '../../level-two/models/launched.model.ts';
 import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
@@ -561,3 +562,24 @@ export function gameSummary(state: UtopiaGame): LevelSummary[] {
   const level2 = state.history.find(entry => entry.level === 2) ?? skipped(2, 'Level 2 · Fixing the world');
   return [level1, level2, level3Summary(state)];
 }
+
+/** Numbers that glide between ticks: TCA, budget, credibility, the utopia bars, corporation power and building progress. */
+export const utopiaSmoothing: Smoothing<UtopiaGame> = {
+  read: state => ({
+    actions: state.actions,
+    budget: state.budget,
+    integrity: state.integrity,
+    ...prefixed('metric', state.metrics),
+    ...prefixed('corp', state.corpPower),
+    ...prefixed('building', state.building)
+  }),
+  write: (state, values) => ({
+    ...state,
+    actions: Math.round(values['actions'] ?? state.actions),
+    budget: Math.round(values['budget'] ?? state.budget),
+    integrity: values['integrity'] ?? state.integrity,
+    metrics: unprefixed('metric', values, state.metrics),
+    corpPower: unprefixed('corp', values, state.corpPower),
+    building: unprefixed('building', values, state.building)
+  })
+};

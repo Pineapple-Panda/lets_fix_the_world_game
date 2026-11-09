@@ -1,3 +1,4 @@
+import { prefixed, unprefixed, type Smoothing } from '../../../shared/game/smoothing.ts';
 import type { Game } from '../../level-one/models/game.model.ts';
 import { formatVersion } from '../../level-one/models/version.model.ts';
 import type {
@@ -1256,3 +1257,22 @@ export function victorySummary(state: LaunchedGame): { facts: Fact[]; verdict: s
         : 'The world is fixed. Your conscience is still in the backlog.';
   return { facts, verdict };
 }
+
+/** Numbers that glide between ticks: actions, budget, integrity, the world problems and the program milestones. */
+export const launchedSmoothing: Smoothing<LaunchedGame> = {
+  read: state => ({
+    actions: state.actions,
+    budget: state.budget,
+    integrity: state.integrity,
+    ...prefixed('world', state.worldProgress),
+    ...Object.fromEntries(state.programs.map(entry => [`milestone.${entry.id}`, entry.milestone]))
+  }),
+  write: (state, values) => ({
+    ...state,
+    actions: Math.round(values['actions'] ?? state.actions),
+    budget: Math.round(values['budget'] ?? state.budget),
+    integrity: values['integrity'] ?? state.integrity,
+    worldProgress: unprefixed('world', values, state.worldProgress),
+    programs: state.programs.map(entry => ({ ...entry, milestone: values[`milestone.${entry.id}`] ?? entry.milestone }))
+  })
+};

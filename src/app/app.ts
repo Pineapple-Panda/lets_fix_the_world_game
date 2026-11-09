@@ -1,4 +1,6 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
+import { Smoother, TickClock } from './shared/game/smoother';
+import { frameMs, tickMs } from './shared/game/smoothing';
 import { ActionBaseComponent } from './levels/level-one/components/action-base/action-base';
 import { BoardComponent } from './levels/level-one/components/board/board';
 import { EarlComponent } from './levels/level-one/components/earl/earl';
@@ -14,7 +16,7 @@ import { DuelDialogComponent } from './levels/level-three/components/duel-dialog
 import { GameOverComponent } from './levels/level-three/components/game-over/game-over';
 import { UtopiaWonComponent } from './levels/level-three/components/utopia-won/utopia-won';
 import {
-  activateUtopiaPerk, cancelMegacorpEffect, gameSummary, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+  activateUtopiaPerk, cancelMegacorpEffect, gameSummary, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia, utopiaSmoothing
 } from './levels/level-three/game/utopia';
 import type { UtopiaGame } from './levels/level-three/models/utopia.model';
 import {
@@ -23,11 +25,11 @@ import {
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
-  upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
+  upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame, gameSmoothing
 } from './levels/level-one/game/game';
 import {
   activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
-  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './levels/level-two/game/launched';
+  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched, launchedSmoothing } from './levels/level-two/game/launched';
 import { newsFeed } from './levels/level-two/game/news';
 import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './shared/game/storage';
 import type { AppView } from './levels/level-one/models/app-view.model';
@@ -56,10 +58,17 @@ export class AppComponent {
   readonly showIntro = signal(false);
   /** Which levels can be played. */
   protected readonly config = gameConfig;
-  /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
-  readonly launched = signal<LaunchedGame | null>(null);
-  /** Level 3 state; null while the player is in level 1 or 2. Also restored by `game`. */
-  readonly utopia = signal<UtopiaGame | null>(null);
+  /** Shown values glide between the once-per-second game ticks; see `Smoother`. */
+  private readonly clock = new TickClock();
+  /** Level 2 state (`state`, null while the player is still in level 1) and what is shown of it (`display`). Must be declared before `levelOne`, which restores it. */
+  private readonly levelTwo = new Smoother<LaunchedGame | null>(launchedSmoothing, this.clock, null);
+  /** Level 3 state, null while the player is in level 1 or 2. Also restored by `levelOne`. */
+  private readonly levelThree = new Smoother<UtopiaGame | null>(utopiaSmoothing, this.clock, null);
+  readonly launched = this.levelTwo.state;
+  readonly utopia = this.levelThree.state;
+  /** What the level 2 and 3 cards show: the state with its numbers gliding towards the latest tick. */
+  readonly launchedDisplay = this.levelTwo.display;
+  readonly utopiaDisplay = this.levelThree.display;
   /** Level 2 news ticker. */
   readonly news = computed(() => {
     const live = this.launched();
@@ -90,7 +99,10 @@ export class AppComponent {
     const live = this.launched();
     return live && worldFixed(live) && !live.victorySeen ? victorySummary(live) : null;
   });
-  readonly game = signal(this.restoreGame());
+  private readonly levelOne = new Smoother<Game>(gameSmoothing, this.clock, this.restoreGame());
+  readonly game = this.levelOne.state;
+  /** True while the level 1 tick runs: its update glides instead of showing at once. */
+  private ticking = false;
 
   readonly view = computed((): AppView => {
     const game = this.game();
@@ -114,8 +126,8 @@ export class AppComponent {
       deploymentBudget: deploymentBudgetReward(game),
       availablePerks: available.filter(entry => entry.available).map(entry => entry.perk),
       stats: {
-        actions: game.actions,
-        budget: game.budget,
+        actions: this.levelOne.display().actions,
+        budget: this.levelOne.display().budget,
         completed: game.items.filter(item => item.type !== 'bug' && item.done).length,
         total: game.items.filter(item => item.type !== 'bug').length,
         automationRate: Number(currentAutomationRate(game).toFixed(1)),
@@ -186,34 +198,39 @@ export class AppComponent {
       const utopia = this.utopia();
       if (utopia) {
         const next = tickUtopia(utopia);
-        this.utopia.set(next);
+        this.levelThree.tick(next);
         this.persistUtopia(next);
         return;
       }
       const launched = this.launched();
       if (launched) {
         const next = tickLaunched(launched, Math.random);
-        this.launched.set(next);
+        this.levelTwo.tick(next);
         this.persistLaunched(next);
         return;
       }
       if (this.showIntro() || this.view().canLaunch) return;
       if (this.view().won) {
         if (this.game().activatedPerks.includes('auto-deploy')) {
-          this.update(game => { autoDeploy(game); });
+          this.tickLevelOne(game => { autoDeploy(game); });
           return;
         }
         if (this.saveWarning()) this.persistGame(this.game());
         return;
       }
-      this.update(game => {
+      this.tickLevelOne(game => {
         game.seconds++;
         const chance = bugChance(game);
         if (game.seconds >= 15 && canGenerateBugs(game) && chance > 0 && Math.random() < chance) addBug(game);
         automate(game);
       });
-    }, 1000);
-    this.destroyRef.onDestroy(() => clearInterval(timer));
+    }, tickMs);
+    // Between ticks, frames move the shown values on.
+    const frames = setInterval(() => this.clock.frame(), frameMs);
+    this.destroyRef.onDestroy(() => {
+      clearInterval(timer);
+      clearInterval(frames);
+    });
   }
 
   onKeydown(event: KeyboardEvent): void {
@@ -300,17 +317,17 @@ export class AppComponent {
 
   /** A new game in the first level the game config enables. */
   private startFirstLevel(): void {
-    this.launched.set(null);
-    this.utopia.set(null);
+    this.levelTwo.set(null);
+    this.levelThree.set(null);
     this.update(() => newGame());
     if (gameConfig.levelOneEnabled) return;
     if (gameConfig.levelTwoEnabled) {
       const state = skippedLevelTwo();
-      this.launched.set(state);
+      this.levelTwo.set(state);
       this.persistLaunched(state);
     } else if (gameConfig.levelThreeEnabled) {
       const state = newUtopia();
-      this.utopia.set(state);
+      this.levelThree.set(state);
       this.persistUtopia(state);
     }
   }
@@ -334,7 +351,7 @@ export class AppComponent {
   /** After completing level 2: a new run of level 1 with 10,000 TCA. */
   restartLevelOne(): void {
     if (!gameConfig.levelOneEnabled) return;
-    this.launched.set(null);
+    this.levelTwo.set(null);
     this.update(() => headStartGame());
   }
 
@@ -342,7 +359,7 @@ export class AppComponent {
   restartLevelTwo(): void {
     if (!gameConfig.levelTwoEnabled) return;
     const state = replayLevelTwo();
-    this.launched.set(state);
+    this.levelTwo.set(state);
     this.persistLaunched(state);
   }
 
@@ -354,8 +371,8 @@ export class AppComponent {
       actions: live.actions, budget: live.budget, integrity: live.integrity,
       actionRate: averageActionsPerSecond(live), budgetRate: averageBudgetPerSecond(live)
     }, [...live.history, level2Summary(live)]);
-    this.launched.set(null);
-    this.utopia.set(state);
+    this.levelTwo.set(null);
+    this.levelThree.set(state);
     this.persistUtopia(state);
   }
 
@@ -369,7 +386,7 @@ export class AppComponent {
     if (!current) return;
     const state = newUtopia({ actions: current.actions, budget: current.budget, integrity: 50, actionRate: current.actionRate, budgetRate: current.budgetRate },
       current.history);
-    this.utopia.set(state);
+    this.levelThree.set(state);
     this.persistUtopia(state);
   }
 
@@ -463,7 +480,7 @@ export class AppComponent {
     if (!current) return;
     const next = change(current);
     if (!next) return;
-    this.launched.set(next);
+    this.levelTwo.change(next);
     this.persistLaunched(next);
   }
 
@@ -472,7 +489,7 @@ export class AppComponent {
     if (!gameConfig.levelTwoEnabled) return;
     const state = launch(this.game());
     if (!state) return;
-    this.launched.set(state);
+    this.levelTwo.set(state);
     this.persistLaunched(state);
   }
 
@@ -493,12 +510,12 @@ export class AppComponent {
     // A save in a level the game config disables is not resumed.
     const utopia = gameConfig.levelThreeEnabled ? loadUtopia(storage) : null;
     if (utopia) {
-      this.utopia.set(utopia);
+      this.levelThree.set(utopia);
       return newGame();
     }
     const launched = gameConfig.levelTwoEnabled ? loadLaunched(storage) : null;
     if (launched) {
-      this.launched.set(launched);
+      this.levelTwo.set(launched);
       return newGame();
     }
     const savedGame = gameConfig.levelOneEnabled ? loadGame(storage) : null;
@@ -506,9 +523,9 @@ export class AppComponent {
     if (gameConfig.levelOneEnabled) {
       this.showIntro.set(true);
     } else if (gameConfig.levelTwoEnabled) {
-      this.launched.set(skippedLevelTwo());
+      this.levelTwo.set(skippedLevelTwo());
     } else if (gameConfig.levelThreeEnabled) {
-      this.utopia.set(newUtopia());
+      this.levelThree.set(newUtopia());
     }
     return newGame();
   }
@@ -526,7 +543,7 @@ export class AppComponent {
     if (!current) return;
     const next = change(current);
     if (!next) return;
-    this.utopia.set(next);
+    this.levelThree.change(next);
     this.persistUtopia(next);
   }
 
@@ -551,6 +568,16 @@ export class AppComponent {
     }
   }
 
+  /** One second of level 1: the result glides in. */
+  private tickLevelOne(change: (game: Game) => Game | void): void {
+    this.ticking = true;
+    try {
+      this.update(change);
+    } finally {
+      this.ticking = false;
+    }
+  }
+
   private update(change: (game: Game) => Game | void): void {
     const host: HTMLElement = this.host.nativeElement;
     const active = document.activeElement as HTMLElement | null;
@@ -565,7 +592,8 @@ export class AppComponent {
     let selected = selectedWorkItem(game);
     if (bugs.length && (!selected || selected.type !== 'bug')) selected = bugs[0];
     game.selected = selected?.id ?? null;
-    this.game.set(game);
+    if (this.ticking) this.levelOne.tick(game);
+    else this.levelOne.change(game);
     this.persistGame(game);
 
     if (focusedId || assignmentId || codeFocused) {
