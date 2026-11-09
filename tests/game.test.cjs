@@ -1991,8 +1991,8 @@ test('duels: a tug-of-war bar; win costs MegaCorp 5% power, losing costs 5 credi
   let state = utopia.startDuel(opened());
   assert.deepEqual(state.duel, { startedBy: 'player', result: null });
   assert.equal(utopia.startDuel(state), null, 'one duel at a time');
-  // The bar: +1 per click, −5 per second.
-  assert.deepEqual(utopia.duelStep(50, 1, 0), { bar: 51, result: null });
+  // The bar: +1.2 per click, −5 per second.
+  assert.deepEqual(utopia.duelStep(50, 1, 0), { bar: 51.2, result: null });
   assert.deepEqual(utopia.duelStep(50, 0, 1), { bar: 45, result: null });
   assert.deepEqual(utopia.duelStep(99.5, 1, 0), { bar: 100, result: 'won' });
   assert.deepEqual(utopia.duelStep(0.3, 0, 0.1), { bar: 0, result: 'lost' });
