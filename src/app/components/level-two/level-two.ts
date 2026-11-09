@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, suedProducts, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -49,6 +49,8 @@ export class LevelTwoComponent {
     return {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
+      actionsPerSecond: averageActionsPerSecond(state),
+      budgetPerSecond: averageBudgetPerSecond(state),
       pitchValue: pitchValue(state),
       canPitch: canPitch(state),
       // At most five perks: the ones that can be taken right now first, then the next by unlock threshold.
@@ -70,6 +72,10 @@ export class LevelTwoComponent {
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
       rented: rentedSlots(state),
+      programSlots: programSlots(state),
+      usedSlots: usedSlots(state),
+      aidSlots: state.aidSlots,
+      aidSeconds: state.aidSeconds,
       rentalIncome: rentalIncome(state),
       worldProgress: worldProblems.map(problem => ({
         ...problem,
@@ -84,6 +90,7 @@ export class LevelTwoComponent {
         condition: client.minIntegrity !== undefined ? `Only works with you at ${client.minIntegrity}% integrity or more`
           : client.maxIntegrity !== undefined ? `Only works with you at ${client.maxIntegrity}% integrity or less` : '',
         income: clientIncome(state, client),
+        actions: (client.actions ?? 0) * state.serverSlots,
         effects: (Object.entries(client.progress) as [WorldProblem, number][]).map(([problem, delta]) => ({
           name: problemName(problem),
           delta: small(delta * factor)
@@ -170,7 +177,7 @@ export class LevelTwoComponent {
       problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id], solved: problemSolved(state, id) })),
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
-      lawsuit: state.lawsuit && lawsuitCase(state)?.product === productId ? {
+      lawsuit: state.lawsuit && suedProducts(state).includes(productId) ? {
         ...lawsuitCase(state)!,
         courtSeconds: state.lawsuit.courtSeconds,
         canSettle: state.budget >= settlementCost(state)
@@ -179,7 +186,7 @@ export class LevelTwoComponent {
       courtDamages: courtDamages(state),
       winChance: Math.round(winChance(state) * 100),
       lawyer: lawyerOnCase(state),
-      verdict: !state.lawsuit && state.verdict?.product === productId ? state.verdict : null,
+      verdict: !state.lawsuit && (state.verdict?.product === productId || state.verdict?.product === 'all') ? state.verdict : null,
       courtDuration: courtDuration(state),
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
       robots: robotsOnSite(state),
@@ -197,7 +204,7 @@ export class LevelTwoComponent {
           program,
           problemName: problemName(program.problem),
           rate: small(program.rate * boost),
-          terms: this.programTerms(program, small(program.rate * boost), programUpkeep(state, program)),
+          terms: this.programTerms(program, small(program.rate * boost), programUpkeep(state, program), programSlotsNeeded(state, program)),
           running: !!running,
           protest: !!running && inProtest(running),
           clicksLeft: running ? Math.ceil(running.resistance) : 0,
@@ -213,14 +220,14 @@ export class LevelTwoComponent {
   }
 
   /** The cost line of a program: start price, upkeep or income, effect, integrity, slots. */
-  private programTerms(program: ProgramDefinition, rate: number, upkeep: number): { text: string; tone: string }[] {
+  private programTerms(program: ProgramDefinition, rate: number, upkeep: number, slots: number): { text: string; tone: string }[] {
     return [
       program.cost ? { text: `${this.format(program.cost)} to start`, tone: '' } : null,
       upkeep > 0 ? { text: `−${this.format(upkeep)} budget/sec`, tone: '' } : null,
       upkeep < 0 ? { text: `+${this.format(-upkeep)} budget/sec`, tone: 'good' } : null,
       rate ? { text: `${problemName(program.problem)} ${this.rate(rate)}%/sec`, tone: rate > 0 ? 'good' : 'bad' } : null,
       program.integrity ? { text: `Integrity ${this.rate(program.integrity)}/sec`, tone: program.integrity > 0 ? 'good' : 'bad' } : null,
-      program.slots ? { text: `${program.slots} server ${program.slots === 1 ? 'slot' : 'slots'}`, tone: '' } : null,
+      { text: `${slots} server ${slots === 1 ? 'slot' : 'slots'}`, tone: '' },
       program.lawsuitMultiplier ? { text: `Lawsuits ×${program.lawsuitMultiplier}`, tone: 'bad' } : null
     ].filter(term => term !== null);
   }
@@ -234,6 +241,11 @@ export class LevelTwoComponent {
   /** 50 → "+50", -50 → "−50", 0 → "±0". */
   protected signed(value: number): string {
     return value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '±0';
+  }
+
+  /** 2544 → "+2,544", -300 → "−300". */
+  protected signedAmount(value: number): string {
+    return (value < 0 ? '−' : '+') + this.format(Math.abs(value));
   }
 
   protected format(value: number): string {

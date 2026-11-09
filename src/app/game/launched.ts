@@ -1,9 +1,10 @@
 import type { Game } from '../models/game.model.ts';
 import type {
   EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
+  SpecialEvent,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals, worldProblems } from './launched-content.ts';
+import { epics, launchedPerks, lawsuits, products, programs, rentalClients, specialEvents, worldGoals, worldProblems } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -54,7 +55,12 @@ function newLaunchedState(actions: number, budget: number): LaunchedGame {
     lawsuitsFiled: 0,
     verdict: null,
     stats: noStats(),
-    victorySeen: false
+    victorySeen: false,
+    eventsSeen: [],
+    pendingEvent: null,
+    nsaSeconds: 0,
+    aidSlots: 0,
+    aidSeconds: 0
   };
 }
 
@@ -87,7 +93,9 @@ export function canPitch(state: LaunchedGame): boolean {
 /** A pitch is worth at least this much budget. */
 export const pitchBase = 100;
 /** A pitch is worth this share of the current budget income per second. */
-export const pitchShare = 0.2;
+export const pitchShare = 0.1;
+/** Each server added with Add Server raises the pitch by half its base value. */
+export const pitchServerStep = 0.5;
 
 /**
  * Budget per second on average, ignoring the focus slider: the payout for new actions at the centre position plus
@@ -103,11 +111,11 @@ export function budgetPerSecond(state: LaunchedGame): number {
 }
 
 /**
- * Budget for one "Pitch to investors" click: 20% of the income per second without the focus slider (at least 100),
- * times the number of server slots. Grows with the platform.
+ * Budget for one "Pitch to investors" click: 10% of the income per second without the focus slider (at least 100),
+ * times 1 + 0.5 per added server (10 slots: ×5.5). Grows with the platform.
  */
 export function pitchValue(state: LaunchedGame): number {
-  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * state.serverSlots);
+  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * (1 + pitchServerStep * addedServers(state)));
 }
 
 /** One click on "Pitch to investors" (needs the Pitch Deck Generator). */
@@ -153,15 +161,18 @@ export const maxBudgetPenalty = 1;
 const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
 
 /** Focus power grows by this factor per added server on top of the linear step. */
-export const focusGrowth = 1.05;
+export const focusGrowth = 1.03;
+/** Linear step of focus power per added server. */
+export const focusStep = 0.5;
 
 /**
- * How strong the slider's bonuses are: (1 + added servers) × 1.05 per added server, rounded to 2 decimals.
- * 1 server ×2.1, 3 servers ×4.63, 10 servers ×17.92: a little faster than linear, far from doubling.
+ * How strong the slider's bonuses are: (1 + 0.5 per added server) × 1.03 per added server, rounded to 2 decimals.
+ * 1 server ×1.55, 3 servers ×2.73, 9 servers ×7.17: a little faster than linear. Server slots already multiply
+ * the actions per second, so the slider grows more gently.
  */
 export function focusPower(state: LaunchedGame): number {
   const servers = addedServers(state);
-  return Math.round((1 + servers) * focusGrowth ** servers * 100) / 100;
+  return Math.round((1 + focusStep * servers) * focusGrowth ** servers * 100) / 100;
 }
 
 /** Multiplier for actions per second: ×1.5 fully left (more with Add Server), ×0.5 fully right. */
@@ -185,6 +196,32 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
   if (!Number.isFinite(focus)) return null;
   const next = clampFocus(focus);
   return next === state.focus ? null : { ...state, focus: next };
+}
+
+/** Actions per second from clients (Mississippi Corp): their actions per slot × your server slots. */
+export function clientActions(state: LaunchedGame): number {
+  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.actions ?? 0), 0) * state.serverSlots;
+}
+
+/**
+ * Average actions per second right now: 175 (the middle of 50–300) × focus slider × server slots, plus the
+ * actions from clients.
+ */
+export function averageActionsPerSecond(state: LaunchedGame): number {
+  return Math.round((minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots + clientActions(state));
+}
+
+/**
+ * Average net budget per second right now, without pitches: the payout for new actions (with the focus slider),
+ * client rent, and the income or upkeep of every program that is working this second.
+ */
+export function averageBudgetPerSecond(state: LaunchedGame): number {
+  const payout = (minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots * budgetPerAction * budgetBoost(state);
+  const programs = state.programs.reduce((total, entry) => {
+    const program = programDefinition(entry.id);
+    return program && programWorking(state, entry) ? total - programUpkeep(state, program) : total;
+  }, 0);
+  return Math.round(payout + rentalIncome(state) + programs);
 }
 
 /** Dev mode: epics take at most this many seconds. */
@@ -216,7 +253,7 @@ export function devBoost(state: LaunchedGame): LaunchedGame {
 }
 
 /**
- * One second in level 2: actions grow by 50–300 (scaled by the focus slider), running epics advance by one second of server time,
+ * One second in level 2: actions grow by 50–300 per server slot (scaled by the focus slider), running epics advance by one second of server time,
  * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
  * Then clients, finished epics, programs, lawsuits and product releases are applied.
  */
@@ -226,7 +263,8 @@ export function tickLaunched(
   fastEpics = false
 ): LaunchedGame {
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
-  const gained = Math.round(base * actionBoost(state));
+  // Every server slot adds a full share of actions per second.
+  const gained = Math.round(base * actionBoost(state) * state.serverSlots);
   const dataCenters = dataCentersActive(state);
   const next: LaunchedGame = {
     ...state,
@@ -245,6 +283,12 @@ export function tickLaunched(
   }
   // Rented slots pay every second, nudge the solution progress a tiny bit and move integrity.
   next.budget = cap(next.budget + rentalIncome(next));
+  // Client actions (Mississippi Corp) count as coding actions but are not paid out as budget again.
+  const outsourced = clientActions(next);
+  if (outsourced) {
+    next.actions = cap(next.actions + outsourced);
+    next.budgetActions = cap(next.budgetActions + outsourced);
+  }
   const progress = { ...next.worldProgress };
   const factor = clientFactor(next);
   for (const id of next.rentals) {
@@ -265,8 +309,10 @@ export function tickLaunched(
     for (const problem of goal.problems) progress[problem] = percent(progress[problem] + epicProgress);
   }
   next.worldProgress = progress;
-  runPrograms(next, random);
+  // Lawsuits first: a case filed this second freezes the sued product's programs right away.
   runLawsuit(next, random);
+  runPrograms(next, random);
+  runEvents(next);
   // A citizens assembly keeps integrity at 40% or more.
   if (citizensAssembly(next)) next.integrity = Math.max(assemblyIntegrity, next.integrity);
   // Clients walk out once integrity leaves their range (Green-Left below 70%, EdisonX above 20%).
@@ -332,11 +378,11 @@ export function launchedPerkUnlocked(state: LaunchedGame, perk: LaunchedPerk): b
   return state.actions >= perk.actionsRequired;
 }
 
-/** Add Server is bought with budget: 25,000 for the first server, 10% more for each further one. */
-export const addServerBasePrice = 25000;
+/** Add Server is bought with budget: 10,000 for the first server, 10% more for each further one. */
+export const addServerBasePrice = 10000;
 export const addServerPriceStep = 1.1;
 
-/** Budget price of the next server: 25,000 × 1.1 per server already added (rounded). */
+/** Budget price of the next server: 10,000 × 1.1 per server already added (rounded). */
 export function addServerPrice(state: LaunchedGame): number {
   return Math.round(addServerBasePrice * addServerPriceStep ** addedServers(state));
 }
@@ -361,7 +407,10 @@ export function addServerPerk(state: LaunchedGame): LaunchedPerk {
 /** Level 2 perks that are not activated yet, in unlock order. Add Server is always offered again. */
 export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
   return [
-    ...launchedPerks.filter(perk => !state.perks.includes(perk.id)),
+    // Some perks wait until one of their products is activated (the Mediation Academy needs Green World,
+    // the lawyers any product card).
+    ...launchedPerks.filter(perk => !state.perks.includes(perk.id) &&
+      (!perk.requiresProducts || perk.requiresProducts.some(id => productActive(state, id)))),
     addServerPerk(state),
     // The Tegridy deal is offered once Network & Financing is open.
     ...(networkOnline(state) && !tegridyActive(state) ? [tegridyPerk] : []),
@@ -445,7 +494,7 @@ export function runningEpics(state: LaunchedGame): number {
 
 /** Server slots taken by running epics and rented clients. */
 export function usedSlots(state: LaunchedGame): number {
-  return runningEpics(state) + rentedSlots(state) + programSlots(state);
+  return runningEpics(state) + rentedSlots(state) + programSlots(state) + state.aidSlots;
 }
 
 // ---------- Problem solving cards: programs, integrity and protests ----------
@@ -463,8 +512,16 @@ export function programDefinition(id: string): ProgramDefinition | undefined {
   return programs.find(program => program.id === id);
 }
 
+/** Server slots a program takes: 1 (or its own base), times the major version of its product (v2.x needs 2 each). */
+export function programSlotsNeeded(state: LaunchedGame, program: ProgramDefinition): number {
+  return (program.slots ?? 1) * (product(state, program.product)?.major ?? 1);
+}
+
 export function programSlots(state: LaunchedGame): number {
-  return state.programs.reduce((total, entry) => total + (programDefinition(entry.id)?.slots ?? 0), 0);
+  return state.programs.reduce((total, entry) => {
+    const program = programDefinition(entry.id);
+    return total + (program ? programSlotsNeeded(state, program) : 0);
+  }, 0);
 }
 
 /** A product's card works only once the product is active. */
@@ -591,8 +648,9 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
   }
   const missing = missingPrograms(state, id);
   if (missing.length) return `Needs ${missing.join(' and ')} running`;
-  if ((program.slots ?? 0) > 0 && usedSlots(state) + (program.slots ?? 0) > state.serverSlots) {
-    return `Needs ${program.slots} free server ${program.slots === 1 ? 'slot' : 'slots'}`;
+  const slots = programSlotsNeeded(state, program);
+  if (usedSlots(state) + slots > state.serverSlots) {
+    return `Needs ${slots} free server ${slots === 1 ? 'slot' : 'slots'}`;
   }
   if (state.budget < program.cost) return 'Not enough budget';
   return null;
@@ -654,7 +712,7 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
 function runPrograms(next: LaunchedGame, random: () => number): void {
   if (!next.programs.length || integrityBlocked(next)) return;
   // A court injunction freezes the programs of the sued product while the lawsuit is open.
-  const sued = lawsuitCase(next)?.product;
+  const sued = suedProducts(next);
   const growth = resistanceGrowth(next);
   // With a citizens assembly nobody needs to protest any more.
   const chance = citizensAssembly(next) ? 0 : protestChance(next);
@@ -664,7 +722,7 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
   const before = { ...next };
   const running = next.programs.map(entry => {
     const program = programDefinition(entry.id);
-    if (!program || program.product === sued) return entry;
+    if (!program || sued.includes(program.product)) return entry;
     // A protest grows with distrust and shrinks while robots are on site; the program waits meanwhile.
     if (inProtest(entry)) {
       return { ...entry, resistance: lowerResistance(Math.min(maxResistance, entry.resistance + growth), robots) };
@@ -704,7 +762,7 @@ export function worldFixed(state: LaunchedGame): boolean {
 /** Whether a running program makes progress this second (not frozen, no protest, funded, requirements met). */
 export function programWorking(state: LaunchedGame, entry: ProgramState): boolean {
   const program = programDefinition(entry.id);
-  return !!program && !integrityBlocked(state) && lawsuitCase(state)?.product !== program.product &&
+  return !!program && !integrityBlocked(state) && !suedProducts(state).includes(program.product) &&
     !inProtest(entry) && programFunded(state, entry.id) && !missingPrograms(state, entry.id).length;
 }
 
@@ -961,7 +1019,7 @@ function escalation(state: LaunchedGame): number {
 
 /** Budget to settle the current lawsuit. */
 export function settlementCost(state: LaunchedGame): number {
-  return Math.round(baseSettlementCost * escalation(state));
+  return Math.round(baseSettlementCost * escalation(state) * (lawsuitCase(state)?.costFactor ?? 1));
 }
 
 /** Seconds in court for the current lawsuit. */
@@ -1013,7 +1071,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
     const won = random() < winChance(next);
     const damages = won ? 0 : courtDamages(next);
     next.budget = Math.max(0, next.budget - damages);
-    next.verdict = { product: sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };
+    next.verdict = { product: sued?.products ? 'all' : sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };
     next.lawsuit = null;
     next.stats = { ...next.stats, [won ? 'lawsuitsWon' : 'lawsuitsLost']: next.stats[won ? 'lawsuitsWon' : 'lawsuitsLost'] + 1 };
     return;
@@ -1022,7 +1080,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
   if (next.lawsuitsFiled > 0 && next.seconds % lawsuitCooldown === 0) next.lawsuitsFiled = next.lawsuitsFiled - 1;
   // Only one lawsuit at a time; the case is drawn from those against the products at risk. Cases tied to a
   // program are filed while that program runs.
-  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.program
+  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.special ? false : entry.program
     ? next.programs.some(running => running.id === entry.program) && productActive(next, entry.product)
     : lawsuitRisk(next, entry.product));
   if (open.length && random() < currentLawsuitChance(next)) {
@@ -1035,6 +1093,103 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
 
 export function lawsuitCase(state: LaunchedGame): LawsuitCase | undefined {
   return state.lawsuit ? lawsuits[state.lawsuit.caseId] : undefined;
+}
+
+/** Products whose programs the current lawsuit freezes (one, or all three for the EdisonX lawsuit). */
+export function suedProducts(state: LaunchedGame): string[] {
+  const sued = lawsuitCase(state);
+  return sued ? sued.products ?? [sued.product] : [];
+}
+
+/** Files a lawsuit right away (used by special events). */
+function fileLawsuit(state: LaunchedGame, caseId: number): LaunchedGame {
+  return {
+    ...state,
+    lawsuit: { caseId, courtSeconds: null },
+    lawsuitsFiled: state.lawsuitsFiled + 1,
+    verdict: null,
+    stats: { ...state.stats, lawsuits: state.stats.lawsuits + 1 }
+  };
+}
+
+// ---------- Special events ----------
+
+/** The NSA leak comes after the NSA has been a client for this many seconds in total. */
+export const nsaLeakSeconds = 60;
+/** UN drought aid: slots lent, for how long, and the hunger progress it brings. */
+export const aidSlotCount = 5;
+export const aidDuration = 60;
+export const aidHunger = 2;
+export const donationBudget = 5000000;
+export const donationIntegrity = 20;
+export const leakPayment = 5000000;
+export const leakIntegrity = 10;
+
+export function specialEvent(id: string | null): SpecialEvent | undefined {
+  return specialEvents.find(entry => entry.id === id);
+}
+
+/** Whether a special event's moment has come. */
+export function eventDue(state: LaunchedGame, id: string): boolean {
+  switch (id) {
+    case 'edisonx-donation':
+      // All three applications activated and at least three problems at 10% or more; needs a free court.
+      return ['green-world', 'fair-share', 'peace-integrity'].every(productId => productActive(state, productId)) &&
+        Object.values(state.worldProgress).filter(value => value >= 10).length >= 3 && !state.lawsuit;
+    case 'nsa-leak':
+      return state.nsaSeconds >= nsaLeakSeconds;
+    case 'un-drought':
+      // Integrity right at 80% (79.5 to 80.5).
+      return Math.round(state.integrity) === 80;
+    default:
+      return false;
+  }
+}
+
+/** Whether the "accept" answer is possible right now (enough budget or free slots). */
+export function canAcceptEvent(state: LaunchedGame, id: string): boolean {
+  if (id === 'nsa-leak') return state.budget >= leakPayment;
+  if (id === 'un-drought') return usedSlots(state) + aidSlotCount <= state.serverSlots;
+  return true;
+}
+
+/** One second of event logic (mutates `next`): counts NSA time, ends the UN aid, and raises the next due event. */
+function runEvents(next: LaunchedGame): void {
+  if (next.rentals.includes('nsa')) next.nsaSeconds = next.nsaSeconds + 1;
+  if (next.aidSeconds > 0) {
+    next.aidSeconds = next.aidSeconds - 1;
+    if (next.aidSeconds === 0) next.aidSlots = 0;
+  }
+  if (next.pendingEvent) return;
+  const due = specialEvents.find(entry => !next.eventsSeen.includes(entry.id) && eventDue(next, entry.id));
+  if (due) {
+    next.pendingEvent = due.id;
+    next.eventsSeen = [...next.eventsSeen, due.id];
+  }
+}
+
+/** The player's answer to the pending event. */
+export function answerEvent(state: LaunchedGame, accept: boolean): LaunchedGame | null {
+  const id = state.pendingEvent;
+  if (!id || (accept && !canAcceptEvent(state, id))) return null;
+  const closed: LaunchedGame = { ...state, pendingEvent: null };
+  switch (id) {
+    case 'edisonx-donation':
+      return accept
+        ? { ...closed, budget: cap(closed.budget + donationBudget), integrity: percent(closed.integrity - donationIntegrity) }
+        : fileLawsuit(closed, lawsuits.findIndex(entry => entry.special));
+    case 'nsa-leak':
+      return accept
+        ? { ...closed, budget: closed.budget - leakPayment }
+        : { ...closed, integrity: percent(closed.integrity - leakIntegrity) };
+    case 'un-drought':
+      return accept
+        ? { ...closed, aidSlots: aidSlotCount, aidSeconds: aidDuration,
+            worldProgress: { ...closed.worldProgress, hunger: percent(closed.worldProgress.hunger + aidHunger) } }
+        : closed;
+    default:
+      return closed;
+  }
 }
 
 /** Pay to make it go away. */

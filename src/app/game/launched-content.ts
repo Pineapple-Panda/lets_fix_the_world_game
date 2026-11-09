@@ -1,5 +1,5 @@
 import type {
-  EpicDefinition, LaunchedPerk, LawsuitCase, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
+  EpicDefinition, LaunchedPerk, LawsuitCase, SpecialEvent, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
 } from '../models/launched.model.ts';
 
 /** Perks of level 2. Level 1 perks that were never activated are gone after the launch. */
@@ -31,15 +31,16 @@ export const launchedPerks: LaunchedPerk[] = [
     name: 'Pitch Deck Generator',
     description: 'Turns any idea into 40 slides with hockey-stick charts. Unlocks "Pitch to investors": every click brings in budget.',
     icon: 'PD',
-    actionsRequired: 1000000
+    actionsRequired: 100000
   },
   {
     id: 'mediation-academy',
     name: 'Conflict Mediation Academy',
     description: 'Train mediators who listen first and talk second. Every Talk to the protesters click counts three times, and they calm protests on their own (−2 resistance per second).',
     icon: 'MA',
-    actionsRequired: 3000000,
-    cost: 1500000
+    actionsRequired: 45000000,
+    cost: 1500000,
+    requiresProducts: ['green-world']
   },
   {
     id: 'grant-proposals',
@@ -61,31 +62,34 @@ export const launchedPerks: LaunchedPerk[] = [
     name: 'Decent Lawyer',
     description: 'Takes every lawsuit to court the moment it is filed. You no longer have to deal with it yourself.',
     icon: 'DL',
-    actionsRequired: 35000000,
-    cost: 4000000
+    actionsRequired: 100000000,
+    cost: 4000000,
+    requiresProducts: ['green-world', 'fair-share', 'peace-integrity']
   },
   {
     id: 'good-lawyer',
     name: 'Good Lawyer',
     description: 'Reads the files before the hearing. Court cases are won 20 percentage points more often.',
     icon: 'GL',
-    actionsRequired: 45000000,
-    cost: 5000000
+    actionsRequired: 150000000,
+    cost: 5000000,
+    requiresProducts: ['green-world', 'fair-share', 'peace-integrity']
   },
   {
     id: 'chewbacca-defense',
     name: 'Chewbacca Defense',
     description: 'Ladies and gentlemen of the jury, this does not make sense. Court cases are won with a fixed 95%.',
     icon: 'CD',
-    actionsRequired: 60000000,
-    cost: 6000000
+    actionsRequired: 200000000,
+    cost: 6000000,
+    requiresProducts: ['green-world', 'fair-share', 'peace-integrity']
   },
   {
     id: 'citizens-assembly',
     name: 'Global Citizens Assembly',
     description: 'Randomly drawn citizens from every country get a real say. Integrity never drops below 40% and nobody needs to protest any more.',
     icon: 'CA',
-    actionsRequired: 100000000,
+    actionsRequired: 300000000,
     cost: 10000000
   }
 ];
@@ -152,9 +156,19 @@ export const rentalClients: RentalClient[] = [
     name: 'EdisonX',
     description: 'A billionaire’s rocket-car-tunnel-AI conglomerate. Pays brilliantly. Asks no questions you would like to answer.',
     income: 2500,
-    progress: { climate: -0.005, corruption: -0.005 },
+    progress: { climate: -0.05, corruption: -0.05 },
     integrity: -0.1,
     maxIntegrity: 20
+  },
+  {
+    id: 'mississippi-corp',
+    name: 'Mississippi Corp',
+    description: 'A worldwide online warehouse and cloud provider. Pays in compute instead of cash: its engineers code for you, as long as nobody asks about the warehouses.',
+    income: 0,
+    progress: { corruption: -0.02 },
+    integrity: -0.02,
+    maxIntegrity: 60,
+    actions: 3000
   }
 ];
 
@@ -428,7 +442,6 @@ export const programs: ProgramDefinition[] = [
     cost: 400000,
     upkeep: 200,
     rate: 0.004,
-    slots: 1
   },
   {
     id: 'smart-grid-scheduler',
@@ -488,7 +501,6 @@ export const programs: ProgramDefinition[] = [
     cost: 1000000,
     upkeep: 500,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'hunger-relief-pricing',
@@ -523,7 +535,6 @@ export const programs: ProgramDefinition[] = [
     cost: 1200000,
     upkeep: 600,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'essentials-tax-relief',
@@ -558,7 +569,6 @@ export const programs: ProgramDefinition[] = [
     cost: 800000,
     upkeep: 400,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'tax-the-rich',
@@ -581,7 +591,6 @@ export const programs: ProgramDefinition[] = [
     cost: 900000,
     upkeep: 300,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'whistleblower-harbor',
@@ -658,5 +667,39 @@ export const lawsuits: LawsuitCase[] = [
   { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'claims its 400 shell companies are “a hobby” and taxing hobbies is unconstitutional.' },
   { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'Mississippi Corp', accusation: 'argues that its offshore accounts are technically a boat and boats are tax-free.' },
   { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'Bananas Inc.', accusation: 'sues because your tax evidence called its yacht “suspiciously cheap”, which hurt its feelings.' },
-  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'demands its taxes back because it “basically owns the planet anyway”.' }
+  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'demands its taxes back because it “basically owns the planet anyway”.' },
+  // Special: filed when you turn down the EdisonX donation. Never drawn at random.
+  { product: 'green-world', products: ['green-world', 'fair-share', 'peace-integrity'], special: true, costFactor: 3, plaintiff: 'EdisonX',
+    accusation: 'sues all three of your applications for "emotional damage" after you turned down its generous donation.' }
+];
+
+/** Special events: a dialog pops up once when its moment comes, and the player picks one of two answers. */
+export const specialEvents: SpecialEvent[] = [
+  {
+    id: 'edisonx-donation',
+    title: 'A generous offer',
+    text: 'EdisonX offers your platform a donation of 5 million. No strings attached, says the press release. There are always strings.',
+    accept: 'Accept',
+    acceptEffect: '+5,000,000 budget · −20 integrity',
+    decline: 'Decline',
+    declineEffect: 'EdisonX sues all three of your applications'
+  },
+  {
+    id: 'nsa-leak',
+    title: 'Leaked: your NSA contract',
+    text: 'A journalist got hold of your contract with the NSA. The story goes live in an hour, unless somebody makes it worth their while.',
+    accept: 'Pay the journalists',
+    acceptEffect: '−5,000,000 budget',
+    decline: 'Let it run',
+    declineEffect: '−10 integrity'
+  },
+  {
+    id: 'un-drought',
+    title: 'The UN asks for help',
+    text: 'A drought threatens the harvest in three countries. The UN needs computing power to coordinate water and food deliveries.',
+    accept: 'Send servers',
+    acceptEffect: '5 server slots for 60 s · Hunger +2%',
+    decline: 'Not now',
+    declineEffect: 'Nothing happens'
+  }
 ];

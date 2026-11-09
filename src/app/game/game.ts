@@ -420,8 +420,9 @@ function baseAutomationRate(game: Game): number {
   );
 }
 
+/** Assistant output in tenths: 10, doubled by the AI Pro Plan and doubled again by the AI Max Plan. */
 function assistantOutputTenths(game: Game): number {
-  return 10 * (game.activatedPerks.includes('ai-subscription') ? 2 : 1);
+  return 10 * (game.activatedPerks.includes('ai-subscription') ? 2 : 1) * (game.activatedPerks.includes('ai-max-plan') ? 2 : 1);
 }
 
 /** Clicks triggered by one press of Write code / Fix bug: 1, plus one extra click per performance upgrade. */

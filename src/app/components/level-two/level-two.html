@@ -84,9 +84,11 @@
                                     <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
                                             (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
                                 } @else if (entry.running) {
-                                    @let paused = entry.unfunded || entry.waitingFor.length > 0;
+                                    @let injunction = !!panel.lawsuit;
+                                    @let paused = entry.unfunded || entry.waitingFor.length > 0 || injunction;
                                     <small [class.panel-warning]="paused" [class.epic-done]="!paused && !panel.frozen">
                                         {{ panel.frozen ? 'Frozen'
+                                            : injunction ? 'Frozen by court injunction'
                                             : entry.waitingFor.length ? 'Paused: needs ' + entry.waitingFor.join(' and ') + ' running'
                                             : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
                                     </small>
@@ -129,7 +131,8 @@
                     <strong>{{ entry.client.name }}</strong>
                     <small>{{ entry.client.description }}</small>
                     <small class="client-terms">
-                        +{{ format(entry.income) }} budget/sec
+                        @if (entry.income) { +{{ format(entry.income) }} budget/sec }
+                        @if (entry.actions) { <span class="good">+{{ format(entry.actions) }} actions/sec</span> ({{ format(entry.client.actions ?? 0) }} per server slot) }
                         @for (effect of entry.effects; track effect.name) {
                             · <span [class.good]="effect.delta > 0" [class.bad]="effect.delta < 0">{{ effect.name }} {{ rate(effect.delta) }}%/sec</span>
                         }
@@ -191,7 +194,9 @@
             }
 
         <div class="live-stats live-stats-monitor">
-            <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong></div>
+            <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong>
+                <small>≈ {{ format(v.actionsPerSecond) }} per second</small>
+            </div>
             <div class="live-monitor">
     <svg class="monitor" viewBox="0 0 240 160" role="img" aria-label="The board keeps working itself off: tasks move from to do to done">
                 <rect class="monitor-frame" x="6" y="6" width="228" height="128" rx="8" />
@@ -212,6 +217,7 @@
             </div>
             <div class="live-stat">
                 <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
+                <small>≈ {{ signedAmount(v.budgetPerSecond) }} per second</small>
                 <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
             </div>
         </div>
@@ -284,17 +290,13 @@
             <h2 class="tool-heading" id="server-title">Server</h2>
             <div class="upgrade-row">
                 <span>Server load</span>
-                <strong id="server-load">{{ v.load }}% · {{ v.running + v.rented }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}@if (v.rented) { ({{ v.rented }} rented) }</strong>
+                <strong id="server-load">{{ v.load }}% · {{ v.usedSlots }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}</strong>
             </div>
             <div class="load-track" role="meter" aria-label="Server load" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.load">
                 <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>
             </div>
             <small class="upgrade-hint" id="rented-slots">
-                @if (v.rented) {
-                    {{ v.rented }} {{ v.rented === 1 ? 'slot' : 'slots' }} rented
-                } @else {
-                    No slots rented
-                }
+                {{ v.running }} for epics · {{ v.programSlots }} for programs · {{ v.rented }} rented@if (v.aidSlots) { · {{ v.aidSlots }} lent to the UN ({{ v.aidSeconds }}s)}
             </small>
 
             @if (v.infrastructure.length) {

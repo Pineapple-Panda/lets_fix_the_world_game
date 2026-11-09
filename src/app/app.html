@@ -4,6 +4,9 @@
     }
     @if (launched(); as live) {
         <main class="level-two">
+            @if (pendingEvent(); as pending) {
+                <app-event-dialog [event]="pending.event" [canAccept]="pending.canAccept" (answered)="answerEvent($event)" />
+            }
             @if (victory(); as summary) {
                 <app-victory [summary]="summary" (dismissed)="dismissVictory()" />
             }

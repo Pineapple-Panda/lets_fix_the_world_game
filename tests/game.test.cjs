@@ -377,7 +377,7 @@ test('the perk list', () => {
   assert.deepEqual(perks.map(perk => [perk.id, perk.actionsRequired]), [
     ['stack-overflow', 50], ['build-pipeline', 200], ['code-assistant', 700], ['multi-agent', 1000],
     ['ram-upgrade', 2000], ['ai-subscription', 4000], ['auto-assigner', 6000], ['bug-fix-agent', 10000],
-    ['earl', 17000], ['testing-skills', 20000], ['auto-testing', 25000], ['ai-testing-subscription', 28000],
+    ['ai-max-plan', 12000], ['earl', 17000], ['testing-skills', 20000], ['auto-testing', 25000], ['ai-testing-subscription', 28000],
     ['auto-deploy', 32000]
   ]);
   assert.equal(new Set(perks.map(perk => perk.icon)).size, perks.length, 'icons are unique');
@@ -400,13 +400,13 @@ test('the perk list previews the next perks in unlock order', () => {
   const byId = id => perks.find(perk => perk.id === id);
   const state = newGame();
   assert.deepEqual(openPerks(state), perks.slice(0, 3));
-  state.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
+  state.activatedPerks = perks.slice(0, 9).map(perk => perk.id);
   state.actions = 16999;
   assert.deepEqual(openPerks(state), [byId('earl'), byId('testing-skills'), byId('auto-testing')], 'locked testing perks are previewed like any other perk');
-  state.activatedPerks = perks.slice(0, 6).map(perk => perk.id);
+  state.activatedPerks = perks.slice(0, 7).map(perk => perk.id);
   state.actions = 7000;
-  assert.deepEqual(openPerks(state), [byId('auto-assigner'), byId('bug-fix-agent'), byId('earl')], 'Earl shows up as soon as it is among the next three');
-  state.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
+  assert.deepEqual(openPerks(state), [byId('bug-fix-agent'), byId('ai-max-plan'), byId('earl')], 'Earl shows up as soon as it is among the next three');
+  state.activatedPerks = perks.slice(0, 9).map(perk => perk.id);
   state.actions = 21000;
   assert.deepEqual(openPerks(state), [byId('auto-testing'), byId('earl'), byId('testing-skills')], 'unlocked testing perks are promoted');
   state.activatedPerks.push('earl', 'testing-skills');
@@ -450,6 +450,8 @@ test('assistants: buying, upgrading and output', () => {
   assert.equal(game.clicksPerPress(state), 3);
   grant(state, 'ai-subscription');
   assert.equal(assistantOutput(state), 2);
+  grant(state, 'ai-max-plan');
+  assert.equal(assistantOutput(state), 4, 'the AI Max Plan doubles it again');
 });
 
 test('multi agent assignments and auto assigner', () => {
@@ -593,7 +595,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -623,14 +625,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -697,23 +699,23 @@ test('the focus slider trades actions against budget', () => {
 test('every Add Server makes the focus effect stronger, a little faster than linear', () => {
   assert.equal(launched.focusPower(liveState()), 1);
   const oneServer = liveState({ serverSlots: 2, focus: -100 });
-  assert.equal(launched.focusPower(oneServer), 2.1);
-  assert.equal(launched.actionBoost(oneServer), 2.05, '+105% actions with one extra server');
+  assert.equal(launched.focusPower(oneServer), 1.55);
+  assert.equal(launched.actionBoost(oneServer), 1.775, '+77.5% actions with one extra server');
   const twoServers = liveState({ serverSlots: 3, focus: 100 });
-  assert.equal(launched.focusPower(twoServers), 3.31);
-  assert.ok(Math.abs(launched.budgetBoost(twoServers) - 4.31) < 1e-9, '+331% budget with two extra servers');
-  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 17.92, 'ten extra servers: x17.92, not x1024');
+  assert.equal(launched.focusPower(twoServers), 2.12);
+  assert.ok(Math.abs(launched.budgetBoost(twoServers) - 3.12) < 1e-9, '+212% budget with two extra servers');
+  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 8.06, 'ten extra servers: x8.06, not x1024');
   assert.equal(launched.actionBoost(twoServers), 0.5, 'the penalty does not grow with servers');
   assert.equal(launched.budgetBoost(liveState({ serverSlots: 3, focus: -100 })), 0, 'budget never goes below 0');
   const half = liveState({ serverSlots: 2, focus: 50 });
-  assert.equal(launched.budgetBoost(half), 2.05, 'half way: +105%');
+  assert.equal(launched.budgetBoost(half), 1.775, 'half way: +77.5%');
   let live = launched.activateLaunchedPerk(liveState({ budget: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');
-  assert.equal(launched.actionBoost(live), 2.05, 'activating Add Server boosts it right away');
+  assert.equal(launched.actionBoost(live), 1.775, 'activating Add Server boosts it right away');
 });
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -721,26 +723,26 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
-test('Add Server costs budget: 25,000 for the first, 10% more for every further server', () => {
+test('Add Server costs budget: 10,000 for the first, 10% more for every further server', () => {
   const offline = liveState({ budget: 1000000 });
   assert.equal(launched.activateLaunchedPerk(offline, 'add-server'), null, 'needs the server first');
-  let live = liveState({ actions: 0, budget: 24999, perks: ['workflow-abstraction'] });
-  assert.equal(launched.addServerPrice(live), 25000);
+  let live = liveState({ actions: 0, budget: 9999, perks: ['workflow-abstraction'] });
+  assert.equal(launched.addServerPrice(live), 10000);
   assert.equal(launched.addServerPerk(live).actionsRequired, 0, 'no action threshold any more');
   assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null, 'not enough budget');
   live = launched.activateLaunchedPerk({ ...live, budget: 1000000 }, 'add-server');
   assert.equal(live.serverSlots, 2);
-  assert.equal(live.budget, 975000);
-  assert.equal(launched.addServerPrice(live), 27500, '+10%');
+  assert.equal(live.budget, 990000);
+  assert.equal(launched.addServerPrice(live), 11000, '+10%');
   live = launched.activateLaunchedPerk(live, 'add-server');
-  assert.equal(live.budget, 947500);
-  assert.equal(launched.addServerPrice(live), 30250);
+  assert.equal(live.budget, 979000);
+  assert.equal(launched.addServerPrice(live), 12100);
   live = launched.activateLaunchedPerk(live, 'add-server');
-  assert.equal(launched.addServerPrice(live), 33275);
+  assert.equal(launched.addServerPrice(live), 13310);
   assert.equal(live.serverSlots, 4);
   assert.deepEqual(live.perks, ['workflow-abstraction'], 'Add Server is not stored as a one-time perk');
 });
@@ -754,7 +756,7 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'network-financing', 'pitch-deck', 'mediation-academy', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'],
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'citizens-assembly'],
     'perks are listed by unlock threshold; Add Server needs no actions');
 });
 
@@ -816,7 +818,7 @@ test('data centres make every client 25% stronger, good and bad', () => {
   assert.equal(launched.clientFactor(boosted), 1.25);
   assert.equal(launched.rentalIncome(boosted), Math.round(launched.rentalIncome(plain) * 1.25));
   assert.ok(Math.abs(launched.rentalProgress(boosted, 'hunger') - 0.003 * 1.25) < 1e-12, 'positive effects grow');
-  assert.ok(Math.abs(launched.rentalProgress(boosted, 'climate') + 0.005 * 1.25) < 1e-12, 'negative effects grow too');
+  assert.ok(Math.abs(launched.rentalProgress(boosted, 'climate') + 0.05 * 1.25) < 1e-12, 'negative effects grow too');
   const afterPlain = launched.tickLaunched(plain, () => 0);
   const afterBoosted = launched.tickLaunched(boosted, () => 0);
   assert.ok(Math.abs((15 - afterBoosted.integrity) - (15 - afterPlain.integrity) * 1.25) < 1e-9, 'integrity loss grows by 25%');
@@ -1029,7 +1031,7 @@ test('clients add or remove a tiny bit of solution progress every second', () =>
   let edison = launched.rentSlot(liveState({ ...online, integrity: 10,
     worldProgress: { climate: 1, war: 0, hunger: 0, poverty: 0, corruption: 0.002 } }), 'edisonx');
   edison = launched.tickLaunched(edison, () => 0);
-  assert.ok(Math.abs(edison.worldProgress.climate - 0.995) < 1e-9, 'EdisonX slows climate');
+  assert.ok(Math.abs(edison.worldProgress.climate - 0.95) < 1e-9, 'EdisonX slows climate');
   assert.equal(edison.worldProgress.corruption, 0, 'never below 0');
 
   let ministry = launched.rentSlot(liveState(online), 'ministry-digital');
@@ -1062,7 +1064,7 @@ test('finished epics fill the solution progress bars', () => {
 test('rental clients and world problems are defined', () => {
   const content = require('../src/app/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
-  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx']);
+  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx', 'mississippi-corp']);
   const green = content.rentalClients[0];
   const edison = content.rentalClients.find(client => client.id === 'edisonx');
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
@@ -1070,7 +1072,7 @@ test('rental clients and world problems are defined', () => {
   assert.ok(green.progress.climate > 0 && green.integrity > 0 && green.minIntegrity === 70);
   assert.ok(edison.progress.climate < 0 && edison.progress.corruption < 0 && edison.integrity < 0 && edison.maxIntegrity === 20);
   for (const client of content.rentalClients) {
-    assert.ok(Object.values(client.progress).every(delta => Math.abs(delta) <= 0.01), client.id + ' progress is tiny');
+    assert.ok(Object.values(client.progress).every(delta => Math.abs(delta) <= 0.05), client.id + ' progress is small');
   }
 });
 
@@ -1264,6 +1266,19 @@ test('EdisonX robots: a perk only for EdisonX clients that works only while Edis
   assert.equal(launched.robotsOnSite(launched.rentSlot(buyer(), 'edisonx')), false, 'EdisonX alone brings no robots');
 });
 
+test('Mississippi Corp pays in actions: 3,000 per second per server slot', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
+  assert.equal(launched.clientAvailable(liveState({ ...online, integrity: 60 }), 'mississippi-corp'), true, '60% or less');
+  assert.equal(launched.clientAvailable(liveState({ ...online, integrity: 60.1 }), 'mississippi-corp'), false);
+  const rented = launched.rentSlot(liveState({ ...online, integrity: 50, actions: 0, budgetActions: 0 }), 'mississippi-corp');
+  assert.equal(launched.clientActions(rented), 12000, '3,000 × 4 slots');
+  const next = launched.tickLaunched(rented, () => 0);
+  assert.equal(next.actions, 50 * 4 + 12000, 'own actions plus client actions');
+  assert.equal(next.budgetActions, 12000, 'client actions are not paid out as budget');
+  assert.ok(Math.abs(next.integrity - 49.98) < 1e-9, '−0.02 integrity per second');
+  assert.equal(launched.averageActionsPerSecond(rented), 175 * 4 + 12000);
+});
+
 test('clients walk out when integrity leaves their range', () => {
   const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
   const green = launched.tickLaunched(liveState({ ...online, integrity: 69.5, rentals: ['green-left-union', 'blue-helmets'] }), () => 0.99);
@@ -1337,11 +1352,20 @@ test('a lawsuit freezes the programs until it is settled or won in court', () =>
   const lost = launched.tickLaunched(beforeVerdict, () => 0.99);
   assert.equal(lost.lawsuit, null);
   assert.deepEqual(lost.verdict, { product: 'green-world', plaintiff: 'Bananas Inc.', won: false, damages: 1000000 }, 'a loss costs twice the settlement');
-  assert.equal(lost.budget, beforeVerdict.budget - 1000000);
+  assert.equal(lost.budget, beforeVerdict.budget - 1000000 - 100, 'damages, then the program runs again and pays its upkeep');
   const broke = launched.tickLaunched({ ...beforeVerdict, budget: 300000 }, () => 0.99);
   assert.equal(broke.budget, 0, 'the budget does not drop below 0');
   const next = launched.tickLaunched({ ...lost, integrity: 90 }, () => 0);
   assert.equal(next.verdict, null, 'a new lawsuit clears the old verdict');
+});
+
+test('a new lawsuit freezes the programs in the very second it is filed', () => {
+  const climate = { ...liveState().worldProgress, climate: 30 };
+  const ready = greenWorldActive({ integrity: 90, worldProgress: climate, programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }] });
+  const sued = launched.tickLaunched(ready, () => 0);
+  assert.ok(sued.lawsuit, 'filed');
+  assert.equal(sued.worldProgress.climate, 30, 'no progress in the filing second');
+  assert.equal(launched.tickLaunched(sued, () => 0.99).worldProgress.climate, 30, 'nor afterwards');
 });
 
 test('every lawsuit costs and takes 20% more than the one before', () => {
@@ -1379,7 +1403,7 @@ test('Fair Share runs the Mealora delivery service and the fair pricing system f
 test('the free meal service needs v2.0, 30% hunger and both other Fair Share programs running', () => {
   const v2 = { id: 'fair-share', major: 2, minor: 0, active: true };
   const both = [{ id: 'mealora-delivery', resistance: 0, milestone: 0 }, { id: 'hunger-relief-pricing', resistance: 0, milestone: 0 }];
-  const ready = overrides => fairShareActive({ serverSlots: 4, products: [{ id: 'green-world', major: 1, minor: 0, active: true }, v2],
+  const ready = overrides => fairShareActive({ serverSlots: 6, products: [{ id: 'green-world', major: 1, minor: 0, active: true }, v2],
     worldProgress: { ...liveState().worldProgress, hunger: 30 }, programs: both, ...overrides });
   assert.equal(launched.programBlocker(ready(), 'free-meal-service'), null);
   assert.equal(launched.programBlocker(fairShareActive({ programs: both, worldProgress: { ...liveState().worldProgress, hunger: 30 } }), 'free-meal-service'), 'Needs v2.0');
@@ -1541,7 +1565,10 @@ test('protests take at most 50 clicks, mediators calm them faster and peacefully
   const protest = overrides => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }], ...overrides });
   const content = require('../src/app/game/launched-content.ts');
   const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
-  assert.equal(perk.actionsRequired, 3000000);
+  assert.equal(perk.actionsRequired, 45000000);
+  assert.deepEqual(perk.requiresProducts, ['green-world']);
+  assert.ok(!launched.openLaunchedPerks(liveState()).some(entry => entry.id === 'mediation-academy'), 'hidden without Green World');
+  assert.ok(launched.openLaunchedPerks(greenWorldActive()).some(entry => entry.id === 'mediation-academy'), 'offered once Green World is active');
   assert.equal(perk.cost, 1500000);
   const clicked = launched.resolveProtest(protest({ perks: ['mediation-academy'] }), 'reforestation-network');
   assert.equal(clicked.programs[0].resistance, 17, 'one click counts three times');
@@ -1582,7 +1609,13 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
   const content = require('../src/app/game/launched-content.ts');
   const perk = id => content.launchedPerks.find(entry => entry.id === id);
   assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
-    [25000000, 35000000, 45000000, 60000000, 100000000]);
+    [25000000, 100000000, 150000000, 200000000, 300000000]);
+  const lawyers = ['decent-lawyer', 'good-lawyer', 'chewbacca-defense'];
+  assert.ok(!launched.openLaunchedPerks(liveState()).some(entry => lawyers.includes(entry.id)), 'no lawyers without an active product card');
+  for (const id of ['green-world', 'fair-share', 'peace-integrity']) {
+    const active = liveState({ products: [{ id, major: 1, minor: 0, active: true }] });
+    assert.ok(lawyers.every(lawyer => launched.openLaunchedPerks(active).some(entry => entry.id === lawyer)), 'lawyers with ' + id);
+  }
 
   // Grant proposals halve the upkeep, not the income.
   const running = { programs: [{ id: 'methane-leak-watch', resistance: 0, milestone: 0 }] };
@@ -1625,21 +1658,90 @@ test('Premium Hosting Contracts make clients pay ten times the rent', () => {
   assert.equal(launched.rentalProgress(premium, 'war'), launched.rentalProgress(liveState(online), 'war'), 'only the money, not the effects');
 });
 
+test('every server slot multiplies the actions per second', () => {
+  assert.equal(launched.tickLaunched(liveState({ actions: 0 }), () => 0).actions, 50);
+  assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 4 }), () => 0).actions, 200, '4 slots: ×4');
+  assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 2, focus: -100 }), () => 0).actions, 178, 'with the slider: 50 × 1.775 × 2');
+  assert.equal(launched.averageActionsPerSecond(liveState({ serverSlots: 4 })), 700, '175 on average × 4 slots');
+  assert.equal(launched.averageBudgetPerSecond(liveState({ serverSlots: 4 })), 700, '1 budget per action');
+  const busy = greenWorldActive({ serverSlots: 1, rentals: ['blue-helmets'], programs: [{ id: 'methane-leak-watch', resistance: 0, milestone: 0 }, { id: 'greenwashing-campaign', resistance: 0, milestone: 0 }] });
+  assert.equal(launched.averageBudgetPerSecond(busy), 175 + 500 - 200 + 500, 'payout + rent − upkeep + program income');
+  assert.equal(launched.averageBudgetPerSecond({ ...busy, programs: [{ id: 'methane-leak-watch', resistance: 20, milestone: 0 }] }), 175 + 500, 'a protested program costs nothing');
+});
+
+test('every program needs a server slot, times the major version of its product', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  const reforest = content.programs.find(program => program.id === 'reforestation-network');
+  assert.equal(launched.programSlotsNeeded(greenWorldActive(), reforest), 1);
+  const v2 = greenWorldActive({ serverSlots: 3, products: [{ id: 'green-world', major: 2, minor: 0, active: true }] });
+  assert.equal(launched.programSlotsNeeded(v2, reforest), 2, 'v2.x: two slots');
+  const running = launched.startProgram(v2, 'reforestation-network');
+  assert.equal(launched.usedSlots(running), 2);
+  assert.equal(launched.programBlocker(running, 'methane-leak-watch'), 'Needs 2 free server slots');
+  assert.equal(launched.programBlocker(greenWorldActive({ serverSlots: 0 }), 'greenwashing-campaign'), 'Needs 1 free server slot', 'even income programs need a slot');
+});
+
+const allApps = [{ id: 'green-world', major: 1, minor: 0, active: true }, { id: 'fair-share', major: 1, minor: 0, active: true },
+  { id: 'peace-integrity', major: 1, minor: 0, active: true }];
+
+test('special event: the EdisonX donation, or a lawsuit against all three applications', () => {
+  const ready = liveState({ budget: 1000000, integrity: 60, products: allApps, worldProgress: { climate: 10, war: 10, hunger: 10, poverty: 0, corruption: 0 } });
+  assert.equal(launched.tickLaunched({ ...ready, products: allApps.slice(0, 2) }, () => 0.99).pendingEvent, null, 'needs all three applications');
+  assert.equal(launched.tickLaunched({ ...ready, worldProgress: { ...ready.worldProgress, hunger: 9 } }, () => 0.99).pendingEvent, null, 'needs three problems at 10%');
+  const offer = launched.tickLaunched(ready, () => 0.99);
+  assert.equal(offer.pendingEvent, 'edisonx-donation');
+  assert.equal(launched.tickLaunched({ ...offer, pendingEvent: null }, () => 0.99).pendingEvent, null, 'only once');
+  const accepted = launched.answerEvent(offer, true);
+  assert.equal(accepted.pendingEvent, null);
+  assert.equal(accepted.budget, offer.budget + 5000000);
+  assert.ok(Math.abs(accepted.integrity - (offer.integrity - 20)) < 1e-9, '−20 integrity');
+  const declined = launched.answerEvent(offer, false);
+  assert.equal(launched.lawsuitCase(declined).plaintiff, 'EdisonX');
+  assert.deepEqual(launched.suedProducts(declined), ['green-world', 'fair-share', 'peace-integrity']);
+  assert.equal(launched.settlementCost(declined), 1500000, 'three times the usual settlement');
+  assert.equal(declined.stats.lawsuits, 1);
+});
+
+test('special event: the leaked NSA contract after one minute of NSA', () => {
+  let live = liveState({ budget: 6000000, perks: ['network-financing'], serverSlots: 5, rentals: ['nsa'] });
+  for (let second = 0; second < 59; second++) live = launched.tickLaunched(live, () => 0.99);
+  assert.equal(live.pendingEvent, null);
+  live = launched.tickLaunched(live, () => 0.99);
+  assert.equal(live.pendingEvent, 'nsa-leak', 'after 60 seconds with the NSA');
+  assert.equal(launched.answerEvent(live, true).budget, live.budget - 5000000);
+  assert.ok(Math.abs(launched.answerEvent(live, false).integrity - (live.integrity - 10)) < 1e-9);
+  assert.equal(launched.answerEvent({ ...live, budget: 4999999 }, true), null, 'paying needs 5,000,000');
+});
+
+test('special event: the UN asks for servers at 80% integrity', () => {
+  const ready = liveState({ integrity: 80, serverSlots: 6 });
+  const asked = launched.tickLaunched(ready, () => 0.99);
+  assert.equal(asked.pendingEvent, 'un-drought');
+  assert.equal(launched.tickLaunched(liveState({ integrity: 81 }), () => 0.99).pendingEvent, null, 'only right at 80%');
+  let helped = launched.answerEvent(asked, true);
+  assert.equal(helped.worldProgress.hunger, 2, 'Hunger +2%');
+  assert.equal(launched.usedSlots(helped), 5, 'five slots lent');
+  for (let second = 0; second < 60; second++) helped = launched.tickLaunched(helped, () => 0.99);
+  assert.equal(launched.usedSlots(helped), 0, 'back after 60 seconds');
+  assert.equal(launched.answerEvent({ ...asked, serverSlots: 4 }, true), null, 'needs five free slots');
+  assert.equal(launched.answerEvent(asked, false).worldProgress.hunger, 0, 'not now: nothing happens');
+});
+
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
   const content = require('../src/app/game/launched-content.ts');
-  assert.equal(content.launchedPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 1000000);
+  assert.equal(content.launchedPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
   const start = liveState({ budget: 1000, perks: ['pitch-deck'] });
   assert.equal(launched.pitchValue(start), 100, 'at least 100: 175 actions per second only make 35');
   const pitched = launched.pitch(start);
   assert.equal(pitched.budget, 1100);
   assert.equal(pitched.stats.pitches, 1);
   const rich = liveState({ rentals: ['edisonx', 'nsa'], perks: ['network-financing'] });
-  assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.2), '20% of the income per second');
+  assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.1), '10% of the income per second');
   const rentOnly = { rentals: ['edisonx', 'nsa'], perks: ['network-financing'] };
   assert.equal(launched.pitchValue(liveState({ ...rentOnly, focus: 100 })), launched.pitchValue(liveState(rentOnly)), 'the focus slider does not change it');
   assert.equal(launched.pitchValue(liveState({ ...rentOnly, focus: -100 })), launched.pitchValue(liveState(rentOnly)));
-  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 400, 'four server slots: ×4');
+  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 250, 'three added servers: ×2.5');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {

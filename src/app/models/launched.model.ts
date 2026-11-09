@@ -46,6 +46,27 @@ export interface LaunchedGame {
   stats: LaunchedStats;
   /** True once the player has seen the "world fixed" dialog. */
   victorySeen: boolean;
+  /** Special events already shown (each one appears once). */
+  eventsSeen: string[];
+  /** The special event waiting for the player's choice, or null. */
+  pendingEvent: string | null;
+  /** Seconds the NSA has been a client in total. */
+  nsaSeconds: number;
+  /** Server slots lent to the UN for drought aid, and for how many more seconds. */
+  aidSlots: number;
+  aidSeconds: number;
+}
+
+/** A special event: a dialog with two choices. */
+export interface SpecialEvent {
+  id: string;
+  title: string;
+  text: string;
+  accept: string;
+  /** What accepting does, in a few words. */
+  acceptEffect: string;
+  decline: string;
+  declineEffect: string;
 }
 
 /** How the level was played, shown when every problem is solved. */
@@ -108,7 +129,7 @@ export interface ProgramDefinition {
   rate: number;
   /** Integrity change per second while running. */
   integrity?: number;
-  /** Server slots the program occupies. */
+  /** Server slots the program occupies at v1.x (default 1); multiplied by the product's major version. */
   slots?: number;
   /** Only startable at this integrity or more. */
   minIntegrity?: number;
@@ -151,6 +172,8 @@ export interface RentalClient {
   maxIntegrity?: number;
   /** Server slots the client rents at once (default 1). */
   slots?: number;
+  /** Coding actions per second per server slot you own, while rented. */
+  actions?: number;
 }
 
 /** A released product (e.g. Green World). Its version can be raised later. */
@@ -171,6 +194,12 @@ export interface LawsuitCase {
   accusation: string;
   /** Only filed while this program runs, and then regardless of progress and integrity. */
   program?: string;
+  /** Freezes these products instead of just `product` (a lawsuit against several applications). */
+  products?: string[];
+  /** Never drawn at random; only filed by a special event. */
+  special?: boolean;
+  /** Settlement and damages are this many times as high. */
+  costFactor?: number;
 }
 
 export interface ProductDefinition {
@@ -188,6 +217,8 @@ export interface LaunchedPerk {
   actionsRequired: number;
   /** Budget price for perks that are bought rather than unlocked by actions. */
   cost?: number;
+  /** Only offered once one of these products is activated. */
+  requiresProducts?: string[];
 }
 
 /** A world goal; it is reached once all of its epics are done. */
