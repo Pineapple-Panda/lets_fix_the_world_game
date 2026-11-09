@@ -21,7 +21,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
 } from './game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { newsFeed } from './game/news';
 import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './game/storage';
@@ -331,7 +331,10 @@ export class AppComponent {
   /** Leaves level 2 for good: level 3 starts fresh. */
   startLevelThree(): void {
     const live = this.launched();
-    const state = newUtopia(live ? { actions: live.actions, budget: live.budget, integrity: live.integrity } : undefined);
+    const state = newUtopia(live ? {
+      actions: live.actions, budget: live.budget, integrity: live.integrity,
+      actionRate: averageActionsPerSecond(live), budgetRate: averageBudgetPerSecond(live)
+    } : undefined);
     this.launched.set(null);
     this.utopia.set(state);
     this.persistUtopia(state);

@@ -1868,15 +1868,17 @@ test('defeated corporations cannot be fought, and the rules are easy to change',
 });
 
 test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing them', () => {
-  const carried = utopia.newUtopia({ actions: 123456789, budget: 4000000, integrity: 81 });
+  const carried = utopia.newUtopia({ actions: 123456789, budget: 4000000, integrity: 81, actionRate: 12000, budgetRate: 3500 });
   assert.equal(carried.actions, 123456789);
   assert.equal(carried.budget, 4000000);
   assert.equal(carried.integrity, 81);
   assert.deepEqual(carried.perks, []);
   assert.deepEqual([utopia.newUtopia().actions, utopia.newUtopia().budget, utopia.newUtopia().integrity], [10000000, 20000000, 50]);
   const next = utopia.tickUtopia(carried, () => 0);
-  assert.equal(next.actions, 123456789 + 50);
-  assert.equal(next.budget, 4000000 + 50, '1 budget per action');
+  assert.equal(next.actions, 123456789 + 12000, 'the actions per second from level 2');
+  assert.equal(next.budget, 4000000 + 3500, 'the budget per second from level 2');
+  assert.equal(utopia.newUtopia({ actions: 0, budget: 0, integrity: 50, actionRate: 100, budgetRate: -300 }).budgetRate, 0, 'never negative');
+  assert.equal(utopia.newUtopia().actionRate, 175);
 });
 
 test('initiatives cost budget; defamation costs integrity; battles move it', () => {

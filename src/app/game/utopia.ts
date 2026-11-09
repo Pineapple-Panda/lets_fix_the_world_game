@@ -1,6 +1,6 @@
 import type { Battle, BattleMove, Corporation, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, battleRules, corporations, economy, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
+  attackRules, battleRules, corporations, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
@@ -11,12 +11,16 @@ const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
  * A fresh level 3: bars at their start values, every corporation at full power. TCA, budget and integrity come
  * from level 2 when given.
  */
-export function newUtopia(carry: { actions: number; budget: number; integrity: number } = utopiaStart): UtopiaGame {
+export function newUtopia(
+  carry: { actions: number; budget: number; integrity: number; actionRate: number; budgetRate: number } = utopiaStart
+): UtopiaGame {
   return {
     seconds: 0,
     actions: carry.actions,
     budget: carry.budget,
     integrity: carry.integrity,
+    actionRate: Math.max(0, Math.round(carry.actionRate)),
+    budgetRate: Math.max(0, Math.round(carry.budgetRate)),
     perks: [],
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, metric.start])) as Record<UtopiaMetric, number>,
     corpPower: Object.fromEntries(corporations.map(corp => [corp.id, 100])),
@@ -64,15 +68,6 @@ export function activateUtopiaPerk(state: UtopiaGame, id: string): UtopiaGame | 
   return { ...state, budget: state.budget - perk.cost, perks: [...state.perks, id] };
 }
 
-/** Average TCA and budget per second. */
-export function averageActionsPerSecond(): number {
-  return (economy.actionsPerSecond[0] + economy.actionsPerSecond[1]) / 2;
-}
-
-export function averageBudgetPerSecond(): number {
-  return averageActionsPerSecond() * economy.budgetPerAction;
-}
-
 /** Lowers or raises bars by the given percentage points. */
 function shiftMetrics(state: UtopiaGame, changes: Partial<Record<UtopiaMetric, number>>, sign: 1 | -1): Record<UtopiaMetric, number> {
   const next = { ...state.metrics };
@@ -87,14 +82,12 @@ function shiftMetrics(state: UtopiaGame, changes: Partial<Record<UtopiaMetric, n
  * or a defamation campaign. Attacks pause while a battle is running.
  */
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
-  const [low, high] = economy.actionsPerSecond;
-  const gained = low + Math.floor(random() * (high - low + 1));
   const drift = perkValue(state, 'driftShield');
   const next: UtopiaGame = {
     ...state,
     seconds: state.seconds + 1,
-    actions: cap(state.actions + gained),
-    budget: cap(state.budget + gained * economy.budgetPerAction),
+    actions: cap(state.actions + state.actionRate),
+    budget: cap(state.budget + state.budgetRate),
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>,
     cooldowns: Object.fromEntries(Object.entries(state.cooldowns).map(([id, seconds]) => [id, Math.max(0, seconds - 1)]))
   };

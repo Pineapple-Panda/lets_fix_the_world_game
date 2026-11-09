@@ -10,6 +10,9 @@ export interface UtopiaGame {
   budget: number;
   /** Integrity in percent (0–100). */
   integrity: number;
+  /** TCA and budget gained every second: the averages level 2 ended with. */
+  actionRate: number;
+  budgetRate: number;
   /** Activated level 3 perks. */
   perks: string[];
   /** Current value of every bar in percent. */

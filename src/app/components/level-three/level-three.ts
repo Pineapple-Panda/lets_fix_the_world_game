@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  averageActionsPerSecond, averageBudgetPerSecond, canFight, canRunInitiative, corporation, initiativeGain, openUtopiaPerks,
+  canFight, canRunInitiative, corporation, initiativeGain, openUtopiaPerks,
   utopiaPerkAvailable
 } from '../../game/utopia';
 import { attackRules, battleRules, corporations, initiatives, megaCorpName, metrics, playerMoves, utopiaPerks } from '../../game/utopia-content';
@@ -43,8 +43,8 @@ export class LevelThreeComponent {
         canFight: canFight(state, corp.id)
       })),
       integrity: state.integrity,
-      actionsPerSecond: averageActionsPerSecond(),
-      budgetPerSecond: averageBudgetPerSecond(),
+      actionsPerSecond: state.actionRate,
+      budgetPerSecond: state.budgetRate,
       activePerks: utopiaPerks.filter(perk => state.perks.includes(perk.id)),
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,

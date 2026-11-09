@@ -7,11 +7,11 @@ import type { BattleMove, Corporation, Initiative, MetricDefinition, UtopiaMetri
 /** Working title of the alliance of EdisonX, Mississippi Corp and Bananas Inc. */
 export const megaCorpName = 'MegaCorp';
 
-/** Starting values when level 3 is not reached from level 2 (otherwise TCA, budget and integrity carry over). */
-export const utopiaStart = { actions: 10000000, budget: 20000000, integrity: 50 };
-
-/** TCA and budget per second: a random 50–300 actions, each worth 1 budget. */
-export const economy = { actionsPerSecond: [50, 300] as [number, number], budgetPerAction: 1 };
+/**
+ * Starting values when level 3 is not reached from level 2. Otherwise TCA, budget and integrity carry over, and so
+ * do the average actions and budget per second level 2 ended with: they keep TCA and budget running.
+ */
+export const utopiaStart = { actions: 10000000, budget: 20000000, integrity: 50, actionRate: 175, budgetRate: 175 };
 
 /** Integrity change after a battle. */
 export const integrityRules = { battleWon: 5, battleLost: -10 };
