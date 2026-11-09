@@ -1854,7 +1854,7 @@ test('cards: one-time hits, timed effects, own decks per corporation', () => {
   assert.ok(content.megacorpCards.every(card => card.actor === 'megacorp') && content.playerCards.every(card => card.actor === 'player'));
   // Bananas Inc. (first by weight with random 0) plays the first card of its deck: Propaganda Flood, −2 credibility.
   const smeared = utopia.megacorpMove(opened(), () => 0);
-  assert.equal(smeared.attackLog[0], 'Bananas Inc.: Propaganda Flood');
+  assert.deepEqual(smeared.attackLog[0], { cardId: 'propaganda', corpId: 'bananas' });
   assert.equal(smeared.integrity, 48);
   // Own cards only for their corporation.
   const decks = { bananas: [], mississippi: [], edison: [] };
@@ -1872,9 +1872,14 @@ test('cards: one-time hits, timed effects, own decks per corporation', () => {
   assert.deepEqual(state.effects, [], 'over after 30 seconds');
 });
 
-test('your cards: rent tax cut, firewalls, antitrust; bribes protect MegaCorp', () => {
+test('your cards: two from the start, the others through perks; bribes protect MegaCorp', () => {
   assert.equal(utopia.cardBlocker({ ...opened(), perks: ['utopia-blueprint'] }, 'antitrust'), 'MegaCorp is unknown');
-  let state = utopia.playPlayerCard(opened(), 'rent-tax-cut');
+  assert.deepEqual(utopia.ownedCards(opened()).map(card => card.id), ['firewall', 'antitrust'], 'available from the start');
+  assert.equal(utopia.cardBlocker(opened(), 'rent-tax-cut'), 'Needs its perk');
+  const withPerk = utopia.activateUtopiaPerk({ ...opened(), actions: 285000000 }, 'housing-policy');
+  assert.equal(withPerk.budget, opened().budget - 2000000);
+  assert.ok(utopia.cardOwned(withPerk, 'rent-tax-cut'));
+  let state = utopia.playPlayerCard(withPerk, 'rent-tax-cut');
   assert.equal(state.effects[0].cardId, 'rent-tax-cut');
   assert.equal(utopia.cardBlocker(state, 'rent-tax-cut'), 'Ready in 30s');
   assert.equal(utopia.playPlayerCard(state, 'rent-tax-cut'), null, 'cooling down');
@@ -1913,9 +1918,9 @@ test('initiatives cost budget', () => {
   assert.equal(utopia.initializeBlocker(poor, 'career-match'), 'Not enough budget');
 });
 
-test('level 3 keeps only the two unlock perks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research']);
-  assert.ok(utopiaContent.utopiaPerks.every(perk => perk.cost === 0));
+test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
     { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'initiativeGain', value: 2 } },
@@ -1983,7 +1988,7 @@ test('each utopia bar shows its current change per second', () => {
 
 test('level 3 saves and loads', () => {
   const store = memoryStorage();
-  const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: ['An attack'] };
+  const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: [{ cardId: 'propaganda', corpId: 'bananas' }] };
   storage.saveUtopia(store, state);
   assert.deepEqual(storage.loadUtopia(store), state);
   assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');

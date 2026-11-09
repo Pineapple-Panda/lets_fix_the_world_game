@@ -21,14 +21,21 @@ export const metrics: MetricDefinition[] = [
 ];
 
 /**
- * Level 3 perks: for now only the two that open the Utopia and MegaCorp cards. More perks can use the other effect
- * kinds (initiativeGain, attackShield, driftShield, upkeep). `actionsRequired` is total TCA, as in level 2.
+ * Level 3 perks: two open the Utopia and MegaCorp cards, one each unlocks a locked action card. More perks can use
+ * the other effect kinds (initiativeGain, attackShield, driftShield, upkeep). `actionsRequired` is total TCA, as in level 2.
  */
 export const utopiaPerks: UtopiaPerk[] = [
   { id: 'utopia-blueprint', name: 'Blueprint for Utopia', description: 'Your AI drafts a plan for a world where everyone has a job, a home and a full plate. Opens the Utopia card.', icon: 'BU',
     actionsRequired: 250000000, cost: 0, effect: { kind: 'unlock', card: 'utopia' } },
   { id: 'opposition-research', name: 'Opposition Research', description: 'Somebody is buying up farmland, warehouses and influencers. Find out who. Opens the MegaCorp card, and MegaCorp starts fighting back.', icon: 'OR',
-    actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } }
+    actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } },
+  // One perk per locked action card.
+  { id: 'housing-policy', name: 'Housing Policy Desk', description: 'Unlocks the move "Cut Rent Taxes": Housing +0.1%/s and Credibility +0.5/s for 15s.', icon: 'HP',
+    actionsRequired: 285000000, cost: 2000000, effect: { kind: 'unlockAction', action: 'rent-tax-cut' } },
+  { id: 'kitchen-network', name: 'Kitchen Network', description: 'Unlocks the move "Community Kitchens": Food +3 at once.', icon: 'KN',
+    actionsRequired: 300000000, cost: 3000000, effect: { kind: 'unlockAction', action: 'community-kitchens' } },
+  { id: 'investigative-desk', name: 'Investigative Desk', description: 'Unlocks the move "Leak the Emails": −3% power for every corporation and Credibility +2.', icon: 'ID',
+    actionsRequired: 320000000, cost: 5000000, effect: { kind: 'unlockAction', action: 'leak' } }
 ];
 
 /**
@@ -67,17 +74,20 @@ export const megacorpCards: ActionCard[] = [
     description: 'Mississippi Corp replaces 10,000 warehouse workers with robots overnight.', effects: [{ kind: 'metric', metric: 'employment', amount: -2 }] }
 ];
 
-/** Your cards. They will get a price later; until then a cooldown keeps them from being spammed. */
+/**
+ * Your cards. Antitrust Lawsuit and Stronger Firewalls are available from the start; the others (`locked`) come with a
+ * perk each. They will get a price later; until then a cooldown keeps them from being spammed.
+ */
 export const playerCards: ActionCard[] = [
-  { id: 'rent-tax-cut', actor: 'player', category: 'powerup', name: 'Cut Rent Taxes', duration: 15, cooldown: 30,
+  { id: 'rent-tax-cut', actor: 'player', category: 'powerup', name: 'Cut Rent Taxes', duration: 15, cooldown: 30, locked: true,
     description: 'Cuts the taxes on renting out apartments.', effects: [{ kind: 'metric', metric: 'housing', amount: 0.1 }, { kind: 'credibility', amount: 0.5 }] },
   { id: 'firewall', actor: 'player', category: 'powerup', name: 'Stronger Firewalls', duration: 60, cooldown: 90,
     description: 'Hardens your systems and channels against MegaCorp.', effects: [{ kind: 'firewall', factor: 0.5 }] },
   { id: 'antitrust', actor: 'player', category: 'damage', name: 'Antitrust Lawsuit', cooldown: 60,
     description: 'Sues the strongest corporation for being a monopoly. Which it is.', effects: [{ kind: 'corpPower', target: 'strongest', amount: -10 }] },
-  { id: 'leak', actor: 'player', category: 'damage', name: 'Leak the Emails', cooldown: 90,
+  { id: 'leak', actor: 'player', category: 'damage', name: 'Leak the Emails', cooldown: 90, locked: true,
     description: 'Publishes how MegaCorp really talks about its customers.', effects: [{ kind: 'corpPower', target: 'all', amount: -3 }, { kind: 'credibility', amount: 2 }] },
-  { id: 'community-kitchens', actor: 'player', category: 'powerup', name: 'Community Kitchens', cooldown: 45,
+  { id: 'community-kitchens', actor: 'player', category: 'powerup', name: 'Community Kitchens', cooldown: 45, locked: true,
     description: 'Opens a kitchen on every corner. Nobody eats alone.', effects: [{ kind: 'metric', metric: 'food', amount: 3 }] }
 ];
 

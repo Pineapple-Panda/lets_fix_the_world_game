@@ -1,10 +1,10 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, cardBlocker, cardSummary, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
-import { corporations, initiatives, megaCorpName, metrics, playerCards, utopiaPerks } from '../../game/utopia-content';
+import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
 import type { UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: you and MegaCorp face each other on top; development, the utopia and MegaCorp's corporations below. */
@@ -62,8 +62,12 @@ export class LevelThreeComponent {
       activePerks: utopiaPerks.filter(perk => state.perks.includes(perk.id)),
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,
-      attackLog: state.attackLog,
-      cards: playerCards.map(card => ({ card, summary: cardSummary(card), blocker: cardBlocker(state, card.id) })),
+      moves: state.attackLog.map((move, index) => {
+        const card = actionCard(move.cardId);
+        const corp = corporation(move.corpId);
+        return card ? { key: index + '-' + move.cardId, card, summary: cardSummary(card), corp } : null;
+      }).filter(move => move !== null).slice(0, 3),
+      cards: ownedCards(state).map(card => ({ card, summary: cardSummary(card), blocker: cardBlocker(state, card.id) })),
       activeEffects: state.effects.map(active => {
         const card = actionCard(active.cardId);
         return {

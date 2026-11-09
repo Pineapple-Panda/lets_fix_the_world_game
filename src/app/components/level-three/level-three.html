@@ -63,15 +63,18 @@
                     <div>
                         <h3 class="tool-heading ops-subheading">{{ megaCorpName }}'s moves</h3>
                         <small class="upgrade-hint">Next move in {{ v.nextAttack }}s</small>
-                        @if (v.attackLog.length) {
-                            <ol class="battle-log" aria-label="Latest MegaCorp moves">
-                                @for (line of v.attackLog; track $index) {
-                                    <li>{{ line }}</li>
-                                }
-                            </ol>
-                        } @else {
-                            <small class="upgrade-hint">Nothing yet.</small>
-                        }
+                        <div class="action-cards megacorp-moves" aria-label="Latest MegaCorp moves">
+                            @for (move of v.moves; track move.key; let latest = $first) {
+                                <div class="action-card megacorp" [class.damage]="move.card.category === 'damage'" [class.latest]="latest">
+                                    <strong>{{ move.corp?.icon }} {{ move.card.name }}</strong>
+                                    <small>{{ move.card.description }}</small>
+                                    <small class="action-card-effect">{{ move.summary }}</small>
+                                    <small class="action-card-by">by {{ move.corp?.name }}</small>
+                                </div>
+                            } @empty {
+                                <small class="upgrade-hint">Nothing yet.</small>
+                            }
+                        </div>
                     </div>
                 </div>
             }

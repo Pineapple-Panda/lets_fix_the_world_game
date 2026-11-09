@@ -47,7 +47,7 @@ export function activeCorporations(state: UtopiaGame): Corporation[] {
 
 // ---------- Perks ----------
 
-type ValueEffect = Exclude<UtopiaPerkEffect, { kind: 'unlock' }>;
+type ValueEffect = Exclude<UtopiaPerkEffect, { kind: 'unlock' } | { kind: 'unlockAction' }>;
 
 /** The combined value of all activated perks of one kind (their multipliers multiplied). */
 export function perkValue(state: UtopiaGame, kind: ValueEffect['kind']): number {
@@ -213,13 +213,26 @@ export function megacorpMove(state: UtopiaGame, random: () => number): UtopiaGam
   const deck = megacorpCards.filter(entry => !entry.corpId || entry.corpId === corp.id);
   const card = deck[Math.min(deck.length - 1, Math.floor(random() * deck.length))]!;
   const next = playCard(state, card, corp.id);
-  return { ...next, attackLog: [`${corp.name}: ${card.name}`, ...state.attackLog].slice(0, attackRules.logLength) };
+  return { ...next, attackLog: [{ cardId: card.id, corpId: corp.id }, ...state.attackLog].slice(0, attackRules.logLength) };
+}
+
+/** Whether one of your cards can be used at all: available from the start, or unlocked by its perk. */
+export function cardOwned(state: UtopiaGame, id: string): boolean {
+  const card = playerCards.find(entry => entry.id === id);
+  if (!card) return false;
+  return !card.locked || utopiaPerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlockAction' && perk.effect.action === id);
+}
+
+/** Your cards you can use (owned), in config order. */
+export function ownedCards(state: UtopiaGame): ActionCard[] {
+  return playerCards.filter(card => cardOwned(state, card.id));
 }
 
 /** Why you cannot play one of your cards right now, or null when you can. */
 export function cardBlocker(state: UtopiaGame, id: string): string | null {
   const card = playerCards.find(entry => entry.id === id);
   if (!card) return 'Unknown card';
+  if (!cardOwned(state, id)) return 'Needs its perk';
   if (!cardUnlocked(state, 'megacorp')) return 'MegaCorp is unknown';
   if ((state.cardCooldowns[id] ?? 0) > 0) return `Ready in ${state.cardCooldowns[id]}s`;
   return null;

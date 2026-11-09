@@ -32,7 +32,7 @@ export interface UtopiaGame {
   /** Seconds until MegaCorp plays its next card. */
   nextAttack: number;
   /** Latest cards MegaCorp played, newest first. */
-  attackLog: string[];
+  attackLog: PlayedCard[];
   /** Timed cards that are still running. */
   effects: ActiveEffect[];
   /** Seconds until each of your cards can be played again. */
@@ -74,6 +74,14 @@ export interface ActionCard {
   cooldown?: number;
   /** MegaCorp cards: only this corporation plays it (any of them without). */
   corpId?: string;
+  /** Your cards: needs a perk before it can be played (available from the start without). */
+  locked?: boolean;
+}
+
+/** A card MegaCorp played, for the list of its latest moves. */
+export interface PlayedCard {
+  cardId: string;
+  corpId: string;
 }
 
 /** A timed card that is still running. */
@@ -137,7 +145,9 @@ export type UtopiaPerkEffect =
   | { kind: 'attackShield'; value: number }
   | { kind: 'driftShield'; value: number }
   | { kind: 'upkeep'; value: number }
-  | { kind: 'unlock'; card: UtopiaCard };
+  | { kind: 'unlock'; card: UtopiaCard }
+  /** Makes one of your locked action cards playable. */
+  | { kind: 'unlockAction'; action: string };
 
 /** Cards of level 3 that start hidden. */
 export type UtopiaCard = 'utopia' | 'megacorp';

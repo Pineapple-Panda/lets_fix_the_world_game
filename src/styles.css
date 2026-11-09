@@ -1833,26 +1833,48 @@ footer {
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
-    padding: 6px 8px;
-    border: 1px solid color-mix(in srgb, var(--green) 55%, var(--line));
-    border-radius: 5px;
-    background: color-mix(in srgb, var(--bg) 90%, var(--green));
+    padding: 7px 9px;
+    border: 2px solid var(--green);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg) 62%, var(--green));
     color: var(--ink);
     text-align: left;
     cursor: pointer;
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--green) 45%, #000);
 }
 
+/* Your damage cards: purple. */
 .action-card.damage {
-    border-color: color-mix(in srgb, var(--purple) 60%, var(--line));
-    background: color-mix(in srgb, var(--bg) 90%, var(--purple));
+    border-color: var(--purple);
+    background: color-mix(in srgb, var(--bg) 58%, var(--purple));
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--purple) 45%, #000);
 }
 
-.action-card:hover:not(:disabled) {
+/* MegaCorp's cards: red, powerups orange. */
+.action-card.megacorp {
+    border-color: #e5a050;
+    background: color-mix(in srgb, var(--bg) 58%, #e5a050);
+    box-shadow: 0 2px 0 color-mix(in srgb, #e5a050 45%, #000);
+    cursor: default;
+}
+
+.action-card.megacorp.damage {
+    border-color: var(--red);
+    background: color-mix(in srgb, var(--bg) 55%, var(--red));
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--red) 45%, #000);
+}
+
+.action-card.megacorp:not(.latest) {
+    opacity: .7;
+}
+
+.action-card:hover:not(:disabled):not(.megacorp) {
     filter: brightness(1.15);
 }
 
 .action-card:disabled {
-    opacity: .55;
+    filter: grayscale(.6);
+    opacity: .6;
     cursor: not-allowed;
 }
 
@@ -1861,16 +1883,21 @@ footer {
 }
 
 .action-card small {
-    color: var(--muted);
+    color: color-mix(in srgb, var(--ink) 75%, transparent);
     font-size: 10px;
 }
 
 .action-card .action-card-effect {
     color: var(--ink);
+    font-weight: 600;
 }
 
 .action-card .action-card-wait {
     color: var(--yellow);
+}
+
+.megacorp-moves {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .effect-chips {
@@ -1895,6 +1922,10 @@ footer {
 @media (max-width: 1100px) {
     .arena-columns {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .megacorp-moves {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
 }
 
