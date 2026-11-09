@@ -367,7 +367,8 @@ export function addServerPerk(state: LaunchedGame): LaunchedPerk {
 /** Level 2 perks that are not activated yet, in unlock order. Add Server is always offered again. */
 export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
   return [
-    ...launchedPerks.filter(perk => !state.perks.includes(perk.id)),
+    // Some perks wait until their product is activated (the Mediation Academy needs Green World).
+    ...launchedPerks.filter(perk => !state.perks.includes(perk.id) && (!perk.requiresProduct || productActive(state, perk.requiresProduct))),
     addServerPerk(state),
     // The Tegridy deal is offered once Network & Financing is open.
     ...(networkOnline(state) && !tegridyActive(state) ? [tegridyPerk] : []),

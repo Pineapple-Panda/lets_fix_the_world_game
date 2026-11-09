@@ -38,8 +38,9 @@ export const launchedPerks: LaunchedPerk[] = [
     name: 'Conflict Mediation Academy',
     description: 'Train mediators who listen first and talk second. Every Talk to the protesters click counts three times, and they calm protests on their own (−2 resistance per second).',
     icon: 'MA',
-    actionsRequired: 3000000,
-    cost: 1500000
+    actionsRequired: 45000000,
+    cost: 1500000,
+    requiresProduct: 'green-world'
   },
   {
     id: 'grant-proposals',
