@@ -329,8 +329,9 @@ export class AppComponent {
   }
 
   /** Leaves level 2 for good: level 3 starts fresh. */
-  startLevelThree(): void {
-    const live = this.launched();
+  /** From the victory dialog: TCA, budget, credibility and the rates per second carry over from level 2. */
+  startLevelThree(carryOver = true): void {
+    const live = carryOver ? this.launched() : null;
     const state = newUtopia(live ? {
       actions: live.actions, budget: live.budget, integrity: live.integrity,
       actionRate: averageActionsPerSecond(live), budgetRate: averageBudgetPerSecond(live)
@@ -340,10 +341,10 @@ export class AppComponent {
     this.persistUtopia(state);
   }
 
-  /** Dev shortcut from level 2: jump straight to level 3. */
+  /** Dev shortcut from level 2: jump straight to level 3 with the default start (280M TCA, 20M budget, 13,000/s each). */
   skipToLevelThree(): void {
     if (!window.confirm('Skip to level 3? Your level 2 progress will be lost.')) return;
-    this.startLevelThree();
+    this.startLevelThree(false);
   }
 
   activateUtopiaPerk(id: string): void {
