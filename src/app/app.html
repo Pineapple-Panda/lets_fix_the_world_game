@@ -7,6 +7,12 @@
             @if (saveWarning()) {
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
+            @if (world.outcome === 'lost') {
+                <app-game-over (retry)="retryLevelThree()" />
+            }
+            @if (world.outcome === 'won' && !world.outcomeSeen) {
+                <app-utopia-won (dismissed)="dismissUtopiaWon()" />
+            }
             @if (world.duel; as duel) {
                 <app-duel-dialog [duel]="duel" (finished)="finishDuel($event)" (closed)="closeDuel()" />
             }

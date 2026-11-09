@@ -91,6 +91,7 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   if (game && game.megacorpSeconds === undefined) game.megacorpSeconds = 0;
   if (game && game.effects === undefined) Object.assign(game, { effects: [], cardCooldowns: {} });
   if (game && game.duel === undefined) Object.assign(game, { duel: null, duelCooldown: 0 });
+  if (game && game.outcome === undefined) Object.assign(game, { outcome: null, outcomeSeen: false });
   // The move log used to be text; it is now a list of played cards.
   if (game && Array.isArray(game.attackLog) && game.attackLog.some(entry => typeof entry === 'string')) game.attackLog = [];
   // Battles were removed; older saves may still carry one.
@@ -108,6 +109,7 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !Array.isArray(game.attackLog) || !game.attackLog.every(entry => isObject(entry) && typeof entry.cardId === 'string' && typeof entry.corpId === 'string') ||
     !Array.isArray(game.effects) || !game.effects.every(entry => isObject(entry) && typeof entry.cardId === 'string' && isCount(entry.remaining)) ||
     !isObject(game.cardCooldowns) || !Object.values(game.cardCooldowns).every(isCount) || !isCount(game.duelCooldown) ||
+    ![null, 'won', 'lost'].includes(game.outcome as string | null) || typeof game.outcomeSeen !== 'boolean' ||
     !(game.duel === null || (isObject(game.duel) && (game.duel.startedBy === 'player' || game.duel.startedBy === 'megacorp') &&
       [null, 'won', 'lost'].includes(game.duel.result as string | null)))
   ) return null;

@@ -11,8 +11,10 @@ import { VictoryComponent } from './components/victory/victory';
 import { EventDialogComponent } from './components/event-dialog/event-dialog';
 import { LevelThreeComponent } from './components/level-three/level-three';
 import { DuelDialogComponent } from './components/duel-dialog/duel-dialog';
+import { GameOverComponent } from './components/game-over/game-over';
+import { UtopiaWonComponent } from './components/utopia-won/utopia-won';
 import {
-  activateUtopiaPerk, closeDuel, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+  activateUtopiaPerk, closeDuel, dismissOutcome, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
 } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
@@ -40,7 +42,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent, DuelDialogComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent, DuelDialogComponent, GameOverComponent, UtopiaWonComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -352,6 +354,19 @@ export class AppComponent {
 
   activateUtopiaPerk(id: string): void {
     this.updateUtopia(state => activateUtopiaPerk(state, id));
+  }
+
+  /** Level 3 lost: start it again with the TCA, budget and rates you have now. */
+  retryLevelThree(): void {
+    const current = this.utopia();
+    if (!current) return;
+    const state = newUtopia({ actions: current.actions, budget: current.budget, integrity: 50, actionRate: current.actionRate, budgetRate: current.budgetRate });
+    this.utopia.set(state);
+    this.persistUtopia(state);
+  }
+
+  dismissUtopiaWon(): void {
+    this.updateUtopia(state => dismissOutcome(state));
   }
 
   startDuel(): void {

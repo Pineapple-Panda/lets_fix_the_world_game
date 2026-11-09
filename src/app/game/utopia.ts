@@ -1,6 +1,6 @@
 import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, corporations, corpStartPower, counterInitiatives, duelRules, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
+  attackRules, corporations, corpStartPower, counterInitiatives, duelRules, outcomeRules, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
@@ -34,7 +34,9 @@ export function newUtopia(
     effects: [],
     cardCooldowns: {},
     duel: null,
-    duelCooldown: 0
+    duelCooldown: 0,
+    outcome: null,
+    outcomeSeen: false
   };
 }
 
@@ -106,6 +108,31 @@ function shiftMetrics(state: UtopiaGame, changes: Partial<Record<UtopiaMetric, n
  * push back, timed cards run, and every few seconds MegaCorp plays a card.
  */
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
+  if (state.outcome) return state;
+  return decide(advance(state, random));
+}
+
+/** Every bar at 100% wins level 3; a bar at 0% (with `loseWhen: 'any'`) ends it. Only once Utopia is open. */
+export function levelOutcome(state: UtopiaGame): 'won' | 'lost' | null {
+  if (!cardUnlocked(state, 'utopia')) return null;
+  const values = Object.values(state.metrics);
+  if (values.every(value => value >= outcomeRules.win)) return 'won';
+  const dropped = values.filter(value => value <= outcomeRules.lose).length;
+  if (outcomeRules.loseWhen === 'any' ? dropped > 0 : dropped === values.length) return 'lost';
+  return null;
+}
+
+function decide(state: UtopiaGame): UtopiaGame {
+  const outcome = levelOutcome(state);
+  return outcome ? { ...state, outcome, duel: null } : state;
+}
+
+/** Closes the "utopia achieved" dialog. */
+export function dismissOutcome(state: UtopiaGame): UtopiaGame | null {
+  return state.outcome === 'won' && !state.outcomeSeen ? { ...state, outcomeSeen: true } : null;
+}
+
+function advance(state: UtopiaGame, random: () => number): UtopiaGame {
   const drift = perkValue(state, 'driftShield');
   const next: UtopiaGame = {
     ...state,
@@ -248,7 +275,7 @@ export function cardBlocker(state: UtopiaGame, id: string): string | null {
 /** Plays one of your cards; it then cools down. */
 export function playPlayerCard(state: UtopiaGame, id: string): UtopiaGame | null {
   const card = playerCards.find(entry => entry.id === id);
-  if (!card || cardBlocker(state, id)) return null;
+  if (!card || state.outcome || cardBlocker(state, id)) return null;
   const next = playCard(state, card);
   return { ...next, cardCooldowns: { ...next.cardCooldowns, [id]: card.cooldown ?? 0 } };
 }

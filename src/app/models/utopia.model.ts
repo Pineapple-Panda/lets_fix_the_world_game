@@ -41,6 +41,10 @@ export interface UtopiaGame {
   duel: Duel | null;
   /** Seconds until the next duel can start. */
   duelCooldown: number;
+  /** How level 3 ended: every bar at 100% (won) or one at 0% (lost); null while it runs. The game stops then. */
+  outcome: 'won' | 'lost' | null;
+  /** True once the player closed the "utopia achieved" dialog. */
+  outcomeSeen: boolean;
 }
 
 /** A direct duel: a tug-of-war bar in a dialog. */

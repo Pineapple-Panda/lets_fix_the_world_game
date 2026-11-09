@@ -13,6 +13,9 @@ export const megaCorpName = 'MegaCorp';
  */
 export const utopiaStart = { actions: 280000000, budget: 20000000, integrity: 50, actionRate: 13000, budgetRate: 13000 };
 
+/** Level 3 is won once every utopia bar reaches `win`, and lost once `loseWhen` bars drop to `lose` ('any' or 'all'). */
+export const outcomeRules = { win: 100, lose: 0, loseWhen: 'any' as 'any' | 'all' };
+
 /** The utopia's bars, in display order. */
 export const metrics: MetricDefinition[] = [
   { id: 'employment', name: 'Employment', hint: 'The AI does the work. Humans need new jobs worth doing.', start: 65, drift: -0.01 },
@@ -153,9 +156,9 @@ export const counterInitiatives: CounterInitiative[] = [
  */
 export const initiatives: Initiative[] = [
   { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.',
-    metric: 'employment', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.02 },
+    metric: 'employment', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.03 },
   { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.',
-    metric: 'housing', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.02 },
+    metric: 'housing', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.03 },
   { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.',
-    metric: 'food', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.02 }
+    metric: 'food', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.03 }
 ];
