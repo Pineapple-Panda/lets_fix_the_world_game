@@ -1,3 +1,6 @@
+import type { BasePerk, Described, LevelSummary, RunningProgram } from '../../../shared/models/shared.model.ts';
+export type { Fact, LevelSummary } from '../../../shared/models/shared.model.ts';
+
 /** An epic in progress or finished. Epics that were never started are not stored. */
 export interface LaunchedEpic {
   id: string;
@@ -115,20 +118,11 @@ export interface ProgramState {
 }
 
 /** A long-running program in a problem solving card. */
-export interface ProgramDefinition {
-  id: string;
+export interface ProgramDefinition extends RunningProgram {
   /** Product whose card runs the program. */
   product: string;
   /** World problem the program works on. */
   problem: WorldProblem;
-  name: string;
-  detail: string;
-  /** Budget to start the program. */
-  cost: number;
-  /** Budget per second while running; negative values are income. */
-  upkeep: number;
-  /** Solution progress (percentage points) per second, before the product version bonus. */
-  rate: number;
   /** Integrity change per second while running. */
   integrity?: number;
   /** Server slots the program occupies at v1.x (default 1); multiplied by the product's major version. */
@@ -159,10 +153,7 @@ export interface ProgramDefinition {
 export type WorldProblem = 'climate' | 'war' | 'hunger' | 'poverty' | 'corruption';
 
 /** An organisation, government or billionaire that can rent a server slot. */
-export interface RentalClient {
-  id: string;
-  name: string;
-  description: string;
+export interface RentalClient extends Described {
   /** Budget per second while the slot is rented. */
   income: number;
   /** Solution progress (percentage points) added to these problems every second while rented; negative slows them. */
@@ -211,12 +202,7 @@ export interface ProductDefinition {
   goals: string[];
 }
 
-export interface LaunchedPerk {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  actionsRequired: number;
+export interface LaunchedPerk extends BasePerk {
   /** Budget price for perks that are bought rather than unlocked by actions. */
   cost?: number;
   /** Only offered once one of these products is activated. */
@@ -249,9 +235,3 @@ export interface EpicDefinition {
   climateBoost?: number;
 }
 
-/** What happened in one level, frozen when the player moves on. Shown when level 3 is won. */
-export interface LevelSummary {
-  level: number;
-  title: string;
-  facts: { label: string; value: string }[];
-}

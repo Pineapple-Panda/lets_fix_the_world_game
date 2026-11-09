@@ -1,7 +1,7 @@
 import type { Game } from '../../level-one/models/game.model.ts';
 import { formatVersion } from '../../level-one/models/version.model.ts';
 import type {
-  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LevelSummary, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
+  EpicDefinition, Fact, LaunchedGame, LaunchedPerk, LaunchedStats, LevelSummary, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
   SpecialEvent,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
@@ -1254,7 +1254,7 @@ export function playTime(seconds: number): string {
 }
 
 /** A few facts about how the world was fixed, and one line about how clean it was. */
-export function victorySummary(state: LaunchedGame): { facts: { label: string; value: string }[]; verdict: string } {
+export function victorySummary(state: LaunchedGame): { facts: Fact[]; verdict: string } {
   const { stats } = state;
   const shady = state.seconds > 0 ? Math.round(stats.dirtySeconds / state.seconds * 100) : 0;
   const facts = [

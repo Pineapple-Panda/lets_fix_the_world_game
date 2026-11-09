@@ -1,4 +1,5 @@
-import { afterNextRender, Component, ElementRef, input, output, viewChild } from '@angular/core';
+import { Component, input, output } from '@angular/core';
+import { ModalDialog } from '../../../../shared/components/modal-dialog';
 import type { SpecialEvent } from '../../models/launched.model';
 
 /** A special event: a modal with two answers. It can only be closed by picking one. */
@@ -23,18 +24,13 @@ import type { SpecialEvent } from '../../models/launched.model';
     </dialog>
   `
 })
-export class EventDialogComponent {
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+export class EventDialogComponent extends ModalDialog {
   readonly event = input.required<SpecialEvent>();
   readonly canAccept = input(true);
   readonly answered = output<boolean>();
 
-  constructor() {
-    afterNextRender(() => this.dialog().nativeElement.showModal());
-  }
-
   answer(accept: boolean): void {
-    this.dialog().nativeElement.close();
+    this.close();
     this.answered.emit(accept);
   }
 }

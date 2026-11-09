@@ -64,7 +64,7 @@
                         @for (entry of panel.programs; track entry.program.id) {
                             <div class="program" [class.running]="entry.running" [class.protest]="entry.protest">
                                 <strong>{{ entry.program.name }}</strong>
-                                <small>{{ entry.program.detail }}</small>
+                                <small>{{ entry.program.description }}</small>
                                 <small class="client-terms">
                                     @for (term of entry.terms; track $index) {<span [class]="term.tone">{{ term.text }}</span>@if (!$last) { · }}
                                 </small>

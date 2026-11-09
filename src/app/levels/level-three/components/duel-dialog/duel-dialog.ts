@@ -1,4 +1,5 @@
-import { afterNextRender, Component, DestroyRef, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, inject, input, output, signal } from '@angular/core';
+import { ModalDialog } from '../../../../shared/components/modal-dialog';
 import { duelStep } from '../../game/utopia';
 import { duelRules, megaCorpName } from '../../game/utopia-content';
 import type { Duel } from '../../models/utopia.model';
@@ -34,8 +35,7 @@ import type { Duel } from '../../models/utopia.model';
     </dialog>
   `
 })
-export class DuelDialogComponent {
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+export class DuelDialogComponent extends ModalDialog {
   readonly duel = input.required<Duel>();
   /** Points one push moves the bar right now. */
   readonly clickGain = input(duelRules.clickGain);
@@ -50,7 +50,7 @@ export class DuelDialogComponent {
   protected readonly bar = signal(duelRules.start);
 
   constructor() {
-    afterNextRender(() => this.dialog().nativeElement.showModal());
+    super();
     const timer = setInterval(() => this.step(0, duelRules.stepMs / 1000), duelRules.stepMs);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }

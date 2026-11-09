@@ -1,4 +1,5 @@
-import { afterNextRender, Component, ElementRef, output, viewChild } from '@angular/core';
+import { Component, output } from '@angular/core';
+import { ModalDialog } from '../../../../shared/components/modal-dialog';
 
 /** Modal shown once Earl reaches 100% coverage; the only way out is launching the application. */
 @Component({
@@ -12,16 +13,11 @@ import { afterNextRender, Component, ElementRef, output, viewChild } from '@angu
     </dialog>
   `
 })
-export class LaunchComponent {
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+export class LaunchComponent extends ModalDialog {
   readonly launched = output<void>();
 
-  constructor() {
-    afterNextRender(() => this.dialog().nativeElement.showModal());
-  }
-
   launch(): void {
-    this.dialog().nativeElement.close();
+    this.close();
     this.launched.emit();
   }
 }

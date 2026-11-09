@@ -1,9 +1,12 @@
-import { afterNextRender, Component, ElementRef, input, output, viewChild } from '@angular/core';
-import type { LevelSummary } from '../../../level-two/models/launched.model';
+import { Component, input, output } from '@angular/core';
+import { ModalDialog } from '../../../../shared/components/modal-dialog';
+import { FactsListComponent } from '../../../../shared/components/facts-list';
+import type { LevelSummary } from '../../../../shared/models/shared.model';
 
 /** Level 3 is won: every utopia bar reached 100%. */
 @Component({
   selector: 'app-utopia-won',
+  imports: [FactsListComponent],
   template: `
     <dialog #dialog class="intro-dialog" aria-labelledby="utopia-won-title" aria-describedby="utopia-won-text" (close)="dismissed.emit()">
       <h1 id="utopia-won-title">Utopia achieved 🌱</h1>
@@ -13,11 +16,7 @@ import type { LevelSummary } from '../../../level-two/models/launched.model';
         @for (level of summary(); track level.level) {
           <section>
             <h2>{{ level.title }}</h2>
-            <dl class="victory-facts">
-              @for (fact of level.facts; track fact.label) {
-                <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
-              }
-            </dl>
+            <dl appFactsList [facts]="level.facts"></dl>
           </section>
         }
       </div>
@@ -25,16 +24,7 @@ import type { LevelSummary } from '../../../level-two/models/launched.model';
     </dialog>
   `
 })
-export class UtopiaWonComponent {
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+export class UtopiaWonComponent extends ModalDialog {
   readonly summary = input.required<LevelSummary[]>();
   readonly dismissed = output<void>();
-
-  constructor() {
-    afterNextRender(() => this.dialog().nativeElement.showModal());
-  }
-
-  close(): void {
-    this.dialog().nativeElement.close();
-  }
 }

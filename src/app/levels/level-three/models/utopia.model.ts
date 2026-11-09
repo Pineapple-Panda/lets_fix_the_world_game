@@ -1,4 +1,4 @@
-import type { LevelSummary } from '../../level-two/models/launched.model.ts';
+import type { BoughtPerk, Described, LevelSummary, RunningProgram } from '../../../shared/models/shared.model.ts';
 /** Level 3: building a utopia while MegaCorp fights back. */
 
 /** The utopia's bars, each in percent (0–100). */
@@ -93,12 +93,9 @@ export type CardEffect =
   | { kind: 'cancelMove' };
 
 /** An action card for you or MegaCorp. */
-export interface ActionCard {
-  id: string;
+export interface ActionCard extends Described {
   actor: CardActor;
   category: CardCategory;
-  name: string;
-  description: string;
   effects: CardEffect[];
   /** Seconds the card keeps working; one-time hit without it. */
   duration?: number;
@@ -135,35 +132,20 @@ export interface MetricDefinition {
   drift: number;
 }
 
-export interface Corporation {
-  id: string;
-  name: string;
-  description: string;
+export interface Corporation extends Described {
   icon: string;
 }
 
 /** A program of your AI system: started once, then it raises a bar every second while it runs and pays its upkeep. */
-export interface Initiative {
-  id: string;
-  name: string;
-  description: string;
+export interface Initiative extends RunningProgram {
   metric: UtopiaMetric;
-  /** Budget to initialize (build) it. */
-  cost: number;
   /** Seconds it takes to build before it can be started. */
   buildTime: number;
-  /** Budget per second while it runs. */
-  upkeep: number;
-  /** Percentage points per second while it runs. */
-  rate: number;
 }
 
 /** A MegaCorp program against the utopia: it pushes a bar down every second while its corporation has power. */
-export interface CounterInitiative {
-  id: string;
+export interface CounterInitiative extends Described {
   corpId: string;
-  name: string;
-  description: string;
   metric: UtopiaMetric;
   /** Percentage points per second it takes at full corporation power. */
   rate: number;
@@ -186,14 +168,6 @@ export type UtopiaPerkEffect =
 /** Cards of level 3 that start hidden. */
 export type UtopiaCard = 'utopia' | 'megacorp';
 
-export interface UtopiaPerk {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  /** Total coding actions needed before it can be taken. */
-  actionsRequired: number;
-  /** Budget price. */
-  cost: number;
+export interface UtopiaPerk extends BoughtPerk {
   effect: UtopiaPerkEffect;
 }

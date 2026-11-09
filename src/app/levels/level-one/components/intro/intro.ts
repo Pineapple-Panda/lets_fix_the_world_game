@@ -1,18 +1,10 @@
-import { afterNextRender, Component, ElementRef, output, viewChild } from '@angular/core';
+import { Component, output } from '@angular/core';
+import { ModalDialog } from '../../../../shared/components/modal-dialog';
 
 @Component({
   selector: 'app-intro',
   templateUrl: './intro.html'
 })
-export class IntroComponent {
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('intro');
+export class IntroComponent extends ModalDialog {
   readonly dismissed = output<void>();
-
-  constructor() {
-    afterNextRender(() => this.dialog().nativeElement.showModal());
-  }
-
-  close(): void {
-    this.dialog().nativeElement.close();
-  }
 }

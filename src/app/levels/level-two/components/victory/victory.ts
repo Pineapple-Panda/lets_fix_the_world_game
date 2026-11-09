@@ -1,8 +1,11 @@
-import { afterNextRender, Component, ElementRef, input, output, viewChild } from '@angular/core';
+import { Component, input, output } from '@angular/core';
+import { FactsListComponent } from '../../../../shared/components/facts-list';
+import { ModalDialog } from '../../../../shared/components/modal-dialog';
+import type { Fact } from '../../../../shared/models/shared.model';
 
 /** A few facts about how the level was played, shown when every world problem is solved. */
 export interface VictorySummary {
-  facts: { label: string; value: string }[];
+  facts: Fact[];
   /** One line about the player's conscience. */
   verdict: string;
 }
@@ -10,16 +13,13 @@ export interface VictorySummary {
 /** Modal shown once all five world problems reach 100%. */
 @Component({
   selector: 'app-victory',
+  imports: [FactsListComponent],
   template: `
     <dialog #dialog class="intro-dialog victory-dialog" aria-labelledby="victory-title" aria-describedby="victory-text"
             (close)="dismissed.emit()">
       <h1 id="victory-title">You fixed the world 🌍</h1>
       <p id="victory-text">Congratulations: climate, war, hunger, poverty and corruption are solved. Every single one.</p>
-      <dl class="victory-facts">
-        @for (fact of summary().facts; track fact.label) {
-          <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
-        }
-      </dl>
+      <dl appFactsList [facts]="summary().facts"></dl>
       <p class="victory-verdict">{{ summary().verdict }}</p>
       <p class="victory-teaser">But a fixed world is bad for business. Somebody is about to fight back.</p>
       <div class="victory-actions">
@@ -37,20 +37,11 @@ export interface VictorySummary {
     </dialog>
   `
 })
-export class VictoryComponent {
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+export class VictoryComponent extends ModalDialog {
   readonly summary = input.required<VictorySummary>();
   readonly dismissed = output<void>();
   /** A new run: the dialog disappears with the old game, so it is not closed (closing would mark the new run as seen). */
   readonly restartLevelOne = output<void>();
   readonly restartLevelTwo = output<void>();
   readonly startLevelThree = output<void>();
-
-  constructor() {
-    afterNextRender(() => this.dialog().nativeElement.showModal());
-  }
-
-  close(): void {
-    this.dialog().nativeElement.close();
-  }
 }

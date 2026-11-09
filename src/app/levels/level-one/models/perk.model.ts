@@ -1,3 +1,5 @@
+import type { BasePerk } from '../../../shared/models/shared.model.ts';
+
 export type PerkId =
   | 'stack-overflow'
   | 'build-pipeline'
@@ -14,14 +16,10 @@ export type PerkId =
   | 'ai-testing-subscription'
   | 'auto-deploy';
 
-export interface Perk {
+export interface Perk extends BasePerk {
   id: PerkId;
-  name: string;
-  description: string;
-  icon: string;
   kind: 'simple' | 'upgradeable';
   rate?: number;
-  actionsRequired: number;
 }
 
 export const perks: Perk[] = [
