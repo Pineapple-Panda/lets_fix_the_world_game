@@ -87,7 +87,9 @@ export function canPitch(state: LaunchedGame): boolean {
 /** A pitch is worth at least this much budget. */
 export const pitchBase = 100;
 /** A pitch is worth this share of the current budget income per second. */
-export const pitchShare = 0.2;
+export const pitchShare = 0.1;
+/** Each server added with Add Server raises the pitch by half its base value. */
+export const pitchServerStep = 0.5;
 
 /**
  * Budget per second on average, ignoring the focus slider: the payout for new actions at the centre position plus
@@ -103,11 +105,11 @@ export function budgetPerSecond(state: LaunchedGame): number {
 }
 
 /**
- * Budget for one "Pitch to investors" click: 20% of the income per second without the focus slider (at least 100),
- * times the number of server slots. Grows with the platform.
+ * Budget for one "Pitch to investors" click: 10% of the income per second without the focus slider (at least 100),
+ * times 1 + 0.5 per added server (10 slots: ×5.5). Grows with the platform.
  */
 export function pitchValue(state: LaunchedGame): number {
-  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * state.serverSlots);
+  return Math.round(Math.max(pitchBase, budgetPerSecond(state) * pitchShare) * (1 + pitchServerStep * addedServers(state)));
 }
 
 /** One click on "Pitch to investors" (needs the Pitch Deck Generator). */
@@ -153,15 +155,18 @@ export const maxBudgetPenalty = 1;
 const clampFocus = (focus: number) => Math.max(-focusLimit, Math.min(focusLimit, Math.round(focus)));
 
 /** Focus power grows by this factor per added server on top of the linear step. */
-export const focusGrowth = 1.05;
+export const focusGrowth = 1.03;
+/** Linear step of focus power per added server. */
+export const focusStep = 0.5;
 
 /**
- * How strong the slider's bonuses are: (1 + added servers) × 1.05 per added server, rounded to 2 decimals.
- * 1 server ×2.1, 3 servers ×4.63, 10 servers ×17.92: a little faster than linear, far from doubling.
+ * How strong the slider's bonuses are: (1 + 0.5 per added server) × 1.03 per added server, rounded to 2 decimals.
+ * 1 server ×1.55, 3 servers ×2.73, 9 servers ×7.17: a little faster than linear. Server slots already multiply
+ * the actions per second, so the slider grows more gently.
  */
 export function focusPower(state: LaunchedGame): number {
   const servers = addedServers(state);
-  return Math.round((1 + servers) * focusGrowth ** servers * 100) / 100;
+  return Math.round((1 + focusStep * servers) * focusGrowth ** servers * 100) / 100;
 }
 
 /** Multiplier for actions per second: ×1.5 fully left (more with Add Server), ×0.5 fully right. */

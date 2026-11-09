@@ -699,18 +699,18 @@ test('the focus slider trades actions against budget', () => {
 test('every Add Server makes the focus effect stronger, a little faster than linear', () => {
   assert.equal(launched.focusPower(liveState()), 1);
   const oneServer = liveState({ serverSlots: 2, focus: -100 });
-  assert.equal(launched.focusPower(oneServer), 2.1);
-  assert.equal(launched.actionBoost(oneServer), 2.05, '+105% actions with one extra server');
+  assert.equal(launched.focusPower(oneServer), 1.55);
+  assert.equal(launched.actionBoost(oneServer), 1.775, '+77.5% actions with one extra server');
   const twoServers = liveState({ serverSlots: 3, focus: 100 });
-  assert.equal(launched.focusPower(twoServers), 3.31);
-  assert.ok(Math.abs(launched.budgetBoost(twoServers) - 4.31) < 1e-9, '+331% budget with two extra servers');
-  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 17.92, 'ten extra servers: x17.92, not x1024');
+  assert.equal(launched.focusPower(twoServers), 2.12);
+  assert.ok(Math.abs(launched.budgetBoost(twoServers) - 3.12) < 1e-9, '+212% budget with two extra servers');
+  assert.equal(launched.focusPower(liveState({ serverSlots: 11 })), 8.06, 'ten extra servers: x8.06, not x1024');
   assert.equal(launched.actionBoost(twoServers), 0.5, 'the penalty does not grow with servers');
   assert.equal(launched.budgetBoost(liveState({ serverSlots: 3, focus: -100 })), 0, 'budget never goes below 0');
   const half = liveState({ serverSlots: 2, focus: 50 });
-  assert.equal(launched.budgetBoost(half), 2.05, 'half way: +105%');
+  assert.equal(launched.budgetBoost(half), 1.775, 'half way: +77.5%');
   let live = launched.activateLaunchedPerk(liveState({ budget: 100000, perks: ['workflow-abstraction'], focus: -100 }), 'add-server');
-  assert.equal(launched.actionBoost(live), 2.05, 'activating Add Server boosts it right away');
+  assert.equal(launched.actionBoost(live), 1.775, 'activating Add Server boosts it right away');
 });
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
@@ -1639,7 +1639,7 @@ test('Premium Hosting Contracts make clients pay ten times the rent', () => {
 test('every server slot multiplies the actions per second', () => {
   assert.equal(launched.tickLaunched(liveState({ actions: 0 }), () => 0).actions, 50);
   assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 4 }), () => 0).actions, 200, '4 slots: ×4');
-  assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 2, focus: -100 }), () => 0).actions, 205, 'with the slider: 50 × 2.05 × 2');
+  assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 2, focus: -100 }), () => 0).actions, 178, 'with the slider: 50 × 1.775 × 2');
   assert.equal(launched.averageActionsPerSecond(liveState({ serverSlots: 4 })), 700, '175 on average × 4 slots');
 });
 
@@ -1653,11 +1653,11 @@ test('pitching to investors adds budget per click and grows with the income', ()
   assert.equal(pitched.budget, 1100);
   assert.equal(pitched.stats.pitches, 1);
   const rich = liveState({ rentals: ['edisonx', 'nsa'], perks: ['network-financing'] });
-  assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.2), '20% of the income per second');
+  assert.equal(launched.pitchValue(rich), Math.round((175 + 3500) * 0.1), '10% of the income per second');
   const rentOnly = { rentals: ['edisonx', 'nsa'], perks: ['network-financing'] };
   assert.equal(launched.pitchValue(liveState({ ...rentOnly, focus: 100 })), launched.pitchValue(liveState(rentOnly)), 'the focus slider does not change it');
   assert.equal(launched.pitchValue(liveState({ ...rentOnly, focus: -100 })), launched.pitchValue(liveState(rentOnly)));
-  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 400, 'four server slots: ×4');
+  assert.equal(launched.pitchValue(liveState({ serverSlots: 4 })), 250, 'three added servers: ×2.5');
 });
 
 test('Green World upgrades raise the version and make programs stronger', () => {
