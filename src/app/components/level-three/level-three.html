@@ -136,6 +136,7 @@
                         <div class="world-fill" [class]="'utopia-' + metric.id" [style.width.%]="metric.value"></div>
                     </div>
                     <b>{{ metric.value | number: '1.1-1' }}%</b>
+                    <small class="world-eta" [class.good]="metric.rate > 0" [class.bad]="metric.rate < 0">{{ rate(metric.rate) }}%/s</small>
                 </div>
                 <small class="upgrade-hint">{{ metric.hint }}</small>
             }
@@ -208,9 +209,11 @@
                         </div>
                         <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
                     </div>
-                    <button class="fight-button" type="button" [disabled]="!entry.canFight"
-                            [attr.aria-label]="'Fight ' + entry.corp.name" [title]="battlesEnabled ? 'Fight ' + entry.corp.name : 'Fights are coming soon'"
-                            (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
+                    @if (battlesEnabled) {
+                        <button class="fight-button" type="button" [disabled]="!entry.canFight"
+                                [attr.aria-label]="'Fight ' + entry.corp.name" [title]="'Fight ' + entry.corp.name"
+                                (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
+                    }
                 </div>
             }
         </section>

@@ -1958,6 +1958,15 @@ test('MegaCorp launches counter initiatives one after another, scaled by power',
   assert.deepEqual(utopia.launchedCounters({ ...state, perks: ['utopia-blueprint'], megacorpSeconds: 500 }), [], 'only once MegaCorp is visible');
 });
 
+test('each utopia bar shows its current change per second', () => {
+  let state = { ...opened(), running: ['career-match'], megacorpSeconds: 90 };
+  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.02 - 0.02)) < 1e-12, 'drift + initiative − counter initiative');
+  assert.ok(Math.abs(utopia.metricRate(state, 'food') - (-0.008 - 0.02)) < 1e-12);
+  assert.equal(utopia.metricRate({ ...state, perks: [] }, 'food'), 0, 'nothing moves while Utopia is locked');
+  const before = state.metrics.housing;
+  assert.ok(Math.abs(utopia.tickUtopia(state, () => 0.99).metrics.housing - (before + utopia.metricRate(state, 'housing'))) < 1e-9, 'matches the tick');
+});
+
 test('fights can be switched off in the config', () => {
   utopiaContent.battleRules.enabled = false;
   assert.equal(utopia.canFight(opened(), 'bananas'), false);

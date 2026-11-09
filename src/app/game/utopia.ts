@@ -179,6 +179,20 @@ export function stopInitiative(state: UtopiaGame, id: string): UtopiaGame | null
   return { ...state, running: state.running.filter(entry => entry !== id) };
 }
 
+/**
+ * How much a bar changes per second right now: drift (once Utopia is open), your funded running initiatives and
+ * MegaCorp's counter initiatives. Attacks come on top every few seconds.
+ */
+export function metricRate(state: UtopiaGame, metric: UtopiaMetric): number {
+  if (!cardUnlocked(state, 'utopia')) return 0;
+  const drift = (metrics.find(entry => entry.id === metric)?.drift ?? 0) * perkValue(state, 'driftShield');
+  const mine = state.running
+    .filter(id => initiative(id)?.metric === metric && initiativeFunded(state, id))
+    .reduce((total, id) => total + initiativeRate(state, id), 0);
+  const theirs = counterInitiatives.filter(counter => counter.metric === metric).reduce((total, counter) => total + counterRate(state, counter), 0);
+  return drift + mine - theirs;
+}
+
 // ---------- Counter initiatives ----------
 
 /** Whether a counter initiative has launched (MegaCorp visible long enough). */

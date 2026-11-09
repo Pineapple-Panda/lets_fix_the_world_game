@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionsGained, canFight, cardUnlocked, corporation, counterRate, launchedCounters, initiativeBlocker, initiativeFunded, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
+  actionsGained, canFight, cardUnlocked, corporation, metricRate, counterRate, launchedCounters, initiativeBlocker, initiativeFunded, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
   utopiaPerkAvailable
 } from '../../game/utopia';
 import { attackRules, battleRules, corporations, initiatives, megaCorpName, metrics, playerMoves, utopiaPerks } from '../../game/utopia-content';
@@ -31,7 +31,7 @@ export class LevelThreeComponent {
     const battle = state.battle;
     const opponent = battle && corporation(battle.corpId);
     return {
-      metrics: metrics.map(metric => ({ ...metric, value: state.metrics[metric.id] })),
+      metrics: metrics.map(metric => ({ ...metric, value: state.metrics[metric.id], rate: Math.round(metricRate(state, metric.id) * 100000) / 100000 })),
       initiatives: initiatives.map(initiative => ({
         initiative,
         metricName: metrics.find(metric => metric.id === initiative.metric)?.name ?? initiative.metric,
@@ -74,6 +74,11 @@ export class LevelThreeComponent {
       } : null
     };
   });
+
+  /** 0.012 → "+0.012", -0.02 → "−0.02", 0 → "±0". */
+  protected rate(value: number): string {
+    return value > 0 ? '+' + value : value < 0 ? '−' + -value : '±0';
+  }
 
   protected format(value: number): string {
     return Math.round(value).toLocaleString('en-US');
