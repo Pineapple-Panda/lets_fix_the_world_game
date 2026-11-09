@@ -37,12 +37,16 @@
                     Somewhere, somebody does not like where this is going.</p>
             } @else {
                 <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} vs. you</h2>
+                @if (v.defeated) {
+                    <p class="megacorp-defeated" role="status">{{ megaCorpName }} is defeated. No more battles, moves or counter initiatives.</p>
+                } @else {
                 <div class="duel-start">
                     <button class="intro-button duel-button" type="button" [disabled]="!v.canDuel" (click)="duelStarted.emit()">
                         ⚔️ Start a battle
                     </button>
                     @if (v.duelCooldown > 0) { <small class="upgrade-hint">Next battle possible in {{ v.duelCooldown }}s</small> }
                 </div>
+                }
                 @if (v.activeEffects.length) {
                     <div class="effect-chips" aria-label="Running effects">
                         @for (effect of v.activeEffects; track effect.id) {
@@ -73,7 +77,7 @@
                     </div>
                     <div>
                         <h3 class="tool-heading ops-subheading">{{ megaCorpName }}'s moves</h3>
-                        <small class="upgrade-hint">Next move in {{ v.nextAttack }}s</small>
+                        <small class="upgrade-hint">{{ v.defeated ? 'No more moves.' : 'Next move in ' + v.nextAttack + 's' }}</small>
                         <div class="action-cards megacorp-moves" aria-label="Latest MegaCorp moves">
                             @for (move of v.moves; track move.key; let latest = $first) {
                                 <div class="action-card megacorp" [class.damage]="move.card.category === 'damage'" [class.latest]="latest">
@@ -124,7 +128,7 @@
                     <div class="world-track" role="meter" [attr.aria-label]="megaCorpName + ' power'" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.megaPower">
                         <div class="world-fill corp-power" [style.width.%]="v.megaPower"></div>
                     </div>
-                    <small>Power {{ v.megaPower }}%</small>
+                    <small>{{ v.defeated ? 'Defeated' : 'Power ' + v.megaPower + '%' }}</small>
                 } @else {
                     <strong>???</strong>
                     <small>Unknown</small>
@@ -256,7 +260,7 @@
                     }
                 </div>
             } @empty {
-                <small class="upgrade-hint">No counter initiatives. Yet.</small>
+                <small class="upgrade-hint">{{ v.defeated ? megaCorpName + ' is defeated. No more counter initiatives.' : 'No counter initiatives. Yet.' }}</small>
             }
             </div>
             </div>

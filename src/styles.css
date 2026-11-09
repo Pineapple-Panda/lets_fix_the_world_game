@@ -2096,3 +2096,14 @@ footer {
 @keyframes chip-pulse {
     50% { border-color: var(--red); }
 }
+
+.megacorp-defeated {
+    margin: 0;
+    padding: 8px 12px;
+    border: 2px solid var(--green);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg) 70%, var(--green));
+    color: var(--ink);
+    text-align: center;
+    font-weight: 600;
+}

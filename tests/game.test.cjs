@@ -2082,6 +2082,19 @@ test('Pop-Up Homes (Prefab Factory perk): Housing +3% per second for 5 seconds',
   assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'pop-up-homes')), 'Housing +3%/s for 5s');
 });
 
+test('a fully defeated MegaCorp stops battles, moves and counter initiatives', () => {
+  const beaten = { ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 }, megacorpSeconds: 500, nextAttack: 1,
+    effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 20 }, { cardId: 'rent-tax-cut', remaining: 10 }] };
+  assert.equal(utopia.megacorpDefeated(beaten), true);
+  assert.equal(utopia.megacorpDefeated(opened()), false);
+  assert.equal(utopia.canDuel(beaten), false, 'no battles');
+  assert.deepEqual(utopia.launchedCounters(beaten), [], 'no counter initiatives');
+  const next = utopia.tickUtopia(beaten, () => 0.1);
+  assert.equal(next.duel, null, 'MegaCorp cannot challenge you');
+  assert.deepEqual(next.attackLog, [], 'no more moves');
+  assert.deepEqual(next.effects.map(active => active.cardId), ['rent-tax-cut'], 'its running moves end, yours stay');
+});
+
 test('level 3 saves and loads', () => {
   const store = memoryStorage();
   const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: [{ cardId: 'propaganda', corpId: 'bananas' }] };

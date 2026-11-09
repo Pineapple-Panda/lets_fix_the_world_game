@@ -167,6 +167,11 @@ function advance(state: UtopiaGame, random: () => number): UtopiaGame {
   }
   runCards(next);
   if (next.duelCooldown > 0 && !next.duel) next.duelCooldown = next.duelCooldown - 1;
+  // A defeated MegaCorp stops for good: its running moves end and it plays no more cards.
+  if (megacorpDefeated(next)) {
+    next.effects = next.effects.filter(active => actionCard(active.cardId)?.actor !== 'megacorp');
+    return next;
+  }
   // MegaCorp only plays cards once you know about it, and waits while a duel is open.
   if (!cardUnlocked(state, 'megacorp') || next.duel) return next;
   next.nextAttack = state.nextAttack - 1;
@@ -417,7 +422,12 @@ export function metricRate(state: UtopiaGame, metric: UtopiaMetric): number {
 
 /** Whether a counter initiative has launched (MegaCorp visible long enough). */
 export function counterLaunched(state: UtopiaGame, counter: CounterInitiative): boolean {
-  return cardUnlocked(state, 'megacorp') && state.megacorpSeconds >= counter.launchAfter;
+  return cardUnlocked(state, 'megacorp') && !megacorpDefeated(state) && state.megacorpSeconds >= counter.launchAfter;
+}
+
+/** Every corporation is at 0% power: no more battles, moves or counter initiatives. */
+export function megacorpDefeated(state: UtopiaGame): boolean {
+  return corporations.every(corp => (state.corpPower[corp.id] ?? 0) <= 0);
 }
 
 /** Percentage points per second a counter initiative takes right now: scaled by power, halved by fact-checkers. */
@@ -459,7 +469,7 @@ function runInitiatives(next: UtopiaGame): void {
 
 /** Whether a duel can start now: MegaCorp is known, no duel is open and the cooldown is over. */
 export function canDuel(state: UtopiaGame): boolean {
-  return cardUnlocked(state, 'megacorp') && !state.duel && state.duelCooldown <= 0;
+  return cardUnlocked(state, 'megacorp') && !megacorpDefeated(state) && !state.duel && state.duelCooldown <= 0;
 }
 
 /** You challenge MegaCorp to a duel. */

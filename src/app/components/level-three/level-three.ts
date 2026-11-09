@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, canCancelEffect, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, canCancelEffect, megacorpDefeated, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
 import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
@@ -66,6 +66,7 @@ export class LevelThreeComponent {
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,
       canDuel: canDuel(state),
+      defeated: megacorpDefeated(state),
       duelCooldown: state.duelCooldown,
       moves: state.attackLog.map((move, index) => {
         const card = actionCard(move.cardId);
