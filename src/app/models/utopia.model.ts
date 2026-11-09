@@ -160,6 +160,8 @@ export type UtopiaPerkEffect =
   | { kind: 'attackShield'; value: number }
   | { kind: 'driftShield'; value: number }
   | { kind: 'upkeep'; value: number }
+  /** Multiplies the TCA and budget gained per second. */
+  | { kind: 'rateBoost'; value: number }
   | { kind: 'unlock'; card: UtopiaCard }
   /** Makes one of your locked action cards playable. */
   | { kind: 'unlockAction'; action: string };

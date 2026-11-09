@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
 import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
@@ -53,8 +53,8 @@ export class LevelThreeComponent {
       /** MegaCorp's strength on the top card: the average power of its corporations. */
       megaPower: Math.round(power.reduce((sum, value) => sum + value, 0) / Math.max(1, power.length)),
       integrity: state.integrity,
-      actionsPerSecond: state.actionRate,
-      budgetPerSecond: state.budgetRate,
+      actionsPerSecond: actionsPerSecond(state),
+      budgetPerSecond: budgetPerSecond(state),
       utopiaOpen: cardUnlocked(state, 'utopia'),
       megacorpOpen: cardUnlocked(state, 'megacorp'),
       utopiaPerkName: unlockPerk('utopia')?.name ?? '',

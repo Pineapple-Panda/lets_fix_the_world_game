@@ -1919,7 +1919,7 @@ test('initiatives cost budget', () => {
 });
 
 test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'housing-policy', 'kitchen-network', 'investigative-desk']);
   assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
@@ -2028,6 +2028,17 @@ test('level 3 is won with every bar at 100% and lost once all of them drop to 0%
   const decided = { ...nearlyWon, outcome: 'won' };
   assert.equal(utopia.dismissOutcome(decided).outcomeSeen, true);
   assert.equal(utopia.dismissOutcome(lost), null, 'game over has no dialog to close');
+});
+
+test('Hyper-Scaling multiplies TCA and budget per second by ten for 5,000,000', () => {
+  const base = { ...opened(), actionRate: 13000, budgetRate: 13000 };
+  const boosted = utopia.activateUtopiaPerk(base, 'hyper-scaling');
+  assert.equal(boosted.budget, base.budget - 5000000);
+  assert.equal(utopia.actionsPerSecond(boosted), 130000);
+  assert.equal(utopia.budgetPerSecond(boosted), 130000);
+  const next = utopia.tickUtopia({ ...boosted, nextAttack: 99 }, () => 0.99);
+  assert.equal(next.actions, boosted.actions + 130000);
+  assert.equal(utopia.activateUtopiaPerk({ ...base, budget: 4999999 }, 'hyper-scaling'), null, 'costs 5,000,000');
 });
 
 test('level 3 saves and loads', () => {

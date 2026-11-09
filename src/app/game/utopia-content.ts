@@ -32,6 +32,8 @@ export const utopiaPerks: UtopiaPerk[] = [
     actionsRequired: 250000000, cost: 0, effect: { kind: 'unlock', card: 'utopia' } },
   { id: 'opposition-research', name: 'Opposition Research', description: 'Somebody is buying up farmland, warehouses and influencers. Find out who. Opens the MegaCorp card, and MegaCorp starts fighting back.', icon: 'OR',
     actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } },
+  { id: 'hyper-scaling', name: 'Hyper-Scaling', description: 'Every server, every process, every intern at full throttle. TCA and budget per second ×10.', icon: 'HS',
+    actionsRequired: 0, cost: 5000000, effect: { kind: 'rateBoost', value: 10 } },
   // One perk per locked action card.
   { id: 'housing-policy', name: 'Housing Policy Desk', description: 'Unlocks the move "Cut Rent Taxes": Housing +0.1%/s and Credibility +0.5/s for 15s.', icon: 'HP',
     actionsRequired: 285000000, cost: 2000000, effect: { kind: 'unlockAction', action: 'rent-tax-cut' } },

@@ -61,6 +61,16 @@ export function perkValue(state: UtopiaGame, kind: ValueEffect['kind']): number 
   return values.reduce((total, value) => total * value, 1);
 }
 
+/** TCA gained per second: the rate from level 2, times rate boosts. */
+export function actionsPerSecond(state: UtopiaGame): number {
+  return Math.round(state.actionRate * perkValue(state, 'rateBoost'));
+}
+
+/** Budget gained per second: the rate from level 2, times rate boosts. */
+export function budgetPerSecond(state: UtopiaGame): number {
+  return Math.round(state.budgetRate * perkValue(state, 'rateBoost'));
+}
+
 /** Whether a hidden card (Utopia, MegaCorp) has been opened by its perk. */
 export function cardUnlocked(state: UtopiaGame, card: UtopiaCard): boolean {
   return utopiaPerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlock' && perk.effect.card === card);
@@ -137,8 +147,8 @@ function advance(state: UtopiaGame, random: () => number): UtopiaGame {
   const next: UtopiaGame = {
     ...state,
     seconds: state.seconds + 1,
-    actions: cap(state.actions + state.actionRate),
-    budget: cap(state.budget + state.budgetRate),
+    actions: cap(state.actions + actionsPerSecond(state)),
+    budget: cap(state.budget + budgetPerSecond(state)),
     // The bars only start to erode once the Utopia card is open.
     metrics: cardUnlocked(state, 'utopia')
       ? Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>
