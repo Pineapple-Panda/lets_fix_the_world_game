@@ -1627,6 +1627,12 @@ test('Premium Hosting Contracts make clients pay ten times the rent', () => {
   assert.equal(launched.rentalProgress(premium, 'war'), launched.rentalProgress(liveState(online), 'war'), 'only the money, not the effects');
 });
 
+test('every server slot multiplies the actions per second', () => {
+  assert.equal(launched.tickLaunched(liveState({ actions: 0 }), () => 0).actions, 50);
+  assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 4 }), () => 0).actions, 200, '4 slots: ×4');
+  assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 2, focus: -100 }), () => 0).actions, 205, 'with the slider: 50 × 2.05 × 2');
+});
+
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
   const content = require('../src/app/game/launched-content.ts');

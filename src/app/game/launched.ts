@@ -216,7 +216,7 @@ export function devBoost(state: LaunchedGame): LaunchedGame {
 }
 
 /**
- * One second in level 2: actions grow by 50–300 (scaled by the focus slider), running epics advance by one second of server time,
+ * One second in level 2: actions grow by 50–300 per server slot (scaled by the focus slider), running epics advance by one second of server time,
  * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
  * Then clients, finished epics, programs, lawsuits and product releases are applied.
  */
@@ -226,7 +226,8 @@ export function tickLaunched(
   fastEpics = false
 ): LaunchedGame {
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
-  const gained = Math.round(base * actionBoost(state));
+  // Every server slot adds a full share of actions per second.
+  const gained = Math.round(base * actionBoost(state) * state.serverSlots);
   const dataCenters = dataCentersActive(state);
   const next: LaunchedGame = {
     ...state,
