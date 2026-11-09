@@ -83,8 +83,11 @@ const isPercentRecord = (value: unknown): boolean => isObject(value) && Object.v
 /** The level 3 state, or null when there is no compatible level 3 save. */
 export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null {
   const game = readSnapshot(storage, 3);
+  // Level 3 saves from before TCA, budget, integrity and perks existed get the starting values.
+  if (game && game.actions === undefined) Object.assign(game, { actions: 10000000, budget: 20000000, integrity: 50, perks: [] });
   if (
-    !game || !isCount(game.seconds) || !isCount(game.nextAttack) ||
+    !game || !isCount(game.seconds) || !isCount(game.nextAttack) || !isCount(game.actions) || !isCount(game.budget) ||
+    !isPercent(game.integrity) || !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
     !isPercentRecord(game.metrics) || !isPercentRecord(game.corpPower) ||
     !isObject(game.cooldowns) || !Object.values(game.cooldowns).every(isCount) ||
     !Array.isArray(game.attackLog) || !game.attackLog.every(line => typeof line === 'string') ||

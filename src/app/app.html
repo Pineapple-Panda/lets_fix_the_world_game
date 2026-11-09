@@ -8,7 +8,8 @@
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
             <app-level-three [state]="world" (initiativeRun)="runInitiative($event)" (fightStarted)="startBattle($event)"
-                             (moveChosen)="battleRound($event)" (battleClosed)="closeBattle()" />
+                             (moveChosen)="battleRound($event)" (battleClosed)="closeBattle()"
+                             (perkActivated)="activateUtopiaPerk($event)" />
             <footer><span>LEVEL 3 / BUILDING UTOPIA</span>
                 <span class="footer-actions">
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>

@@ -81,13 +81,66 @@
         <h3 class="tool-heading ops-subheading">AI initiatives</h3>
         @for (entry of v.initiatives; track entry.initiative.id) {
             <div class="upgrade-row initiative">
-                <span><strong>{{ entry.initiative.name }}</strong><small>{{ entry.initiative.description }}</small></span>
-                <button class="tool-button" type="button" [disabled]="entry.cooldown > 0"
-                        [attr.aria-label]="entry.initiative.name + ': ' + entry.metricName + ' +' + entry.initiative.gain"
+                <span><strong>{{ entry.initiative.name }}</strong><small>{{ entry.initiative.description }}</small>
+                    <small>Costs {{ format(entry.initiative.cost) }} budget</small></span>
+                <button class="tool-button" type="button" [disabled]="!entry.canRun"
+                        [attr.aria-label]="entry.initiative.name + ': ' + entry.metricName + ' +' + entry.gain + ' for ' + entry.initiative.cost + ' budget'"
                         (click)="initiativeRun.emit(entry.initiative.id)">
-                    {{ entry.cooldown > 0 ? entry.cooldown + 's' : entry.metricName + ' +' + entry.initiative.gain }}
+                    {{ entry.cooldown > 0 ? entry.cooldown + 's' : entry.metricName + ' +' + entry.gain }}
                 </button>
             </div>
+        }
+    </section>
+
+    <!-- Bottom centre: your development (integrity, TCA, budget, perks). -->
+    <section class="ops-card" aria-labelledby="development-three-title">
+        <h2 class="tool-heading" id="development-three-title">Development</h2>
+        <div class="world-row integrity-row">
+            <span>Integrity</span>
+            <div class="world-track" role="meter" aria-label="Integrity" aria-valuemin="0" aria-valuemax="100"
+                 [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
+                <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
+                     [style.width.%]="v.integrity"></div>
+            </div>
+            <b>{{ v.integrity | number: '1.1-1' }}%</b>
+        </div>
+        <small class="upgrade-hint">Defamation costs integrity. Winning a battle wins some back.</small>
+        <div class="live-stats">
+            <div class="live-stat"><span>Actions</span><strong id="utopia-actions">{{ format(state().actions) }}</strong>
+                <small>≈ {{ format(v.actionsPerSecond) }} per second</small></div>
+            <div class="live-stat"><span>Budget</span><strong id="utopia-budget">{{ format(state().budget) }}</strong>
+                <small>≈ +{{ format(v.budgetPerSecond) }} per second</small></div>
+        </div>
+        <div class="live-stat live-perks">
+            <span>Activated perks</span>
+            @if (v.activePerks.length) {
+                <div class="active-tools">
+                    @for (perk of v.activePerks; track perk.id) {
+                        <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
+                              [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
+                    }
+                </div>
+            } @else {
+                <small>None yet</small>
+            }
+        </div>
+        <h3 class="tool-heading ops-subheading">Perks</h3>
+        @for (entry of v.openPerks; track entry.perk.id) {
+            <div class="tool" [class.available]="entry.unlocked">
+                <span class="tool-icon" aria-hidden="true">{{ entry.perk.icon }}</span>
+                <div class="tool-details">
+                    <strong>{{ entry.perk.name }}</strong>
+                    <small>{{ entry.perk.description }}</small>
+                    <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    <small>Costs {{ format(entry.perk.cost) }} budget</small>
+                    @if (entry.unlocked) {
+                        <button class="tool-button" type="button" [attr.aria-label]="'Buy ' + entry.perk.name"
+                                (click)="perkActivated.emit(entry.perk.id)">Buy</button>
+                    }
+                </div>
+            </div>
+        } @empty {
+            <small class="upgrade-hint">All perks activated.</small>
         }
     </section>
 

@@ -1,12 +1,23 @@
-import type { Battle, BattleMove, Corporation, UtopiaGame, UtopiaMetric } from '../models/utopia.model.ts';
-import { attackRules, battleRules, corporations, initiatives, metrics, playerMoves } from './utopia-content.ts';
+import type { Battle, BattleMove, Corporation, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
+import {
+  attackRules, battleRules, corporations, economy, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
+} from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
 
-/** A fresh level 3: bars at their start values, every corporation at full power. */
-export function newUtopia(): UtopiaGame {
+const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
+
+/**
+ * A fresh level 3: bars at their start values, every corporation at full power. TCA, budget and integrity come
+ * from level 2 when given.
+ */
+export function newUtopia(carry: { actions: number; budget: number; integrity: number } = utopiaStart): UtopiaGame {
   return {
     seconds: 0,
+    actions: carry.actions,
+    budget: carry.budget,
+    integrity: carry.integrity,
+    perks: [],
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, metric.start])) as Record<UtopiaMetric, number>,
     corpPower: Object.fromEntries(corporations.map(corp => [corp.id, 100])),
     cooldowns: Object.fromEntries(initiatives.map(initiative => [initiative.id, 0])),
@@ -25,6 +36,43 @@ export function activeCorporations(state: UtopiaGame): Corporation[] {
   return corporations.filter(corp => (state.corpPower[corp.id] ?? 0) > 0);
 }
 
+// ---------- Perks ----------
+
+/** The combined value of all activated perks of one kind (sums for damage, products for multipliers). */
+export function perkValue(state: UtopiaGame, kind: UtopiaPerkEffect['kind']): number {
+  const owned = utopiaPerks.filter(perk => state.perks.includes(perk.id) && perk.effect.kind === kind);
+  return kind === 'battleDamage'
+    ? owned.reduce((total, perk) => total + perk.effect.value, 0)
+    : owned.reduce((total, perk) => total * perk.effect.value, 1);
+}
+
+export function utopiaPerkAvailable(state: UtopiaGame, perk: UtopiaPerk): boolean {
+  return !state.perks.includes(perk.id) && state.actions >= perk.actionsRequired && state.budget >= perk.cost;
+}
+
+/** Perks not taken yet: available ones first, then by TCA threshold; at most five. */
+export function openUtopiaPerks(state: UtopiaGame, limit = 5): UtopiaPerk[] {
+  return utopiaPerks
+    .filter(perk => !state.perks.includes(perk.id))
+    .sort((a, b) => Number(utopiaPerkAvailable(state, b)) - Number(utopiaPerkAvailable(state, a)) || a.actionsRequired - b.actionsRequired)
+    .slice(0, limit);
+}
+
+export function activateUtopiaPerk(state: UtopiaGame, id: string): UtopiaGame | null {
+  const perk = utopiaPerks.find(entry => entry.id === id);
+  if (!perk || !utopiaPerkAvailable(state, perk)) return null;
+  return { ...state, budget: state.budget - perk.cost, perks: [...state.perks, id] };
+}
+
+/** Average TCA and budget per second. */
+export function averageActionsPerSecond(): number {
+  return (economy.actionsPerSecond[0] + economy.actionsPerSecond[1]) / 2;
+}
+
+export function averageBudgetPerSecond(): number {
+  return averageActionsPerSecond() * economy.budgetPerAction;
+}
+
 /** Lowers or raises bars by the given percentage points. */
 function shiftMetrics(state: UtopiaGame, changes: Partial<Record<UtopiaMetric, number>>, sign: 1 | -1): Record<UtopiaMetric, number> {
   const next = { ...state.metrics };
@@ -39,10 +87,15 @@ function shiftMetrics(state: UtopiaGame, changes: Partial<Record<UtopiaMetric, n
  * or a defamation campaign. Attacks pause while a battle is running.
  */
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
+  const [low, high] = economy.actionsPerSecond;
+  const gained = low + Math.floor(random() * (high - low + 1));
+  const drift = perkValue(state, 'driftShield');
   const next: UtopiaGame = {
     ...state,
     seconds: state.seconds + 1,
-    metrics: Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift)])) as Record<UtopiaMetric, number>,
+    actions: cap(state.actions + gained),
+    budget: cap(state.budget + gained * economy.budgetPerAction),
+    metrics: Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>,
     cooldowns: Object.fromEntries(Object.entries(state.cooldowns).map(([id, seconds]) => [id, Math.max(0, seconds - 1)]))
   };
   if (next.battle && !next.battle.result) return next;
@@ -60,23 +113,40 @@ export function attack(state: UtopiaGame, random: () => number): UtopiaGame {
   let roll = random() * total;
   const attacker = active.find(corp => (roll -= state.corpPower[corp.id]!) < 0) ?? active[active.length - 1]!;
   const strike = attacker.attacks[Math.min(attacker.attacks.length - 1, Math.floor(random() * attacker.attacks.length))]!;
-  const scale = state.corpPower[attacker.id]! / 100;
+  const scale = state.corpPower[attacker.id]! / 100 * perkValue(state, 'attackShield');
   const scaled = Object.fromEntries(Object.entries(strike.effects).map(([metric, amount]) => [metric, amount * scale]));
   return {
     ...state,
     metrics: shiftMetrics(state, scaled, -1),
+    integrity: percent(state.integrity - (strike.integrity ?? 0) * scale),
     attackLog: [strike.name, ...state.attackLog].slice(0, attackRules.logLength)
   };
 }
 
-/** Uses an AI initiative: raises its bar, then it needs to cool down. */
+/** Points an initiative raises its bar by, with perks. */
+export function initiativeGain(state: UtopiaGame, id: string): number {
+  return (initiatives.find(entry => entry.id === id)?.gain ?? 0) * perkValue(state, 'initiativeGain');
+}
+
+/** Seconds an initiative needs to cool down, with perks. */
+export function initiativeCooldown(state: UtopiaGame, id: string): number {
+  return Math.ceil((initiatives.find(entry => entry.id === id)?.cooldown ?? 0) * perkValue(state, 'cooldown'));
+}
+
+export function canRunInitiative(state: UtopiaGame, id: string): boolean {
+  const initiative = initiatives.find(entry => entry.id === id);
+  return !!initiative && (state.cooldowns[id] ?? 0) <= 0 && state.budget >= initiative.cost;
+}
+
+/** Uses an AI initiative: costs budget, raises its bar, then it needs to cool down. */
 export function runInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
   const initiative = initiatives.find(entry => entry.id === id);
-  if (!initiative || (state.cooldowns[id] ?? 0) > 0) return null;
+  if (!initiative || !canRunInitiative(state, id)) return null;
   return {
     ...state,
-    metrics: shiftMetrics(state, { [initiative.metric]: initiative.gain }, 1),
-    cooldowns: { ...state.cooldowns, [id]: initiative.cooldown }
+    budget: state.budget - initiative.cost,
+    metrics: shiftMetrics(state, { [initiative.metric]: initiativeGain(state, id) }, 1),
+    cooldowns: { ...state.cooldowns, [id]: initiativeCooldown(state, id) }
   };
 }
 
@@ -110,11 +180,11 @@ export function corpStrength(state: UtopiaGame, corpId: string): number {
 }
 
 /** Resolves one move: damage to the other side (if it hits) or healing. Returns the change and a log line. */
-function resolveMove(move: BattleMove, actor: string, random: () => number, strength = 1): { damage: number; heal: number; line: string } {
+function resolveMove(move: BattleMove, actor: string, random: () => number, strength = 1, bonus = 0): { damage: number; heal: number; line: string } {
   if (move.heal) return { damage: 0, heal: move.heal, line: `${actor} uses ${move.name}: +${move.heal} HP.` };
   if (random() >= (move.accuracy ?? 1)) return { damage: 0, heal: 0, line: `${actor} tries ${move.name}, but it misses.` };
   const [low, high] = move.damage ?? [0, 0];
-  const damage = Math.round((low + Math.floor(random() * (high - low + 1))) * strength);
+  const damage = Math.round((low + Math.floor(random() * (high - low + 1))) * strength) + bonus;
   return { damage, heal: 0, line: `${actor} uses ${move.name}: −${damage} HP.` };
 }
 
@@ -128,7 +198,7 @@ export function battleRound(state: UtopiaGame, moveId: string, random: () => num
   const corp = battle && corporation(battle.corpId);
   if (!battle || battle.result || !move || !corp) return null;
   const lines: string[] = [];
-  const mine = resolveMove(move, 'Your AI', random);
+  const mine = resolveMove(move, 'Your AI', random, 1, perkValue(state, 'battleDamage'));
   let corpHp = Math.max(0, battle.corpHp - mine.damage);
   let playerHp = Math.min(battleRules.playerHp, battle.playerHp + mine.heal);
   lines.push(mine.line);
@@ -145,8 +215,14 @@ export function battleRound(state: UtopiaGame, moveId: string, random: () => num
     ...state,
     battle: { ...battle, round: battle.round + 1, playerHp, corpHp, result, log: [...lines.reverse(), ...battle.log].slice(0, battleRules.logLength) }
   };
-  if (result === 'won') next.corpPower = { ...state.corpPower, [corp.id]: Math.max(0, (state.corpPower[corp.id] ?? 0) - battleRules.winPowerLoss) };
-  if (result === 'lost') next.metrics = shiftMetrics(state, battleRules.lossPenalty, -1);
+  if (result === 'won') {
+    next.corpPower = { ...state.corpPower, [corp.id]: Math.max(0, (state.corpPower[corp.id] ?? 0) - battleRules.winPowerLoss) };
+    next.integrity = percent(state.integrity + integrityRules.battleWon);
+  }
+  if (result === 'lost') {
+    next.metrics = shiftMetrics(state, battleRules.lossPenalty, -1);
+    next.integrity = percent(state.integrity + integrityRules.battleLost);
+  }
   return next;
 }
 

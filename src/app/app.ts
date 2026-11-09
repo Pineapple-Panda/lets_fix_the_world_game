@@ -10,7 +10,7 @@ import { StatsComponent } from './components/stats/stats';
 import { VictoryComponent } from './components/victory/victory';
 import { EventDialogComponent } from './components/event-dialog/event-dialog';
 import { LevelThreeComponent } from './components/level-three/level-three';
-import { battleRound, closeBattle, newUtopia, runInitiative, startBattle, tickUtopia } from './game/utopia';
+import { activateUtopiaPerk, battleRound, closeBattle, newUtopia, runInitiative, startBattle, tickUtopia } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
@@ -330,7 +330,8 @@ export class AppComponent {
 
   /** Leaves level 2 for good: level 3 starts fresh. */
   startLevelThree(): void {
-    const state = newUtopia();
+    const live = this.launched();
+    const state = newUtopia(live ? { actions: live.actions, budget: live.budget, integrity: live.integrity } : undefined);
     this.launched.set(null);
     this.utopia.set(state);
     this.persistUtopia(state);
@@ -340,6 +341,10 @@ export class AppComponent {
   skipToLevelThree(): void {
     if (!window.confirm('Skip to level 3? Your level 2 progress will be lost.')) return;
     this.startLevelThree();
+  }
+
+  activateUtopiaPerk(id: string): void {
+    this.updateUtopia(state => activateUtopiaPerk(state, id));
   }
 
   runInitiative(id: string): void {

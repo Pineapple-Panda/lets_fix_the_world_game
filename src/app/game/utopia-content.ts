@@ -2,10 +2,19 @@
  * Level 3 content and balance. Everything you might want to tune lives here: bars, corporations, battle moves,
  * attacks, initiatives and the effects of winning or losing a battle.
  */
-import type { BattleMove, Corporation, Initiative, MetricDefinition, UtopiaMetric } from '../models/utopia.model.ts';
+import type { BattleMove, Corporation, Initiative, MetricDefinition, UtopiaMetric, UtopiaPerk } from '../models/utopia.model.ts';
 
 /** Working title of the alliance of EdisonX, Mississippi Corp and Bananas Inc. */
 export const megaCorpName = 'MegaCorp';
+
+/** Starting values when level 3 is not reached from level 2 (otherwise TCA, budget and integrity carry over). */
+export const utopiaStart = { actions: 10000000, budget: 20000000, integrity: 50 };
+
+/** TCA and budget per second: a random 50–300 actions, each worth 1 budget. */
+export const economy = { actionsPerSecond: [50, 300] as [number, number], budgetPerAction: 1 };
+
+/** Integrity change after a battle. */
+export const integrityRules = { battleWon: 5, battleLost: -10 };
 
 /** The utopia's bars, in display order. */
 export const metrics: MetricDefinition[] = [
@@ -27,6 +36,20 @@ export const battleRules = {
   /** Lines kept in the battle log. */
   logLength: 6
 };
+
+/** Level 3 perks, shown at most five at a time (available ones first). */
+export const utopiaPerks: UtopiaPerk[] = [
+  { id: 'counter-lobby', name: 'Counter-Lobby Network', description: 'Ex-lobbyists who switched sides. Your battle attacks deal +5 damage.', icon: 'CL',
+    actionsRequired: 15000000, cost: 3000000, effect: { kind: 'battleDamage', value: 5 } },
+  { id: 'open-source-ai', name: 'Open-Source Initiatives', description: 'Anyone can improve your AI initiatives. They raise their bar twice as much.', icon: 'OS',
+    actionsRequired: 25000000, cost: 5000000, effect: { kind: 'initiativeGain', value: 2 } },
+  { id: 'fact-checkers', name: 'Global Fact-Checker Guild', description: 'Every MegaCorp claim is checked within minutes. Their attacks hit half as hard.', icon: 'FC',
+    actionsRequired: 40000000, cost: 8000000, effect: { kind: 'attackShield', value: 0.5 } },
+  { id: 'basic-services', name: 'Universal Basic Services', description: 'Homes, food and training as a right, not a product. The bars erode half as fast.', icon: 'UB',
+    actionsRequired: 60000000, cost: 12000000, effect: { kind: 'driftShield', value: 0.5 } },
+  { id: 'ai-scheduler', name: 'AI Task Scheduler', description: 'Your AI plans the next initiative while the last one runs. Cooldowns are halved.', icon: 'TS',
+    actionsRequired: 80000000, cost: 15000000, effect: { kind: 'cooldown', value: 0.5 } }
+];
 
 /** Your AI system's moves in battle. */
 export const playerMoves: BattleMove[] = [
@@ -55,7 +78,8 @@ export const corporations: Corporation[] = [
     ],
     attacks: [
       { name: 'Bananas Inc. buys up farmland to grow only bananas', effects: { food: 4 } },
-      { name: 'Bananas Inc. sues your vertical farms for “unfair photosynthesis”', effects: { food: 2, housing: 1 } }
+      { name: 'Bananas Inc. sues your vertical farms for “unfair photosynthesis”', effects: { food: 2, housing: 1 }, integrity: 1 },
+      { name: 'Bananas Inc. pays influencers to call your utopia “a banana-free dictatorship”', effects: {}, integrity: 4 }
     ]
   },
   {
@@ -69,7 +93,8 @@ export const corporations: Corporation[] = [
     ],
     attacks: [
       { name: 'Mississippi Corp replaces 10,000 warehouse workers with robots overnight', effects: { employment: 4 } },
-      { name: 'Mississippi Corp buys every empty building “for storage”', effects: { housing: 4 } }
+      { name: 'Mississippi Corp buys every empty building “for storage”', effects: { housing: 4 } },
+      { name: 'Mississippi Corp’s product reviews suddenly rate your AI one star', effects: { employment: 1 }, integrity: 3 }
     ]
   },
   {
@@ -82,7 +107,7 @@ export const corporations: Corporation[] = [
       { id: 'hyperloop', name: 'Hyperloop of Lies', description: '', damage: [25, 35], accuracy: 0.6 }
     ],
     attacks: [
-      { name: 'EdisonX posts that your AI “wants to steal your job” — 400 million views', effects: { employment: 2, housing: 1, food: 1 } },
+      { name: 'EdisonX posts that your AI “wants to steal your job” — 400 million views', effects: { employment: 2, housing: 1, food: 1 }, integrity: 3 },
       { name: 'EdisonX sues you for building homes in the path of its future launch pads', effects: { housing: 3 } }
     ]
   }
@@ -90,7 +115,7 @@ export const corporations: Corporation[] = [
 
 /** What your AI system can do for the utopia. */
 export const initiatives: Initiative[] = [
-  { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.', metric: 'employment', gain: 3, cooldown: 10 },
-  { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.', metric: 'housing', gain: 3, cooldown: 10 },
-  { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.', metric: 'food', gain: 3, cooldown: 10 }
+  { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.', metric: 'employment', gain: 3, cooldown: 10, cost: 250000 },
+  { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.', metric: 'housing', gain: 3, cooldown: 10, cost: 250000 },
+  { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.', metric: 'food', gain: 3, cooldown: 10, cost: 250000 }
 ];

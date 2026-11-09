@@ -1867,6 +1867,50 @@ test('defeated corporations cannot be fought, and the rules are easy to change',
   assert.deepEqual(utopiaContent.battleRules.lossPenalty, { employment: 25, housing: 25, food: 25 });
 });
 
+test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing them', () => {
+  const carried = utopia.newUtopia({ actions: 123456789, budget: 4000000, integrity: 81 });
+  assert.equal(carried.actions, 123456789);
+  assert.equal(carried.budget, 4000000);
+  assert.equal(carried.integrity, 81);
+  assert.deepEqual(carried.perks, []);
+  assert.deepEqual([utopia.newUtopia().actions, utopia.newUtopia().budget, utopia.newUtopia().integrity], [10000000, 20000000, 50]);
+  const next = utopia.tickUtopia(carried, () => 0);
+  assert.equal(next.actions, 123456789 + 50);
+  assert.equal(next.budget, 4000000 + 50, '1 budget per action');
+});
+
+test('initiatives cost budget; defamation costs integrity; battles move it', () => {
+  const poor = { ...utopia.newUtopia(), budget: 249999 };
+  assert.equal(utopia.runInitiative(poor, 'career-match'), null, 'needs 250,000');
+  assert.equal(utopia.runInitiative(utopia.newUtopia(), 'career-match').budget, 20000000 - 250000);
+  const smeared = utopia.attack({ ...utopia.newUtopia(), corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0.99);
+  assert.equal(smeared.integrity, 46, 'influencer smear: −4 integrity');
+  let won = utopia.startBattle(utopia.newUtopia(), 'bananas');
+  while (!won.battle.result) won = utopia.battleRound(won, 'fact-check', () => 0.99);
+  assert.equal(won.integrity, 55, '+5 for a win');
+});
+
+test('level 3 perks: at most five, available first, each with its own effect', () => {
+  const rich = { ...utopia.newUtopia(), actions: 100000000, budget: 100000000 };
+  assert.ok(utopia.openUtopiaPerks(rich).length <= 5);
+  assert.equal(utopia.openUtopiaPerks({ ...utopia.newUtopia(), actions: 30000000 })[0].id, 'counter-lobby', 'available first');
+  assert.equal(utopia.activateUtopiaPerk(utopia.newUtopia(), 'counter-lobby'), null, 'needs 15M TCA');
+  let state = utopia.activateUtopiaPerk(rich, 'open-source-ai');
+  assert.equal(state.budget, 100000000 - 5000000);
+  assert.equal(utopia.initiativeGain(state, 'career-match'), 6, 'twice the gain');
+  state = utopia.activateUtopiaPerk(state, 'ai-scheduler');
+  assert.equal(utopia.initiativeCooldown(state, 'career-match'), 5, 'half the cooldown');
+  state = utopia.activateUtopiaPerk(state, 'fact-checkers');
+  const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
+  assert.equal(75 - shielded.metrics.food, 2, 'attacks hit half as hard');
+  state = utopia.activateUtopiaPerk(state, 'basic-services');
+  assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
+  state = utopia.activateUtopiaPerk(state, 'counter-lobby');
+  let battle = utopia.startBattle(state, 'bananas');
+  battle = utopia.battleRound(battle, 'fact-check', () => 0);
+  assert.equal(battle.battle.corpHp, 100 - (16 + 5), 'counter-lobby adds 5 damage');
+});
+
 test('level 3 saves and loads', () => {
   const store = memoryStorage();
   const state = utopia.startBattle(utopia.newUtopia(), 'mississippi');

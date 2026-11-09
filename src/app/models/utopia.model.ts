@@ -5,6 +5,13 @@ export type UtopiaMetric = 'employment' | 'housing' | 'food';
 
 export interface UtopiaGame {
   seconds: number;
+  /** Total coding actions (TCA), budget and integrity carry over from level 2. */
+  actions: number;
+  budget: number;
+  /** Integrity in percent (0–100). */
+  integrity: number;
+  /** Activated level 3 perks. */
+  perks: string[];
   /** Current value of every bar in percent. */
   metrics: Record<UtopiaMetric, number>;
   /** Power of every corporation in percent; 0 means defeated. */
@@ -60,6 +67,8 @@ export interface CorpAttack {
   name: string;
   /** Percentage points lost per bar at full corporation power. */
   effects: Partial<Record<UtopiaMetric, number>>;
+  /** Integrity lost at full corporation power (defamation). */
+  integrity?: number;
 }
 
 export interface Corporation {
@@ -80,4 +89,26 @@ export interface Initiative {
   /** Percentage points gained per use. */
   gain: number;
   cooldown: number;
+  /** Budget per use. */
+  cost: number;
+}
+
+/** What a level 3 perk changes. Add a kind here and handle it in `utopia.ts` to create new effects. */
+export type UtopiaPerkEffect =
+  | { kind: 'battleDamage'; value: number }
+  | { kind: 'initiativeGain'; value: number }
+  | { kind: 'attackShield'; value: number }
+  | { kind: 'driftShield'; value: number }
+  | { kind: 'cooldown'; value: number };
+
+export interface UtopiaPerk {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  /** Total coding actions needed before it can be taken. */
+  actionsRequired: number;
+  /** Budget price. */
+  cost: number;
+  effect: UtopiaPerkEffect;
 }

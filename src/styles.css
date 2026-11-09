@@ -1592,7 +1592,7 @@ footer {
 
 .utopia {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: minmax(260px, 1fr) auto;
     gap: 10px;
     flex: 1;
@@ -1762,4 +1762,9 @@ footer {
     .utopia {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+/* Level 3 stats sit in a narrower column. */
+.utopia .live-stat strong {
+    font-size: 17px;
 }
