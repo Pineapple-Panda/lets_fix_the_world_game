@@ -1896,10 +1896,10 @@ test('initiatives cost budget; defamation costs integrity; battles move it', () 
 });
 
 test('level 3 perks: at most five, available first, each with its own effect', () => {
-  const rich = { ...opened(), actions: 100000000, budget: 100000000 };
+  const rich = { ...opened(), actions: 500000000, budget: 100000000 };
   assert.ok(utopia.openUtopiaPerks(rich).length <= 5);
   assert.equal(utopia.openUtopiaPerks({ ...utopia.newUtopia(), actions: 30000000 })[0].id, 'utopia-blueprint', 'available first, then by threshold');
-  assert.equal(utopia.activateUtopiaPerk(opened(), 'counter-lobby'), null, 'needs 1M TCA gained in level 3');
+  assert.equal(utopia.activateUtopiaPerk(opened(), 'counter-lobby'), null, 'needs 270M total TCA');
   let state = utopia.activateUtopiaPerk(rich, 'open-source-ai');
   assert.equal(state.budget, 100000000 - 5000000);
   assert.equal(utopia.initiativeGain(state, 'career-match'), 6, 'twice the gain');
@@ -1916,23 +1916,23 @@ test('level 3 perks: at most five, available first, each with its own effect', (
   assert.equal(battle.battle.corpHp, 100 - (16 + 5), 'counter-lobby adds 5 damage');
 });
 
-test('Utopia and MegaCorp start hidden and open through perks counted from the level 3 start', () => {
-  const start = utopia.newUtopia({ actions: 200000000, budget: 50000000, integrity: 70, actionRate: 1000, budgetRate: 1000 });
-  assert.equal(start.startActions, 200000000);
+test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total TCA', () => {
+  const start = utopia.newUtopia({ actions: 249950000, budget: 0, integrity: 70, actionRate: 1000, budgetRate: 0 });
   assert.equal(utopia.cardUnlocked(start, 'utopia'), false);
   assert.equal(utopia.cardUnlocked(start, 'megacorp'), false);
-  assert.equal(utopia.activateUtopiaPerk(start, 'utopia-blueprint'), null, 'the 200M from level 2 do not count');
+  assert.equal(utopia.activateUtopiaPerk(start, 'utopia-blueprint'), null, 'needs 250M total TCA');
   let later = start;
   for (let second = 0; second < 50; second++) later = utopia.tickUtopia(later, () => 0);
   assert.deepEqual(later.metrics, start.metrics, 'the bars wait for the Utopia card');
   assert.equal(later.nextAttack, start.nextAttack, 'MegaCorp waits too');
-  assert.equal(utopia.actionsGained(later), 50000);
-  assert.equal(utopia.runInitiative(later, 'career-match'), null, 'no initiatives yet');
+  assert.equal(utopia.runInitiative({ ...later, budget: 1000000 }, 'career-match'), null, 'no initiatives yet');
   assert.equal(utopia.startBattle(later, 'bananas'), null, 'no battles yet');
   later = utopia.activateUtopiaPerk(later, 'utopia-blueprint');
+  assert.equal(later.budget, 0, 'free');
   assert.equal(utopia.cardUnlocked(later, 'utopia'), true);
   assert.ok(utopia.tickUtopia(later, () => 0).metrics.employment < 65, 'now the bars erode');
-  assert.equal(utopia.activateUtopiaPerk(later, 'opposition-research'), null, 'needs 250,000 gained');
+  assert.equal(utopia.activateUtopiaPerk(later, 'opposition-research'), null, 'needs 260M');
+  assert.equal(utopia.cardUnlocked(utopia.activateUtopiaPerk({ ...later, actions: 260000000 }, 'opposition-research'), 'megacorp'), true);
 });
 
 test('level 3 saves and loads', () => {

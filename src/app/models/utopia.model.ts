@@ -115,7 +115,7 @@ export interface UtopiaPerk {
   name: string;
   description: string;
   icon: string;
-  /** Coding actions to gain in level 3 before it can be taken. */
+  /** Total coding actions needed before it can be taken. */
   actionsRequired: number;
   /** Budget price. */
   cost: number;

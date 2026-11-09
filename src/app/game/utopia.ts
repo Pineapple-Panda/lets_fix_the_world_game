@@ -69,7 +69,7 @@ export function actionsGained(state: UtopiaGame): number {
 }
 
 export function utopiaPerkAvailable(state: UtopiaGame, perk: UtopiaPerk): boolean {
-  return !state.perks.includes(perk.id) && actionsGained(state) >= perk.actionsRequired && state.budget >= perk.cost;
+  return !state.perks.includes(perk.id) && state.actions >= perk.actionsRequired && state.budget >= perk.cost;
 }
 
 /** Perks not taken yet: available ones first, then by TCA threshold; at most five. */

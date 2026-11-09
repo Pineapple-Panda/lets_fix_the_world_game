@@ -109,11 +109,13 @@
                 <div class="tool-details">
                     <strong>{{ entry.perk.name }}</strong>
                     <small>{{ entry.perk.description }}</small>
-                    <small>Unlock: Gain {{ format(entry.perk.actionsRequired) }} coding actions in level 3 ({{ format(v.actionsGained < entry.perk.actionsRequired ? v.actionsGained : entry.perk.actionsRequired) }} so far)</small>
-                    <small>Costs {{ format(entry.perk.cost) }} budget</small>
+                    <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    @if (entry.perk.cost) {
+                        <small>Costs {{ format(entry.perk.cost) }} budget</small>
+                    }
                     @if (entry.unlocked) {
-                        <button class="tool-button" type="button" [attr.aria-label]="'Buy ' + entry.perk.name"
-                                (click)="perkActivated.emit(entry.perk.id)">Buy</button>
+                        <button class="tool-button" type="button" [attr.aria-label]="(entry.perk.cost ? 'Buy ' : 'Activate ') + entry.perk.name"
+                                (click)="perkActivated.emit(entry.perk.id)">{{ entry.perk.cost ? 'Buy' : 'Activate' }}</button>
                     }
                 </div>
             </div>
