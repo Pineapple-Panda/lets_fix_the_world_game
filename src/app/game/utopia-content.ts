@@ -53,13 +53,13 @@ export const attackRules = {
 };
 
 /**
- * Duels: a bar starts at 50%. Each click on the button adds 0.5%, and it drains by 5% per second (in small steps).
+ * Duels: a bar starts at 50%. Each click on the button adds 1%, and it drains by 5% per second (in small steps).
  * At 100% you win and every corporation loses 5% power; at 0% you lose 5 credibility. MegaCorp starts a duel instead
  * of playing a card with a 15% chance. After a duel, the next one can start after 30 seconds.
  */
 export const duelRules = {
   start: 50,
-  clickGain: 0.5,
+  clickGain: 1,
   drainPerSecond: 5,
   /** Milliseconds between two drain steps in the dialog. */
   stepMs: 100,
