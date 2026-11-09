@@ -2031,7 +2031,8 @@ test('level 3 is won with every bar at 100% and lost once all of them drop to 0%
 });
 
 test('Hyper-Scaling multiplies TCA and budget per second by ten for 5,000,000', () => {
-  const base = { ...opened(), actionRate: 13000, budgetRate: 13000 };
+  assert.equal(utopia.activateUtopiaPerk({ ...opened(), actions: 309999999 }, 'hyper-scaling'), null, 'needs 310M TCA');
+  const base = { ...opened(), actions: 310000000, actionRate: 13000, budgetRate: 13000 };
   const boosted = utopia.activateUtopiaPerk(base, 'hyper-scaling');
   assert.equal(boosted.budget, base.budget - 5000000);
   assert.equal(utopia.actionsPerSecond(boosted), 130000);
