@@ -1986,6 +1986,35 @@ test('each utopia bar shows its current change per second', () => {
   assert.ok(Math.abs(utopia.tickUtopia(state, () => 0.99).metrics.housing - (before + utopia.metricRate(state, 'housing'))) < 1e-9, 'matches the tick');
 });
 
+test('duels: a tug-of-war bar; win costs MegaCorp 5% power, losing costs 5 credibility', () => {
+  assert.equal(utopia.startDuel({ ...opened(), perks: ['utopia-blueprint'] }), null, 'only once MegaCorp is known');
+  let state = utopia.startDuel(opened());
+  assert.deepEqual(state.duel, { startedBy: 'player', result: null });
+  assert.equal(utopia.startDuel(state), null, 'one duel at a time');
+  // The bar: +0.5 per click, −5 per second.
+  assert.deepEqual(utopia.duelStep(50, 1, 0), { bar: 50.5, result: null });
+  assert.deepEqual(utopia.duelStep(50, 0, 1), { bar: 45, result: null });
+  assert.deepEqual(utopia.duelStep(99.8, 1, 0), { bar: 100, result: 'won' });
+  assert.deepEqual(utopia.duelStep(0.3, 0, 0.1), { bar: 0, result: 'lost' });
+  const won = utopia.finishDuel(state, true);
+  assert.deepEqual(won.corpPower, { bananas: 70, mississippi: 70, edison: 70 });
+  assert.equal(won.duel.result, 'won');
+  assert.equal(utopia.finishDuel(won, true), null, 'decided only once');
+  const lost = utopia.finishDuel(state, false);
+  assert.equal(lost.integrity, 45);
+  const closed = utopia.closeDuel(won);
+  assert.equal(closed.duel, null);
+  assert.equal(utopia.canDuel(closed), false, '30 seconds cooldown');
+  let later = closed;
+  for (let second = 0; second < 30; second++) later = utopia.tickUtopia({ ...later, nextAttack: 99 }, () => 0.99);
+  assert.equal(utopia.canDuel(later), true);
+  // MegaCorp challenges you instead of playing a card with a 15% chance.
+  const challenged = utopia.tickUtopia({ ...opened(), nextAttack: 1 }, () => 0.1);
+  assert.deepEqual(challenged.duel, { startedBy: 'megacorp', result: null });
+  const paused = utopia.tickUtopia({ ...challenged, nextAttack: 1 }, () => 0.99);
+  assert.equal(paused.attackLog.length, 0, 'no MegaCorp moves while a duel is open');
+});
+
 test('level 3 saves and loads', () => {
   const store = memoryStorage();
   const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: [{ cardId: 'propaganda', corpId: 'bananas' }] };

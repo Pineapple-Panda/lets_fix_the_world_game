@@ -1,6 +1,6 @@
 import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, corporations, corpStartPower, counterInitiatives, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
+  attackRules, corporations, corpStartPower, counterInitiatives, duelRules, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
@@ -32,7 +32,9 @@ export function newUtopia(
     nextAttack: attackRules.baseInterval,
     attackLog: [],
     effects: [],
-    cardCooldowns: {}
+    cardCooldowns: {},
+    duel: null,
+    duelCooldown: 0
   };
 }
 
@@ -127,10 +129,15 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
     runCounterInitiatives(next);
   }
   runCards(next);
-  // MegaCorp only plays cards once you know about it.
-  if (!cardUnlocked(state, 'megacorp')) return next;
+  if (next.duelCooldown > 0 && !next.duel) next.duelCooldown = next.duelCooldown - 1;
+  // MegaCorp only plays cards once you know about it, and waits while a duel is open.
+  if (!cardUnlocked(state, 'megacorp') || next.duel) return next;
   next.nextAttack = state.nextAttack - 1;
   if (next.nextAttack > 0) return next;
+  // Sometimes MegaCorp challenges you to a duel instead of playing a card.
+  if (canDuel(next) && random() < duelRules.megacorpChance) {
+    return { ...next, duel: { startedBy: 'megacorp', result: null }, nextAttack: attackInterval(next) };
+  }
   const played = megacorpMove(next, random);
   return { ...played, nextAttack: attackInterval(played) };
 }
@@ -381,3 +388,35 @@ function runInitiatives(next: UtopiaGame): void {
   }
 }
 
+
+// ---------- Duels ----------
+
+/** Whether a duel can start now: MegaCorp is known, no duel is open and the cooldown is over. */
+export function canDuel(state: UtopiaGame): boolean {
+  return cardUnlocked(state, 'megacorp') && !state.duel && state.duelCooldown <= 0;
+}
+
+/** You challenge MegaCorp to a duel. */
+export function startDuel(state: UtopiaGame): UtopiaGame | null {
+  return canDuel(state) ? { ...state, duel: { startedBy: 'player', result: null } } : null;
+}
+
+/** The duel's bar reached 100% (won) or 0% (lost): applies the outcome. */
+export function finishDuel(state: UtopiaGame, won: boolean): UtopiaGame | null {
+  if (!state.duel || state.duel.result) return null;
+  const next: UtopiaGame = { ...state, duel: { ...state.duel, result: won ? 'won' : 'lost' } };
+  if (won) applyEffect(next, { kind: 'corpPower', target: 'all', amount: -duelRules.winPowerLoss }, 1);
+  else next.integrity = percent(next.integrity - duelRules.lossCredibility);
+  return next;
+}
+
+/** Closes a decided duel; the next one can start after the cooldown. */
+export function closeDuel(state: UtopiaGame): UtopiaGame | null {
+  return state.duel?.result ? { ...state, duel: null, duelCooldown: duelRules.cooldown } : null;
+}
+
+/** One step of the duel bar: clicks add, time drains; the result once it hits 0% or 100%. */
+export function duelStep(bar: number, clicks: number, seconds: number): { bar: number; result: 'won' | 'lost' | null } {
+  const next = Math.max(0, Math.min(100, bar + clicks * duelRules.clickGain - seconds * duelRules.drainPerSecond));
+  return { bar: next, result: next >= 100 ? 'won' : next <= 0 ? 'lost' : null };
+}

@@ -10,7 +10,10 @@ import { StatsComponent } from './components/stats/stats';
 import { VictoryComponent } from './components/victory/victory';
 import { EventDialogComponent } from './components/event-dialog/event-dialog';
 import { LevelThreeComponent } from './components/level-three/level-three';
-import { activateUtopiaPerk, initializeInitiative, newUtopia, playPlayerCard, startInitiative, stopInitiative, tickUtopia } from './game/utopia';
+import { DuelDialogComponent } from './components/duel-dialog/duel-dialog';
+import {
+  activateUtopiaPerk, closeDuel, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+} from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
@@ -37,7 +40,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent, DuelDialogComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -349,6 +352,18 @@ export class AppComponent {
 
   activateUtopiaPerk(id: string): void {
     this.updateUtopia(state => activateUtopiaPerk(state, id));
+  }
+
+  startDuel(): void {
+    this.updateUtopia(state => startDuel(state));
+  }
+
+  finishDuel(won: boolean): void {
+    this.updateUtopia(state => finishDuel(state, won));
+  }
+
+  closeDuel(): void {
+    this.updateUtopia(state => closeDuel(state));
   }
 
   playCard(id: string): void {

@@ -37,6 +37,12 @@
                     Somewhere, somebody does not like where this is going.</p>
             } @else {
                 <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} vs. you</h2>
+                <div class="duel-start">
+                    <button class="intro-button duel-button" type="button" [disabled]="!v.canDuel" (click)="duelStarted.emit()">
+                        ⚔️ Start a battle
+                    </button>
+                    @if (v.duelCooldown > 0) { <small class="upgrade-hint">Next battle possible in {{ v.duelCooldown }}s</small> }
+                </div>
                 @if (v.activeEffects.length) {
                     <div class="effect-chips" aria-label="Running effects">
                         @for (effect of v.activeEffects; track effect.id) {

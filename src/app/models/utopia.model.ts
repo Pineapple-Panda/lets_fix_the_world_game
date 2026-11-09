@@ -37,6 +37,17 @@ export interface UtopiaGame {
   effects: ActiveEffect[];
   /** Seconds until each of your cards can be played again. */
   cardCooldowns: Record<string, number>;
+  /** The duel shown in its dialog, or null. */
+  duel: Duel | null;
+  /** Seconds until the next duel can start. */
+  duelCooldown: number;
+}
+
+/** A direct duel: a tug-of-war bar in a dialog. */
+export interface Duel {
+  startedBy: CardActor;
+  /** Set once the bar reached 100% (won) or 0% (lost); its effects are already applied. */
+  result: 'won' | 'lost' | null;
 }
 
 /** Who plays a card. */

@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
 import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
@@ -16,6 +16,7 @@ import type { UtopiaGame } from '../../models/utopia.model';
 export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
   readonly cardPlayed = output<string>();
+  readonly duelStarted = output<void>();
   readonly initiativeInitialized = output<string>();
   readonly initiativeStarted = output<string>();
   readonly initiativeStopped = output<string>();
@@ -62,6 +63,8 @@ export class LevelThreeComponent {
       activePerks: utopiaPerks.filter(perk => state.perks.includes(perk.id)),
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,
+      canDuel: canDuel(state),
+      duelCooldown: state.duelCooldown,
       moves: state.attackLog.map((move, index) => {
         const card = actionCard(move.cardId);
         const corp = corporation(move.corpId);

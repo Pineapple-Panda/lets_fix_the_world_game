@@ -52,6 +52,23 @@ export const attackRules = {
   logLength: 5
 };
 
+/**
+ * Duels: a bar starts at 50%. Each click on the button adds 0.5%, and it drains by 5% per second (in small steps).
+ * At 100% you win and every corporation loses 5% power; at 0% you lose 5 credibility. MegaCorp starts a duel instead
+ * of playing a card with a 15% chance. After a duel, the next one can start after 30 seconds.
+ */
+export const duelRules = {
+  start: 50,
+  clickGain: 0.5,
+  drainPerSecond: 5,
+  /** Milliseconds between two drain steps in the dialog. */
+  stepMs: 100,
+  winPowerLoss: 5,
+  lossCredibility: 5,
+  megacorpChance: 0.15,
+  cooldown: 30
+};
+
 /** MegaCorp's cards. A random corporation (weighted by power) plays a random one of those it may play. */
 export const megacorpCards: ActionCard[] = [
   { id: 'propaganda', actor: 'megacorp', category: 'damage', name: 'Propaganda Flood',

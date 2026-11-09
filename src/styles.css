@@ -1933,3 +1933,72 @@ footer {
 .utopia .live-stats {
     grid-template-columns: minmax(0, 1fr);
 }
+
+/* Level 3 duels: a centred start button on the top card and a tug-of-war dialog. */
+.duel-start {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.duel-button {
+    background: var(--red);
+    font-size: 14px;
+    padding: 9px 22px;
+}
+
+.duel-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 80%, #fff);
+}
+
+.duel-button:disabled {
+    background: var(--surface-2);
+    color: var(--faint);
+    cursor: not-allowed;
+}
+
+.duel-bar {
+    position: relative;
+    height: 28px;
+    margin: 14px 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg) 80%, var(--red));
+    overflow: hidden;
+}
+
+.duel-fill {
+    height: 100%;
+    background: var(--blue);
+    transition: width .1s linear;
+}
+
+.duel-fill.low { background: var(--red); }
+.duel-fill.high { background: var(--green); }
+
+.duel-value {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font: 700 13px var(--mono);
+    color: var(--ink);
+    text-shadow: 0 1px 2px #000;
+}
+
+.duel-push {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    user-select: none;
+}
+
+.duel-result {
+    color: var(--red);
+    font-weight: 600;
+}
+
+.duel-result.won {
+    color: var(--green);
+}
