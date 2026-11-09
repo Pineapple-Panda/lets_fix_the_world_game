@@ -22,7 +22,15 @@ export interface VictorySummary {
       </dl>
       <p class="victory-verdict">{{ summary().verdict }}</p>
       <p class="victory-teaser">Level 3 is on its way. Something big is brewing.</p>
-      <button class="intro-button" type="button" autofocus (click)="close()">Enjoy the view</button>
+      <div class="victory-actions">
+        <button class="intro-button" type="button" autofocus (click)="close()">Enjoy the view</button>
+        <button class="intro-button event-decline" type="button" (click)="restartLevelOne.emit()">
+          Restart at Level 1<small>Start with 10,000 TCA</small>
+        </button>
+        <button class="intro-button event-decline" type="button" (click)="restartLevelTwo.emit()">
+          Restart at Level 2<small>Start with 10,000,000 TCA and 20,000,000 budget</small>
+        </button>
+      </div>
     </dialog>
   `
 })
@@ -30,6 +38,9 @@ export class VictoryComponent {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly summary = input.required<VictorySummary>();
   readonly dismissed = output<void>();
+  /** A new run: the dialog disappears with the old game, so it is not closed (closing would mark the new run as seen). */
+  readonly restartLevelOne = output<void>();
+  readonly restartLevelTwo = output<void>();
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal());

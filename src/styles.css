@@ -1569,3 +1569,21 @@ footer {
     color: var(--muted);
     font-size: 12px;
 }
+
+.victory-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.victory-actions .intro-button {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+}
+
+.victory-actions small {
+    font-weight: 400;
+    font-size: 11px;
+    opacity: .8;
+}

@@ -15,10 +15,10 @@ import {
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
-  upgradeAutoCoverage, upgradeManualCoverage, work
+  upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
 } from './game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { newsFeed } from './game/news';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
@@ -300,6 +300,19 @@ export class AppComponent {
 
   pitch(): void {
     this.updateLaunched(state => pitch(state));
+  }
+
+  /** After completing level 2: a new run of level 1 with 10,000 TCA. */
+  restartLevelOne(): void {
+    this.launched.set(null);
+    this.update(() => headStartGame());
+  }
+
+  /** After completing level 2: a new run of level 2 with 10,000,000 TCA and 20,000,000 budget. */
+  restartLevelTwo(): void {
+    const state = replayLevelTwo();
+    this.launched.set(state);
+    this.persistLaunched(state);
   }
 
   dismissVictory(): void {

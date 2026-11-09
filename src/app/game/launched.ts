@@ -128,6 +128,14 @@ export function pitch(state: LaunchedGame): LaunchedGame | null {
   };
 }
 
+/** A new run of level 2 after completing it: 10,000,000 actions and 20,000,000 budget. */
+export const replayLevelTwoActions = 10000000;
+export const replayLevelTwoBudget = 20000000;
+
+export function replayLevelTwo(): LaunchedGame {
+  return newLaunchedState(replayLevelTwoActions, replayLevelTwoBudget);
+}
+
 /** Every problem at 0%. */
 export function noProgress(): Record<WorldProblem, number> {
   return { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 };

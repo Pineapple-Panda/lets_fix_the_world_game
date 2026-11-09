@@ -62,6 +62,14 @@ export function newGame(): Game {
   };
 }
 
+/** Coding actions a new run of level 1 starts with after level 2 was completed. */
+export const replayActions = 10000;
+
+/** A fresh level 1 with a head start of coding actions (already counted for deployments). */
+export function headStartGame(actions = replayActions): Game {
+  return { ...newGame(), actions, lastDeploymentActions: actions };
+}
+
 export function openBugs(game: Game): Item[] {
   return game.items.filter(item => item.type === 'bug' && !item.done);
 }

@@ -8,7 +8,8 @@
                 <app-event-dialog [event]="pending.event" [canAccept]="pending.canAccept" (answered)="answerEvent($event)" />
             }
             @if (victory(); as summary) {
-                <app-victory [summary]="summary" (dismissed)="dismissVictory()" />
+                <app-victory [summary]="summary" (dismissed)="dismissVictory()"
+                             (restartLevelOne)="restartLevelOne()" (restartLevelTwo)="restartLevelTwo()" />
             }
             <section class="console news-ticker" aria-label="World news">
                 <div class="console-body" role="status" aria-live="polite" tabindex="0">

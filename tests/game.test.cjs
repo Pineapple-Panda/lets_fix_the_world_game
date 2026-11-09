@@ -1727,6 +1727,19 @@ test('special event: the UN asks for servers at 80% integrity', () => {
   assert.equal(launched.answerEvent(asked, false).worldProgress.hunger, 0, 'not now: nothing happens');
 });
 
+test('after the world is fixed, a new run starts with a head start', () => {
+  const one = game.headStartGame();
+  assert.equal(one.actions, 10000);
+  assert.equal(one.lastDeploymentActions, 10000, 'the head start is not paid out at the first deployment');
+  assert.equal(one.budget, 0);
+  const two = launched.replayLevelTwo();
+  assert.equal(two.actions, 10000000);
+  assert.equal(two.budget, 20000000);
+  assert.deepEqual(two.perks, []);
+  assert.equal(two.victorySeen, false);
+  assert.equal(launched.worldFixed(two), false);
+});
+
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
   const content = require('../src/app/game/launched-content.ts');
