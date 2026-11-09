@@ -46,6 +46,8 @@ export interface LaunchedGame {
   stats: LaunchedStats;
   /** True once the player has seen the "world fixed" dialog. */
   victorySeen: boolean;
+  /** Summaries of the levels played before (level 1), for the final summary. */
+  history: LevelSummary[];
   /** Special events already shown (each one appears once). */
   eventsSeen: string[];
   /** The special event waiting for the player's choice, or null. */
@@ -245,4 +247,11 @@ export interface EpicDefinition {
   requiresPerk?: string;
   /** One-time climate solution boost (percentage points) when the epic is done. */
   climateBoost?: number;
+}
+
+/** What happened in one level, frozen when the player moves on. Shown when level 3 is won. */
+export interface LevelSummary {
+  level: number;
+  title: string;
+  facts: { label: string; value: string }[];
 }

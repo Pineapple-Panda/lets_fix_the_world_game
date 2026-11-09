@@ -1,3 +1,4 @@
+import type { LevelSummary } from '../models/launched.model.ts';
 import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
   attackRules, corporations, corpStartPower, counterInitiatives, duelRules, outcomeRules, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
@@ -12,7 +13,8 @@ const cap = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, value);
  * from level 2 when given.
  */
 export function newUtopia(
-  carry: { actions: number; budget: number; integrity: number; actionRate: number; budgetRate: number } = utopiaStart
+  carry: { actions: number; budget: number; integrity: number; actionRate: number; budgetRate: number } = utopiaStart,
+  history: LevelSummary[] = []
 ): UtopiaGame {
   return {
     seconds: 0,
@@ -36,7 +38,9 @@ export function newUtopia(
     duel: null,
     duelCooldown: 0,
     outcome: null,
-    outcomeSeen: false
+    outcomeSeen: false,
+    history,
+    stats: { duelsWon: 0, duelsLost: 0, cardsPlayed: 0, megacorpMoves: 0 }
   };
 }
 
@@ -226,7 +230,8 @@ export function cancelMegacorpEffect(state: UtopiaGame, index: number): UtopiaGa
   return {
     ...state,
     effects: state.effects.filter((_, position) => position !== index),
-    cardCooldowns: { ...state.cardCooldowns, [card.id]: card.cooldown ?? 0 }
+    cardCooldowns: { ...state.cardCooldowns, [card.id]: card.cooldown ?? 0 },
+    stats: { ...state.stats, cardsPlayed: state.stats.cardsPlayed + 1 }
   };
 }
 
@@ -285,7 +290,11 @@ export function megacorpMove(state: UtopiaGame, random: () => number): UtopiaGam
   const deck = megacorpCards.filter(entry => !entry.corpId || entry.corpId === corp.id);
   const card = deck[Math.min(deck.length - 1, Math.floor(random() * deck.length))]!;
   const next = playCard(state, card, corp.id);
-  return { ...next, attackLog: [{ cardId: card.id, corpId: corp.id }, ...state.attackLog].slice(0, attackRules.logLength) };
+  return {
+    ...next,
+    attackLog: [{ cardId: card.id, corpId: corp.id }, ...state.attackLog].slice(0, attackRules.logLength),
+    stats: { ...state.stats, megacorpMoves: state.stats.megacorpMoves + 1 }
+  };
 }
 
 /** Whether one of your cards can be used at all: available from the start, or unlocked by its perk. */
@@ -319,7 +328,11 @@ export function playPlayerCard(state: UtopiaGame, id: string): UtopiaGame | null
   const card = playerCards.find(entry => entry.id === id);
   if (!card || state.outcome || cardBlocker(state, id)) return null;
   const next = playCard(state, card);
-  return { ...next, cardCooldowns: { ...next.cardCooldowns, [id]: card.cooldown ?? 0 } };
+  return {
+    ...next,
+    cardCooldowns: { ...next.cardCooldowns, [id]: card.cooldown ?? 0 },
+    stats: { ...next.stats, cardsPlayed: next.stats.cardsPlayed + 1 }
+  };
 }
 
 /** A short line about what a card does, e.g. "Housing −1%/s for 30s". */
@@ -480,7 +493,11 @@ export function startDuel(state: UtopiaGame): UtopiaGame | null {
 /** The duel's bar reached 100% (won) or 0% (lost): applies the outcome. */
 export function finishDuel(state: UtopiaGame, won: boolean): UtopiaGame | null {
   if (!state.duel || state.duel.result) return null;
-  const next: UtopiaGame = { ...state, duel: { ...state.duel, result: won ? 'won' : 'lost' } };
+  const next: UtopiaGame = {
+    ...state,
+    duel: { ...state.duel, result: won ? 'won' : 'lost' },
+    stats: { ...state.stats, [won ? 'duelsWon' : 'duelsLost']: state.stats[won ? 'duelsWon' : 'duelsLost'] + 1 }
+  };
   if (won) applyEffect(next, { kind: 'corpPower', target: 'all', amount: -duelRules.winPowerLoss }, 1);
   else next.integrity = percent(next.integrity - duelRules.lossCredibility);
   return next;
@@ -508,4 +525,33 @@ export function duelBoostCards(state: UtopiaGame): ActionCard[] {
 export function duelStep(bar: number, clicks: number, seconds: number, clickGain = duelRules.clickGain): { bar: number; result: 'won' | 'lost' | null } {
   const next = Math.max(0, Math.min(100, bar + clicks * clickGain - seconds * duelRules.drainPerSecond));
   return { bar: next, result: next >= 100 ? 'won' : next <= 0 ? 'lost' : null };
+}
+
+// ---------- Final summary ----------
+
+/** Level 3 in a few numbers. */
+export function level3Summary(state: UtopiaGame): LevelSummary {
+  const minutes = Math.round(state.seconds / 60);
+  return {
+    level: 3,
+    title: 'Level 3 · Building utopia',
+    facts: [
+      { label: 'Time', value: minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min` },
+      { label: 'Battles', value: `${state.stats.duelsWon + state.stats.duelsLost} (${state.stats.duelsWon} won, ${state.stats.duelsLost} lost)` },
+      { label: 'Your moves', value: state.stats.cardsPlayed.toLocaleString('en-US') },
+      { label: 'MegaCorp moves', value: state.stats.megacorpMoves.toLocaleString('en-US') },
+      { label: 'Initiatives built', value: state.built.length.toLocaleString('en-US') },
+      { label: 'Corporations defeated', value: `${corporations.filter(corp => (state.corpPower[corp.id] ?? 0) <= 0).length} of ${corporations.length}` },
+      { label: 'Credibility at the end', value: `${Math.round(state.integrity)}%` },
+      { label: 'Coding actions', value: state.actions.toLocaleString('en-US') }
+    ]
+  };
+}
+
+/** All three levels for the final summary; levels that were skipped (dev buttons) are marked as such. */
+export function gameSummary(state: UtopiaGame): LevelSummary[] {
+  const skipped = (level: number, title: string): LevelSummary => ({ level, title, facts: [{ label: 'Skipped', value: 'No stats from this run' }] });
+  const level1 = state.history.find(entry => entry.level === 1) ?? skipped(1, 'Level 1 · Building the platform');
+  const level2 = state.history.find(entry => entry.level === 2) ?? skipped(2, 'Level 2 · Fixing the world');
+  return [level1, level2, level3Summary(state)];
 }

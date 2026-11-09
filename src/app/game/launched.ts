@@ -1,6 +1,7 @@
 import type { Game } from '../models/game.model.ts';
+import { formatVersion } from '../models/version.model.ts';
 import type {
-  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
+  EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LevelSummary, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
   SpecialEvent,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
@@ -56,6 +57,7 @@ function newLaunchedState(actions: number, budget: number): LaunchedGame {
     verdict: null,
     stats: noStats(),
     victorySeen: false,
+    history: [],
     eventsSeen: [],
     pendingEvent: null,
     nsaSeconds: 0,
@@ -66,7 +68,37 @@ function newLaunchedState(actions: number, budget: number): LaunchedGame {
 
 /** Reduces the level 1 game to the level 2 state: only actions and budget survive, level 1 perks are gone. */
 export function launch(game: Game): LaunchedGame | null {
-  return canLaunch(game) ? newLaunchedState(game.actions, game.budget) : null;
+  return canLaunch(game) ? { ...newLaunchedState(game.actions, game.budget), history: [level1Summary(game)] } : null;
+}
+
+/** Level 1 in a few numbers, frozen at the launch. */
+export function level1Summary(game: Game): LevelSummary {
+  return {
+    level: 1,
+    title: 'Level 1 · Building the platform',
+    facts: [
+      { label: 'Time', value: playTime(game.seconds) },
+      { label: 'App version at launch', value: formatVersion(game.appVersion) },
+      { label: 'Deployments', value: game.deployments.toLocaleString('en-US') },
+      { label: 'Bugs that showed up', value: game.bugCount.toLocaleString('en-US') },
+      { label: 'Perks activated', value: game.activatedPerks.length.toLocaleString('en-US') },
+      { label: 'Coding actions', value: game.actions.toLocaleString('en-US') }
+    ]
+  };
+}
+
+/** Level 2 in a few numbers, frozen when level 3 starts. */
+export function level2Summary(state: LaunchedGame): LevelSummary {
+  return {
+    level: 2,
+    title: 'Level 2 · Fixing the world',
+    facts: [
+      ...victorySummary(state).facts,
+      { label: 'Epics shipped', value: state.epics.filter(entry => entry.done).length.toLocaleString('en-US') },
+      { label: 'Servers', value: state.serverSlots.toLocaleString('en-US') },
+      { label: 'Coding actions', value: state.actions.toLocaleString('en-US') }
+    ]
+  };
 }
 
 /** Starting values when level 1 is skipped with the dev button. */
@@ -1216,7 +1248,7 @@ export function fightLawsuit(state: LaunchedGame): LaunchedGame | null {
 // ---------- End of level 2 ----------
 
 /** 8,040 seconds → "2 h 14 min", 300 → "5 min". */
-function playTime(seconds: number): string {
+export function playTime(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   return minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
 }

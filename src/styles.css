@@ -2107,3 +2107,27 @@ footer {
     text-align: center;
     font-weight: 600;
 }
+
+/* Final summary when level 3 is won: one section per level. */
+.final-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.final-summary h2 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: var(--green);
+}
+
+.final-summary .victory-facts {
+    margin: 0;
+    font-size: 12px;
+}
+
+.intro-dialog:has(.final-summary) {
+    width: min(860px, 94vw);
+}

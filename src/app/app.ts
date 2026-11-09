@@ -14,7 +14,7 @@ import { DuelDialogComponent } from './components/duel-dialog/duel-dialog';
 import { GameOverComponent } from './components/game-over/game-over';
 import { UtopiaWonComponent } from './components/utopia-won/utopia-won';
 import {
-  activateUtopiaPerk, cancelMegacorpEffect, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+  activateUtopiaPerk, cancelMegacorpEffect, gameSummary, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
 } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
@@ -26,7 +26,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
 } from './game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { newsFeed } from './game/news';
 import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './game/storage';
@@ -67,6 +67,11 @@ export class AppComponent {
     return live ? newsFeed(live) : [];
   });
   /** Level 3 duel: points per push right now, and the boost moves you can use in the dialog. */
+  /** The summary of all three levels, while the "utopia achieved" dialog is due. */
+  readonly finalSummary = computed(() => {
+    const world = this.utopia();
+    return world && world.outcome === 'won' && !world.outcomeSeen ? gameSummary(world) : null;
+  });
   readonly duelGain = computed(() => {
     const world = this.utopia();
     return world ? duelClickGain(world) : 0;
@@ -349,7 +354,7 @@ export class AppComponent {
     const state = newUtopia(live ? {
       actions: live.actions, budget: live.budget, integrity: live.integrity,
       actionRate: averageActionsPerSecond(live), budgetRate: averageBudgetPerSecond(live)
-    } : undefined);
+    } : undefined, live ? [...live.history, level2Summary(live)] : []);
     this.launched.set(null);
     this.utopia.set(state);
     this.persistUtopia(state);
@@ -369,7 +374,8 @@ export class AppComponent {
   retryLevelThree(): void {
     const current = this.utopia();
     if (!current) return;
-    const state = newUtopia({ actions: current.actions, budget: current.budget, integrity: 50, actionRate: current.actionRate, budgetRate: current.budgetRate });
+    const state = newUtopia({ actions: current.actions, budget: current.budget, integrity: 50, actionRate: current.actionRate, budgetRate: current.budgetRate },
+      current.history);
     this.utopia.set(state);
     this.persistUtopia(state);
   }

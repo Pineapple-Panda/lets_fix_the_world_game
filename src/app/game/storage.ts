@@ -77,6 +77,11 @@ export function saveUtopia(storage: Pick<Storage, 'setItem'>, state: UtopiaGame)
   return value;
 }
 
+/** Saved level summaries: a level number, a title and label/value facts. */
+const isHistory = (value: unknown): boolean => Array.isArray(value) && value.every(entry => isObject(entry) &&
+  typeof entry.level === 'number' && typeof entry.title === 'string' && Array.isArray(entry.facts) &&
+  entry.facts.every(fact => isObject(fact) && typeof fact.label === 'string' && typeof fact.value === 'string'));
+
 const isPercent = (value: unknown): value is number => typeof value === 'number' && value >= 0 && value <= 100;
 const isPercentRecord = (value: unknown): boolean => isObject(value) && Object.values(value).every(isPercent);
 
@@ -92,6 +97,7 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   if (game && game.effects === undefined) Object.assign(game, { effects: [], cardCooldowns: {} });
   if (game && game.duel === undefined) Object.assign(game, { duel: null, duelCooldown: 0 });
   if (game && game.outcome === undefined) Object.assign(game, { outcome: null, outcomeSeen: false });
+  if (game && game.history === undefined) Object.assign(game, { history: [], stats: { duelsWon: 0, duelsLost: 0, cardsPlayed: 0, megacorpMoves: 0 } });
   // The move log used to be text; it is now a list of played cards.
   if (game && Array.isArray(game.attackLog) && game.attackLog.some(entry => typeof entry === 'string')) game.attackLog = [];
   // Battles were removed; older saves may still carry one.
@@ -109,7 +115,8 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !Array.isArray(game.attackLog) || !game.attackLog.every(entry => isObject(entry) && typeof entry.cardId === 'string' && typeof entry.corpId === 'string') ||
     !Array.isArray(game.effects) || !game.effects.every(entry => isObject(entry) && typeof entry.cardId === 'string' && isCount(entry.remaining)) ||
     !isObject(game.cardCooldowns) || !Object.values(game.cardCooldowns).every(isCount) || !isCount(game.duelCooldown) ||
-    ![null, 'won', 'lost'].includes(game.outcome as string | null) || typeof game.outcomeSeen !== 'boolean' ||
+    ![null, 'won', 'lost'].includes(game.outcome as string | null) || typeof game.outcomeSeen !== 'boolean' || !isHistory(game.history) ||
+    !isObject(game.stats) || !['duelsWon', 'duelsLost', 'cardsPlayed', 'megacorpMoves'].every(key => isCount((game.stats as Snapshot)[key])) ||
     !(game.duel === null || (isObject(game.duel) && (game.duel.startedBy === 'player' || game.duel.startedBy === 'megacorp') &&
       [null, 'won', 'lost'].includes(game.duel.result as string | null)))
   ) return null;
@@ -138,6 +145,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
   if (game && game.stats === undefined) game.stats = { lawsuits: game.lawsuitsFiled ?? 0, lawsuitsWon: 0, lawsuitsLost: 0, lawsuitsSettled: 0,
     protestClicks: 0, dirtySeconds: 0, tegridyBags: 0 };
   if (game && game.victorySeen === undefined) game.victorySeen = false;
+  if (game && game.history === undefined) game.history = [];
   if (game && game.eventsSeen === undefined) Object.assign(game, { eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0 });
   if (game && isObject(game.stats) && game.stats.pitches === undefined) game.stats = { ...game.stats, pitches: 0 };
   if (
@@ -152,7 +160,7 @@ export function loadLaunched(storage: Pick<Storage, 'getItem'>): LaunchedGame | 
     !Array.isArray(game.programs) ||
     !Array.isArray(game.completedPrograms) || !game.completedPrograms.every(id => typeof id === 'string') ||
     !isCount(game.lawsuitsFiled) ||
-    typeof game.victorySeen !== 'boolean' ||
+    typeof game.victorySeen !== 'boolean' || !isHistory(game.history) ||
     !Array.isArray(game.eventsSeen) || !game.eventsSeen.every(id => typeof id === 'string') ||
     !(game.pendingEvent === null || typeof game.pendingEvent === 'string') ||
     !['nsaSeconds', 'aidSlots', 'aidSeconds'].every(key => isCount(game[key])) ||

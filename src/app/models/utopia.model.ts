@@ -1,3 +1,4 @@
+import type { LevelSummary } from './launched.model.ts';
 /** Level 3: building a utopia while MegaCorp fights back. */
 
 /** The utopia's bars, each in percent (0–100). */
@@ -45,6 +46,18 @@ export interface UtopiaGame {
   outcome: 'won' | 'lost' | null;
   /** True once the player closed the "utopia achieved" dialog. */
   outcomeSeen: boolean;
+  /** Summaries of levels 1 and 2 (as far as they were played), for the final summary. */
+  history: LevelSummary[];
+  /** Counters for the final summary. */
+  stats: UtopiaStats;
+}
+
+export interface UtopiaStats {
+  duelsWon: number;
+  duelsLost: number;
+  /** Your moves played (including Shut It Down). */
+  cardsPlayed: number;
+  megacorpMoves: number;
 }
 
 /** A direct duel: a tug-of-war bar in a dialog. */

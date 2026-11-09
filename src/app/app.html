@@ -10,8 +10,8 @@
             @if (world.outcome === 'lost') {
                 <app-game-over (retry)="retryLevelThree()" />
             }
-            @if (world.outcome === 'won' && !world.outcomeSeen) {
-                <app-utopia-won (dismissed)="dismissUtopiaWon()" />
+            @if (finalSummary(); as summary) {
+                <app-utopia-won [summary]="summary" (dismissed)="dismissUtopiaWon()" />
             }
             @if (world.duel; as duel) {
                 <app-duel-dialog [duel]="duel" [clickGain]="duelGain()" [boosts]="duelBoosts()" (boosted)="playCard($event)"

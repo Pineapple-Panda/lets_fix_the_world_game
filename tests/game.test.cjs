@@ -595,7 +595,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, history: [], ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -625,14 +625,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, history: [launched.level1Summary(state)]
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, history: []
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -2093,6 +2093,29 @@ test('a fully defeated MegaCorp stops battles, moves and counter initiatives', (
   assert.equal(next.duel, null, 'MegaCorp cannot challenge you');
   assert.deepEqual(next.attackLog, [], 'no more moves');
   assert.deepEqual(next.effects.map(active => active.cardId), ['rent-tax-cut'], 'its running moves end, yours stay');
+});
+
+test('winning level 3 shows a summary of all three levels', () => {
+  const game = require('../src/app/game/game.ts');
+  const level1 = launched.level1Summary({ ...game.newGame(), seconds: 1800, deployments: 12, bugCount: 7, actions: 40000 });
+  assert.equal(level1.level, 1);
+  assert.deepEqual(level1.facts.slice(0, 1), [{ label: 'Time', value: '30 min' }]);
+  assert.ok(level1.facts.some(fact => fact.label === 'Deployments' && fact.value === '12'));
+  const level2 = launched.level2Summary(liveState({ seconds: 7200, actions: 300000000 }));
+  assert.equal(level2.level, 2);
+  assert.ok(level2.facts.some(fact => fact.label === 'Coding actions' && fact.value === '300,000,000'));
+  // Played through: both summaries travel into level 3.
+  let state = utopia.newUtopia(undefined, [level1, level2]);
+  state = utopia.playPlayerCard({ ...state, perks: ['utopia-blueprint', 'opposition-research'] }, 'antitrust');
+  state = utopia.finishDuel(utopia.startDuel(state), true);
+  const summary = utopia.gameSummary(state);
+  assert.deepEqual(summary.map(entry => entry.level), [1, 2, 3]);
+  assert.equal(summary[0], level1);
+  const facts = Object.fromEntries(summary[2].facts.map(fact => [fact.label, fact.value]));
+  assert.equal(facts['Battles'], '1 (1 won, 0 lost)');
+  assert.equal(facts['Your moves'], '1');
+  // Skipped levels (dev buttons) are marked.
+  assert.equal(utopia.gameSummary(utopia.newUtopia())[0].facts[0].label, 'Skipped');
 });
 
 test('level 3 saves and loads', () => {
