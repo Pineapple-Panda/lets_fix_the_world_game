@@ -1,6 +1,6 @@
 import type { Battle, BattleMove, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, battleRules, corporations, counterInitiatives, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
+  attackRules, battleRules, corporations, corpStartPower, counterInitiatives, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
@@ -24,7 +24,7 @@ export function newUtopia(
     budgetRate: Math.max(0, Math.round(carry.budgetRate)),
     perks: [],
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, metric.start])) as Record<UtopiaMetric, number>,
-    corpPower: Object.fromEntries(corporations.map(corp => [corp.id, 100])),
+    corpPower: Object.fromEntries(corporations.map(corp => [corp.id, corpStartPower])),
     running: [],
     megacorpSeconds: 0,
     nextAttack: attackRules.interval,

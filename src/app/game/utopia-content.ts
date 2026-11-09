@@ -64,6 +64,9 @@ export const attackRules = {
   logLength: 5
 };
 
+/** Power every corporation starts with, in percent. Attacks and counter initiatives are scaled by power. */
+export const corpStartPower = 75;
+
 /** The three corporations, in display order. */
 export const corporations: Corporation[] = [
   {
@@ -114,15 +117,16 @@ export const corporations: Corporation[] = [
 
 /**
  * MegaCorp's counter initiatives: they launch one after another once MegaCorp shows itself and push a bar down every
- * second, scaled by their corporation's power. A defeated corporation's counter initiative stops.
+ * second: their rate × their corporation's power (0.2 × 75% = 0.15%/s at the start). A defeated corporation's
+ * counter initiative stops.
  */
 export const counterInitiatives: CounterInitiative[] = [
   { id: 'monoculture', corpId: 'bananas', name: 'Monoculture Land Grab', description: 'Every field becomes a banana plantation. Bananas for everyone, nothing else for anyone.',
-    metric: 'food', rate: 0.02, launchAfter: 30 },
+    metric: 'food', rate: 0.2, launchAfter: 30 },
   { id: 'lights-out', corpId: 'mississippi', name: 'Lights-Out Warehouses', description: 'Fully automated warehouses, no humans, no lights, no jobs.',
-    metric: 'employment', rate: 0.02, launchAfter: 90 },
+    metric: 'employment', rate: 0.2, launchAfter: 90 },
   { id: 'mars-hype', corpId: 'edison', name: 'Mars Colony Real Estate', description: 'Buys up homes on Earth as “collateral” for apartments on Mars. Opening 2090, probably.',
-    metric: 'housing', rate: 0.02, launchAfter: 150 }
+    metric: 'housing', rate: 0.2, launchAfter: 150 }
 ];
 
 /** Your initiatives: programs that run continuously, like the program cards of level 2. */

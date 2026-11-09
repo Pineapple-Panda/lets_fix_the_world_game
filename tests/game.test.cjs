@@ -1805,11 +1805,11 @@ utopiaContent.battleRules.enabled = true;
 const opened = () => ({ ...utopia.newUtopia(), perks: ['utopia-blueprint', 'opposition-research'] });
 
 
-test('level 3 starts with 65% employment and three corporations at full power', () => {
+test('level 3 starts with 65% employment and three corporations at 75% power', () => {
   const state = opened();
   assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 });
   assert.deepEqual(utopiaContent.corporations.map(corp => corp.id), ['bananas', 'mississippi', 'edison'], 'Bananas, Mississippi, EdisonX');
-  assert.deepEqual(state.corpPower, { bananas: 100, mississippi: 100, edison: 100 });
+  assert.deepEqual(state.corpPower, { bananas: 75, mississippi: 75, edison: 75 });
   assert.equal(state.battle, null);
 });
 
@@ -1838,7 +1838,7 @@ test('MegaCorp attacks every 45 seconds, weaker corporations hit softer', () => 
   assert.equal(state.attackLog[0], utopiaContent.corporations[0].attacks[0].name);
   const full = utopia.attack(opened(), () => 0);
   const weak = utopia.attack({ ...opened(), corpPower: { bananas: 50, mississippi: 0, edison: 0 } }, () => 0);
-  assert.equal(75 - full.metrics.food, 4);
+  assert.equal(75 - full.metrics.food, 3, '4 points × 75% power');
   assert.equal(75 - weak.metrics.food, 2, 'half power, half the damage');
   assert.deepEqual(utopia.attack({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }, () => 0).attackLog, [], 'no attacks once all are defeated');
 });
@@ -1851,7 +1851,7 @@ test('a won battle costs the corporation 25% power', () => {
   let rounds = 0;
   while (!state.battle.result && rounds < 20) { state = utopia.battleRound(state, 'fact-check', () => 0.99); rounds++; }
   assert.equal(state.battle.result, 'won');
-  assert.equal(state.corpPower.bananas, 75);
+  assert.equal(state.corpPower.bananas, 50, '75% − 25%');
   assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 }, 'no penalty');
   state = utopia.closeBattle(state);
   assert.equal(state.battle, null);
@@ -1867,7 +1867,7 @@ test('a lost battle costs the utopia 25 points on every bar', () => {
   while (!state.battle.result && rounds < 50) { state = utopia.battleRound(state, 'open-data', random); rounds++; }
   assert.equal(state.battle.result, 'lost');
   assert.deepEqual(state.metrics, { employment: 40, housing: 45, food: 50 });
-  assert.equal(state.corpPower.edison, 100);
+  assert.equal(state.corpPower.edison, 75);
 });
 
 test('defeated corporations cannot be fought, and the rules are easy to change', () => {
@@ -1957,19 +1957,19 @@ test('MegaCorp launches counter initiatives one after another, scaled by power',
   for (let second = 0; second < 30; second++) state = utopia.tickUtopia(state, () => 0.99);
   assert.deepEqual(utopia.launchedCounters(state).map(counter => counter.id), ['monoculture'], 'Bananas Inc. after 30 seconds');
   const counter = utopiaContent.counterInitiatives[0];
-  assert.equal(utopia.counterRate(state, counter), 0.02, 'full power');
-  assert.equal(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 50 } }, counter), 0.01, 'half power, half the effect');
+  assert.ok(Math.abs(utopia.counterRate(state, counter) - 0.15) < 1e-12, '0.2 × 75% power');
+  assert.ok(Math.abs(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 50 } }, counter) - 0.1) < 1e-12, '0.2 × 50%');
   assert.equal(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 0 } }, counter), 0, 'stopped once defeated');
   const next = utopia.tickUtopia(state, () => 0.99);
-  assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.008 - 0.02)) < 1e-9, 'drift plus the counter initiative');
+  assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.008 - 0.15)) < 1e-9, 'drift plus the counter initiative');
   assert.deepEqual(utopia.launchedCounters({ ...state, megacorpSeconds: 150 }).length, 3, 'all three after 150 seconds');
   assert.deepEqual(utopia.launchedCounters({ ...state, perks: ['utopia-blueprint'], megacorpSeconds: 500 }), [], 'only once MegaCorp is visible');
 });
 
 test('each utopia bar shows its current change per second', () => {
   let state = { ...opened(), running: ['career-match'], megacorpSeconds: 90 };
-  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.02 - 0.02)) < 1e-12, 'drift + initiative − counter initiative');
-  assert.ok(Math.abs(utopia.metricRate(state, 'food') - (-0.008 - 0.02)) < 1e-12);
+  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.02 - 0.15)) < 1e-12, 'drift + initiative − counter initiative');
+  assert.ok(Math.abs(utopia.metricRate(state, 'food') - (-0.008 - 0.15)) < 1e-12);
   assert.equal(utopia.metricRate({ ...state, perks: [] }, 'food'), 0, 'nothing moves while Utopia is locked');
   const before = state.metrics.housing;
   assert.ok(Math.abs(utopia.tickUtopia(state, () => 0.99).metrics.housing - (before + utopia.metricRate(state, 'housing'))) < 1e-9, 'matches the tick');
