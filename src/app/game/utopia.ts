@@ -438,6 +438,12 @@ export function counterLaunched(state: UtopiaGame, counter: CounterInitiative): 
   return cardUnlocked(state, 'megacorp') && !megacorpDefeated(state) && state.megacorpSeconds >= counter.launchAfter;
 }
 
+/** MegaCorp's strength on the top card: the average power of the corporations still standing (0 once all are defeated). */
+export function megacorpPower(state: UtopiaGame): number {
+  const standing = activeCorporations(state).map(corp => state.corpPower[corp.id] ?? 0);
+  return standing.length ? Math.round(standing.reduce((sum, value) => sum + value, 0) / standing.length) : 0;
+}
+
 /** Every corporation is at 0% power: no more battles, moves or counter initiatives. */
 export function megacorpDefeated(state: UtopiaGame): boolean {
   return corporations.every(corp => (state.corpPower[corp.id] ?? 0) <= 0);

@@ -2118,6 +2118,13 @@ test('winning level 3 shows a summary of all three levels', () => {
   assert.equal(utopia.gameSummary(utopia.newUtopia())[0].facts[0].label, 'Skipped');
 });
 
+test('the MegaCorp avatar shows the average power of the corporations still standing', () => {
+  assert.equal(utopia.megacorpPower(opened()), 75);
+  assert.equal(utopia.megacorpPower({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 6 } }), 6, 'defeated ones do not pull it down');
+  assert.equal(utopia.megacorpPower({ ...opened(), corpPower: { bananas: 40, mississippi: 0, edison: 20 } }), 30);
+  assert.equal(utopia.megacorpPower({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }), 0);
+});
+
 test('level 3 saves and loads', () => {
   const store = memoryStorage();
   const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: [{ cardId: 'propaganda', corpId: 'bananas' }] };

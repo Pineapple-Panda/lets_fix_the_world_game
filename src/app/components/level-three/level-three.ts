@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, canCancelEffect, megacorpDefeated, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, canCancelEffect, megacorpDefeated, megacorpPower, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
 import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
@@ -28,7 +28,6 @@ export class LevelThreeComponent {
 
   protected readonly view = computed(() => {
     const state = this.state();
-    const power = corporations.map(corp => state.corpPower[corp.id] ?? 0);
     return {
       metrics: metrics.map(metric => ({ ...metric, value: state.metrics[metric.id], rate: Math.round(metricRate(state, metric.id) * 100000) / 100000 })),
       initiatives: initiatives.map(initiative => ({
@@ -52,8 +51,7 @@ export class LevelThreeComponent {
         power: state.corpPower[counter.corpId] ?? 0
       })),
       corps: corporations.map(corp => ({ corp, power: state.corpPower[corp.id] ?? 0 })),
-      /** MegaCorp's strength on the top card: the average power of its corporations. */
-      megaPower: Math.round(power.reduce((sum, value) => sum + value, 0) / Math.max(1, power.length)),
+      megaPower: megacorpPower(state),
       integrity: state.integrity,
       actionsPerSecond: actionsPerSecond(state),
       budgetPerSecond: budgetPerSecond(state),
