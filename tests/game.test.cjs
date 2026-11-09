@@ -715,7 +715,7 @@ test('every Add Server makes the focus effect stronger, a little faster than lin
 
 test('the first level 2 perk unlocks at 35,000 actions and brings the server online', () => {
   const live = liveState({ actions: 34999 });
-  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
+  assert.deepEqual(launched.openLaunchedPerks(live).map(perk => perk.id), ['add-server', 'workflow-abstraction', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(live, 'workflow-abstraction'), null);
   assert.equal(launched.serverOnline(live), false);
   const ready = liveState({ actions: 35000 });
@@ -723,7 +723,7 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.deepEqual(active.perks, ['workflow-abstraction']);
   assert.equal(launched.serverOnline(active), true);
   assert.equal(launched.activateLaunchedPerk(active, 'workflow-abstraction'), null, 'only once');
-  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly']);
+  assert.deepEqual(launched.openLaunchedPerks(active).map(perk => perk.id), ['add-server', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'citizens-assembly']);
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
@@ -756,7 +756,7 @@ test('"Who Pays for All This?" unlocks at 250,000 actions and opens Network & Fi
   assert.equal(launched.serverOnline(ready), false, 'independent of the server perk');
   assert.equal(launched.activateLaunchedPerk(ready, 'network-financing'), null, 'only once');
   const later = liveState({ perks: ['workflow-abstraction'], serverSlots: 5 });
-  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'],
+  assert.deepEqual(launched.openLaunchedPerks(later).map(perk => perk.id), ['add-server', 'data-centers', 'pitch-deck', 'network-financing', 'grant-proposals', 'premium-hosting', 'citizens-assembly'],
     'perks are listed by unlock threshold; Add Server needs no actions');
 });
 
@@ -1544,7 +1544,7 @@ test('protests take at most 50 clicks, mediators calm them faster and peacefully
   const content = require('../src/app/game/launched-content.ts');
   const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
   assert.equal(perk.actionsRequired, 45000000);
-  assert.equal(perk.requiresProduct, 'green-world');
+  assert.deepEqual(perk.requiresProducts, ['green-world']);
   assert.ok(!launched.openLaunchedPerks(liveState()).some(entry => entry.id === 'mediation-academy'), 'hidden without Green World');
   assert.ok(launched.openLaunchedPerks(greenWorldActive()).some(entry => entry.id === 'mediation-academy'), 'offered once Green World is active');
   assert.equal(perk.cost, 1500000);
@@ -1587,7 +1587,13 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
   const content = require('../src/app/game/launched-content.ts');
   const perk = id => content.launchedPerks.find(entry => entry.id === id);
   assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
-    [25000000, 35000000, 45000000, 60000000, 100000000]);
+    [25000000, 100000000, 150000000, 200000000, 300000000]);
+  const lawyers = ['decent-lawyer', 'good-lawyer', 'chewbacca-defense'];
+  assert.ok(!launched.openLaunchedPerks(liveState()).some(entry => lawyers.includes(entry.id)), 'no lawyers without an active product card');
+  for (const id of ['green-world', 'fair-share', 'peace-integrity']) {
+    const active = liveState({ products: [{ id, major: 1, minor: 0, active: true }] });
+    assert.ok(lawyers.every(lawyer => launched.openLaunchedPerks(active).some(entry => entry.id === lawyer)), 'lawyers with ' + id);
+  }
 
   // Grant proposals halve the upkeep, not the income.
   const running = { programs: [{ id: 'methane-leak-watch', resistance: 0, milestone: 0 }] };

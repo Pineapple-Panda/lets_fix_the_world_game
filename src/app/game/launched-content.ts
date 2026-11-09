@@ -40,7 +40,7 @@ export const launchedPerks: LaunchedPerk[] = [
     icon: 'MA',
     actionsRequired: 45000000,
     cost: 1500000,
-    requiresProduct: 'green-world'
+    requiresProducts: ['green-world']
   },
   {
     id: 'grant-proposals',
@@ -62,31 +62,34 @@ export const launchedPerks: LaunchedPerk[] = [
     name: 'Decent Lawyer',
     description: 'Takes every lawsuit to court the moment it is filed. You no longer have to deal with it yourself.',
     icon: 'DL',
-    actionsRequired: 35000000,
-    cost: 4000000
+    actionsRequired: 100000000,
+    cost: 4000000,
+    requiresProducts: ['green-world', 'fair-share', 'peace-integrity']
   },
   {
     id: 'good-lawyer',
     name: 'Good Lawyer',
     description: 'Reads the files before the hearing. Court cases are won 20 percentage points more often.',
     icon: 'GL',
-    actionsRequired: 45000000,
-    cost: 5000000
+    actionsRequired: 150000000,
+    cost: 5000000,
+    requiresProducts: ['green-world', 'fair-share', 'peace-integrity']
   },
   {
     id: 'chewbacca-defense',
     name: 'Chewbacca Defense',
     description: 'Ladies and gentlemen of the jury, this does not make sense. Court cases are won with a fixed 95%.',
     icon: 'CD',
-    actionsRequired: 60000000,
-    cost: 6000000
+    actionsRequired: 200000000,
+    cost: 6000000,
+    requiresProducts: ['green-world', 'fair-share', 'peace-integrity']
   },
   {
     id: 'citizens-assembly',
     name: 'Global Citizens Assembly',
     description: 'Randomly drawn citizens from every country get a real say. Integrity never drops below 40% and nobody needs to protest any more.',
     icon: 'CA',
-    actionsRequired: 100000000,
+    actionsRequired: 300000000,
     cost: 10000000
   }
 ];

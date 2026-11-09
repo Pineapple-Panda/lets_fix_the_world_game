@@ -188,8 +188,8 @@ export interface LaunchedPerk {
   actionsRequired: number;
   /** Budget price for perks that are bought rather than unlocked by actions. */
   cost?: number;
-  /** Only offered once this product is activated. */
-  requiresProduct?: string;
+  /** Only offered once one of these products is activated. */
+  requiresProducts?: string[];
 }
 
 /** A world goal; it is reached once all of its epics are done. */
