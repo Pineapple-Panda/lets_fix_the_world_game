@@ -24,6 +24,7 @@ export class LevelThreeComponent {
 
   protected readonly megaCorpName = megaCorpName;
   protected readonly moves = playerMoves;
+  protected readonly battlesEnabled = battleRules.enabled;
 
   protected readonly view = computed(() => {
     const state = this.state();

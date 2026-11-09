@@ -24,6 +24,8 @@ export const metrics: MetricDefinition[] = [
 ];
 
 export const battleRules = {
+  /** Switch for the fight buttons; while false, MegaCorp can only be watched. */
+  enabled: false,
   /** Hit points of both sides at the start of a battle. */
   playerHp: 100,
   corpHp: 100,

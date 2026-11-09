@@ -57,7 +57,7 @@
             } @else {
             <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} is watching</h2>
             <p class="arena-intro">EdisonX, Mississippi Corp and Bananas Inc. have joined forces. Your utopia threatens their business,
-                so they fight back with lawsuits and defamation. Pick a fight to take away their power.</p>
+                so they fight back with lawsuits and defamation.@if (battlesEnabled) { Pick a fight to take away their power.}</p>
             <small class="upgrade-hint">Next attack in {{ v.nextAttack }}s</small>
             @if (v.attackLog.length) {
                 <ol class="battle-log" aria-label="Latest attacks">
@@ -209,7 +209,7 @@
                         <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
                     </div>
                     <button class="fight-button" type="button" [disabled]="!entry.canFight"
-                            [attr.aria-label]="'Fight ' + entry.corp.name" [title]="'Fight ' + entry.corp.name"
+                            [attr.aria-label]="'Fight ' + entry.corp.name" [title]="battlesEnabled ? 'Fight ' + entry.corp.name : 'Fights are coming soon'"
                             (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
                 </div>
             }

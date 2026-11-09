@@ -1798,6 +1798,9 @@ test('application versions', () => {
 
 const utopia = require('../src/app/game/utopia.ts');
 const utopiaContent = require('../src/app/game/utopia-content.ts');
+// Fights are switched off in the game for now; the battle tests switch them on.
+utopiaContent.battleRules.enabled = true;
+
 /** Level 3 with the Utopia and MegaCorp cards already open. */
 const opened = () => ({ ...utopia.newUtopia(), perks: ['utopia-blueprint', 'opposition-research'] });
 
@@ -1953,6 +1956,14 @@ test('MegaCorp launches counter initiatives one after another, scaled by power',
   assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.008 - 0.02)) < 1e-9, 'drift plus the counter initiative');
   assert.deepEqual(utopia.launchedCounters({ ...state, megacorpSeconds: 150 }).length, 3, 'all three after 150 seconds');
   assert.deepEqual(utopia.launchedCounters({ ...state, perks: ['utopia-blueprint'], megacorpSeconds: 500 }), [], 'only once MegaCorp is visible');
+});
+
+test('fights can be switched off in the config', () => {
+  utopiaContent.battleRules.enabled = false;
+  assert.equal(utopia.canFight(opened(), 'bananas'), false);
+  assert.equal(utopia.startBattle(opened(), 'bananas'), null);
+  utopiaContent.battleRules.enabled = true;
+  assert.equal(utopia.canFight(opened(), 'bananas'), true);
 });
 
 test('level 3 saves and loads', () => {

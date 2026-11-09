@@ -224,7 +224,7 @@ function runInitiatives(next: UtopiaGame): void {
 
 /** Whether you can challenge a corporation right now. */
 export function canFight(state: UtopiaGame, corpId: string): boolean {
-  return !!corporation(corpId) && cardUnlocked(state, 'megacorp') && (state.corpPower[corpId] ?? 0) > 0 && !(state.battle && !state.battle.result);
+  return battleRules.enabled && !!corporation(corpId) && cardUnlocked(state, 'megacorp') && (state.corpPower[corpId] ?? 0) > 0 && !(state.battle && !state.battle.result);
 }
 
 /** Opens a battle against a corporation in the arena. */
