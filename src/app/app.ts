@@ -10,7 +10,7 @@ import { StatsComponent } from './components/stats/stats';
 import { VictoryComponent } from './components/victory/victory';
 import { EventDialogComponent } from './components/event-dialog/event-dialog';
 import { LevelThreeComponent } from './components/level-three/level-three';
-import { activateUtopiaPerk, battleRound, closeBattle, newUtopia, runInitiative, startBattle, tickUtopia } from './game/utopia';
+import { activateUtopiaPerk, battleRound, closeBattle, newUtopia, startBattle, startInitiative, stopInitiative, tickUtopia } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
@@ -350,8 +350,12 @@ export class AppComponent {
     this.updateUtopia(state => activateUtopiaPerk(state, id));
   }
 
-  runInitiative(id: string): void {
-    this.updateUtopia(state => runInitiative(state, id));
+  startInitiative(id: string): void {
+    this.updateUtopia(state => startInitiative(state, id));
+  }
+
+  stopInitiative(id: string): void {
+    this.updateUtopia(state => stopInitiative(state, id));
   }
 
   startBattle(corpId: string): void {

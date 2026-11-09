@@ -45,14 +45,14 @@ export const utopiaPerks: UtopiaPerk[] = [
     actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } },
   { id: 'counter-lobby', name: 'Counter-Lobby Network', description: 'Ex-lobbyists who switched sides. Your battle attacks deal +5 damage.', icon: 'CL',
     actionsRequired: 270000000, cost: 3000000, effect: { kind: 'battleDamage', value: 5 } },
-  { id: 'open-source-ai', name: 'Open-Source Initiatives', description: 'Anyone can improve your AI initiatives. They raise their bar twice as much.', icon: 'OS',
+  { id: 'open-source-ai', name: 'Open-Source Initiatives', description: 'Anyone can improve your AI initiatives. They work twice as fast.', icon: 'OS',
     actionsRequired: 290000000, cost: 5000000, effect: { kind: 'initiativeGain', value: 2 } },
   { id: 'fact-checkers', name: 'Global Fact-Checker Guild', description: 'Every MegaCorp claim is checked within minutes. Their attacks hit half as hard.', icon: 'FC',
     actionsRequired: 320000000, cost: 8000000, effect: { kind: 'attackShield', value: 0.5 } },
   { id: 'basic-services', name: 'Universal Basic Services', description: 'Homes, food and training as a right, not a product. The bars erode half as fast.', icon: 'UB',
     actionsRequired: 360000000, cost: 12000000, effect: { kind: 'driftShield', value: 0.5 } },
-  { id: 'ai-scheduler', name: 'AI Task Scheduler', description: 'Your AI plans the next initiative while the last one runs. Cooldowns are halved.', icon: 'TS',
-    actionsRequired: 400000000, cost: 15000000, effect: { kind: 'cooldown', value: 0.5 } }
+  { id: 'ai-scheduler', name: 'AI Task Scheduler', description: 'Your AI shares servers and staff between initiatives. They cost half the upkeep.', icon: 'TS',
+    actionsRequired: 400000000, cost: 15000000, effect: { kind: 'upkeep', value: 0.5 } }
 ];
 
 /** Your AI system's moves in battle. */
@@ -117,9 +117,12 @@ export const corporations: Corporation[] = [
   }
 ];
 
-/** What your AI system can do for the utopia. */
+/** AI initiatives: programs that run continuously, like the program cards of level 2. */
 export const initiatives: Initiative[] = [
-  { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.', metric: 'employment', gain: 3, cooldown: 10, cost: 250000 },
-  { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.', metric: 'housing', gain: 3, cooldown: 10, cost: 250000 },
-  { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.', metric: 'food', gain: 3, cooldown: 10, cost: 250000 }
+  { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.',
+    metric: 'employment', cost: 1000000, upkeep: 1000, rate: 0.02 },
+  { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.',
+    metric: 'housing', cost: 1000000, upkeep: 1000, rate: 0.02 },
+  { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.',
+    metric: 'food', cost: 1000000, upkeep: 1000, rate: 0.02 }
 ];

@@ -7,7 +7,7 @@
             @if (saveWarning()) {
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
-            <app-level-three [state]="world" (initiativeRun)="runInitiative($event)" (fightStarted)="startBattle($event)"
+            <app-level-three [state]="world" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)" (fightStarted)="startBattle($event)"
                              (moveChosen)="battleRound($event)" (battleClosed)="closeBattle()"
                              (perkActivated)="activateUtopiaPerk($event)" />
             <footer><span>LEVEL 3 / BUILDING UTOPIA</span>

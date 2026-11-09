@@ -1,4 +1,4 @@
-import type { Battle, BattleMove, Corporation, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
+import type { Battle, BattleMove, Corporation, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
   attackRules, battleRules, corporations, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
@@ -25,7 +25,7 @@ export function newUtopia(
     perks: [],
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, metric.start])) as Record<UtopiaMetric, number>,
     corpPower: Object.fromEntries(corporations.map(corp => [corp.id, 100])),
-    cooldowns: Object.fromEntries(initiatives.map(initiative => [initiative.id, 0])),
+    running: [],
     nextAttack: attackRules.interval,
     attackLog: [],
     battle: null
@@ -110,8 +110,8 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
     metrics: cardUnlocked(state, 'utopia')
       ? Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>
       : state.metrics,
-    cooldowns: Object.fromEntries(Object.entries(state.cooldowns).map(([id, seconds]) => [id, Math.max(0, seconds - 1)]))
   };
+  runInitiatives(next);
   // MegaCorp only attacks once you know about it, and not during a battle.
   if (!cardUnlocked(state, 'megacorp') || (next.battle && !next.battle.result)) return next;
   next.nextAttack = state.nextAttack - 1;
@@ -138,31 +138,55 @@ export function attack(state: UtopiaGame, random: () => number): UtopiaGame {
   };
 }
 
-/** Points an initiative raises its bar by, with perks. */
-export function initiativeGain(state: UtopiaGame, id: string): number {
-  return (initiatives.find(entry => entry.id === id)?.gain ?? 0) * perkValue(state, 'initiativeGain');
+export function initiative(id: string): Initiative | undefined {
+  return initiatives.find(entry => entry.id === id);
 }
 
-/** Seconds an initiative needs to cool down, with perks. */
-export function initiativeCooldown(state: UtopiaGame, id: string): number {
-  return Math.ceil((initiatives.find(entry => entry.id === id)?.cooldown ?? 0) * perkValue(state, 'cooldown'));
+/** Percentage points per second an initiative adds to its bar, with perks. */
+export function initiativeRate(state: UtopiaGame, id: string): number {
+  return (initiative(id)?.rate ?? 0) * perkValue(state, 'initiativeGain');
 }
 
-export function canRunInitiative(state: UtopiaGame, id: string): boolean {
-  const initiative = initiatives.find(entry => entry.id === id);
-  return !!initiative && cardUnlocked(state, 'utopia') && (state.cooldowns[id] ?? 0) <= 0 && state.budget >= initiative.cost;
+/** Budget per second an initiative costs, with perks. */
+export function initiativeUpkeep(state: UtopiaGame, id: string): number {
+  return (initiative(id)?.upkeep ?? 0) * perkValue(state, 'upkeep');
 }
 
-/** Uses an AI initiative: costs budget, raises its bar, then it needs to cool down. */
-export function runInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
-  const initiative = initiatives.find(entry => entry.id === id);
-  if (!initiative || !canRunInitiative(state, id)) return null;
-  return {
-    ...state,
-    budget: state.budget - initiative.cost,
-    metrics: shiftMetrics(state, { [initiative.metric]: initiativeGain(state, id) }, 1),
-    cooldowns: { ...state.cooldowns, [id]: initiativeCooldown(state, id) }
-  };
+/** Why an initiative cannot start right now, or null when it can. */
+export function initiativeBlocker(state: UtopiaGame, id: string): string | null {
+  const entry = initiative(id);
+  if (!entry) return 'Unknown initiative';
+  if (!cardUnlocked(state, 'utopia')) return 'Utopia is locked';
+  if (state.running.includes(id)) return 'Already running';
+  if (state.budget < entry.cost) return 'Not enough budget';
+  return null;
+}
+
+/** Starts an AI initiative: pays its start price; from then on it runs every second. */
+export function startInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
+  const entry = initiative(id);
+  if (!entry || initiativeBlocker(state, id)) return null;
+  return { ...state, budget: state.budget - entry.cost, running: [...state.running, id] };
+}
+
+export function stopInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
+  if (!state.running.includes(id)) return null;
+  return { ...state, running: state.running.filter(entry => entry !== id) };
+}
+
+/** Whether a running initiative can pay this second's upkeep. */
+export function initiativeFunded(state: UtopiaGame, id: string): boolean {
+  return state.budget >= initiativeUpkeep(state, id);
+}
+
+/** One second of all running initiatives (mutates `next`): each pays its upkeep and raises its bar, or pauses without budget. */
+function runInitiatives(next: UtopiaGame): void {
+  for (const id of next.running) {
+    const entry = initiative(id);
+    if (!entry || !initiativeFunded(next, id)) continue;
+    next.budget = Math.max(0, next.budget - initiativeUpkeep(next, id));
+    next.metrics = { ...next.metrics, [entry.metric]: percent(next.metrics[entry.metric] + initiativeRate(next, id)) };
+  }
 }
 
 // ---------- Battle ----------

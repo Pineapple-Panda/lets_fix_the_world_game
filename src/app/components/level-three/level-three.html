@@ -140,17 +140,30 @@
                 <small class="upgrade-hint">{{ metric.hint }}</small>
             }
             <h3 class="tool-heading ops-subheading">AI initiatives</h3>
+            <div class="program-grid">
             @for (entry of v.initiatives; track entry.initiative.id) {
-                <div class="upgrade-row initiative">
-                    <span><strong>{{ entry.initiative.name }}</strong><small>{{ entry.initiative.description }}</small>
-                        <small>Costs {{ format(entry.initiative.cost) }} budget</small></span>
-                    <button class="tool-button" type="button" [disabled]="!entry.canRun"
-                            [attr.aria-label]="entry.initiative.name + ': ' + entry.metricName + ' +' + entry.gain + ' for ' + entry.initiative.cost + ' budget'"
-                            (click)="initiativeRun.emit(entry.initiative.id)">
-                        {{ entry.cooldown > 0 ? entry.cooldown + 's' : entry.metricName + ' +' + entry.gain }}
-                    </button>
+                <div class="program" [class.running]="entry.running">
+                    <strong>{{ entry.initiative.name }}</strong>
+                    <small>{{ entry.initiative.description }}</small>
+                    <small class="client-terms">
+                        {{ format(entry.initiative.cost) }} to start · −{{ format(entry.upkeep) }} budget/sec ·
+                        <span class="good">{{ entry.metricName }} +{{ entry.rate }}%/sec</span>
+                    </small>
+                    @if (entry.running) {
+                        <small [class.panel-warning]="!entry.funded" [class.epic-done]="entry.funded">
+                            {{ entry.funded ? 'Running' : 'Paused: not enough budget for the upkeep' }}
+                        </small>
+                        <button class="tool-button client-end" type="button" [attr.aria-label]="'Stop ' + entry.initiative.name"
+                                (click)="initiativeStopped.emit(entry.initiative.id)">Stop</button>
+                    } @else {
+                        @if (entry.blocker) { <small class="panel-warning">{{ entry.blocker }}</small> }
+                        <button class="tool-button" type="button" [disabled]="!!entry.blocker"
+                                [attr.aria-label]="'Start ' + entry.initiative.name"
+                                (click)="initiativeStarted.emit(entry.initiative.id)">Start</button>
+                    }
                 </div>
             }
+            </div>
         </section>
     } @else {
         <div class="ops-card ops-locked" aria-hidden="true"><span>Locked · {{ v.utopiaPerkName }}</span></div>

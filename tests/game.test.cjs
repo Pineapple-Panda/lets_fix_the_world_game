@@ -1810,15 +1810,20 @@ test('level 3 starts with 65% employment and three corporations at full power', 
   assert.equal(state.battle, null);
 });
 
-test('bars erode every second, initiatives raise them and cool down', () => {
+test('bars erode every second; AI initiatives run like programs: start once, upkeep and progress every second', () => {
   const next = utopia.tickUtopia(opened(), () => 0.99);
   assert.ok(next.metrics.employment < 65 && next.metrics.housing < 70 && next.metrics.food < 75);
-  const helped = utopia.runInitiative(opened(), 'career-match');
-  assert.equal(helped.metrics.employment, 68);
-  assert.equal(utopia.runInitiative(helped, 'career-match'), null, 'cooling down');
-  let later = helped;
-  for (let second = 0; second < 10; second++) later = utopia.tickUtopia(later, () => 0.99);
-  assert.ok(utopia.runInitiative(later, 'career-match'), 'ready again after 10 seconds');
+  const started = utopia.startInitiative({ ...opened(), budgetRate: 0 }, 'career-match');
+  assert.equal(started.budget, 20000000 - 1000000, '1,000,000 to start');
+  assert.deepEqual(started.running, ['career-match']);
+  assert.equal(utopia.initiativeBlocker(started, 'career-match'), 'Already running');
+  let later = started;
+  for (let second = 0; second < 100; second++) later = utopia.tickUtopia(later, () => 0.99);
+  assert.ok(Math.abs(later.metrics.employment - (65 + 100 * (0.02 - 0.01))) < 1e-9, '+0.02%/s against −0.01%/s drift');
+  assert.equal(later.budget, started.budget - 100 * 1000, '1,000 budget per second');
+  const broke = utopia.tickUtopia({ ...started, budget: 999 }, () => 0.99);
+  assert.ok(broke.metrics.employment < 65, 'paused without budget for the upkeep');
+  assert.deepEqual(utopia.stopInitiative(started, 'career-match').running, []);
 });
 
 test('MegaCorp attacks every 45 seconds, weaker corporations hit softer', () => {
@@ -1885,9 +1890,9 @@ test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing the
 });
 
 test('initiatives cost budget; defamation costs integrity; battles move it', () => {
-  const poor = { ...opened(), budget: 249999 };
-  assert.equal(utopia.runInitiative(poor, 'career-match'), null, 'needs 250,000');
-  assert.equal(utopia.runInitiative(opened(), 'career-match').budget, 20000000 - 250000);
+  const poor = { ...opened(), budget: 999999 };
+  assert.equal(utopia.startInitiative(poor, 'career-match'), null, 'needs 1,000,000');
+  assert.equal(utopia.initiativeBlocker(poor, 'career-match'), 'Not enough budget');
   const smeared = utopia.attack({ ...opened(), corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0.99);
   assert.equal(smeared.integrity, 46, 'influencer smear: −4 integrity');
   let won = utopia.startBattle(opened(), 'bananas');
@@ -1902,9 +1907,9 @@ test('level 3 perks: at most five, available first, each with its own effect', (
   assert.equal(utopia.activateUtopiaPerk(opened(), 'counter-lobby'), null, 'needs 270M total TCA');
   let state = utopia.activateUtopiaPerk(rich, 'open-source-ai');
   assert.equal(state.budget, 100000000 - 5000000);
-  assert.equal(utopia.initiativeGain(state, 'career-match'), 6, 'twice the gain');
+  assert.equal(utopia.initiativeRate(state, 'career-match'), 0.04, 'twice as fast');
   state = utopia.activateUtopiaPerk(state, 'ai-scheduler');
-  assert.equal(utopia.initiativeCooldown(state, 'career-match'), 5, 'half the cooldown');
+  assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500, 'half the upkeep');
   state = utopia.activateUtopiaPerk(state, 'fact-checkers');
   const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
   assert.equal(75 - shielded.metrics.food, 2, 'attacks hit half as hard');
@@ -1925,7 +1930,7 @@ test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total 
   for (let second = 0; second < 50; second++) later = utopia.tickUtopia(later, () => 0);
   assert.deepEqual(later.metrics, start.metrics, 'the bars wait for the Utopia card');
   assert.equal(later.nextAttack, start.nextAttack, 'MegaCorp waits too');
-  assert.equal(utopia.runInitiative({ ...later, budget: 1000000 }, 'career-match'), null, 'no initiatives yet');
+  assert.equal(utopia.initiativeBlocker({ ...later, budget: 1000000 }, 'career-match'), 'Utopia is locked', 'no initiatives yet');
   assert.equal(utopia.startBattle(later, 'bananas'), null, 'no battles yet');
   later = utopia.activateUtopiaPerk(later, 'utopia-blueprint');
   assert.equal(later.budget, 0, 'free');

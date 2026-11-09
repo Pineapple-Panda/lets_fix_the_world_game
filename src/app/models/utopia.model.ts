@@ -21,8 +21,8 @@ export interface UtopiaGame {
   metrics: Record<UtopiaMetric, number>;
   /** Power of every corporation in percent; 0 means defeated. */
   corpPower: Record<string, number>;
-  /** Seconds until each AI initiative can be used again. */
-  cooldowns: Record<string, number>;
+  /** AI initiatives that are running. */
+  running: string[];
   /** Seconds until MegaCorp attacks again. */
   nextAttack: number;
   /** Latest MegaCorp attacks, newest first. */
@@ -85,17 +85,18 @@ export interface Corporation {
   attacks: CorpAttack[];
 }
 
-/** An action of your AI system that raises a bar, usable again after a cooldown. */
+/** A program of your AI system: started once, then it raises a bar every second while it runs and pays its upkeep. */
 export interface Initiative {
   id: string;
   name: string;
   description: string;
   metric: UtopiaMetric;
-  /** Percentage points gained per use. */
-  gain: number;
-  cooldown: number;
-  /** Budget per use. */
+  /** Budget to start it. */
   cost: number;
+  /** Budget per second while it runs. */
+  upkeep: number;
+  /** Percentage points per second while it runs. */
+  rate: number;
 }
 
 /** What a level 3 perk changes. Add a kind here and handle it in `utopia.ts` to create new effects. */
@@ -104,7 +105,7 @@ export type UtopiaPerkEffect =
   | { kind: 'initiativeGain'; value: number }
   | { kind: 'attackShield'; value: number }
   | { kind: 'driftShield'; value: number }
-  | { kind: 'cooldown'; value: number }
+  | { kind: 'upkeep'; value: number }
   | { kind: 'unlock'; card: UtopiaCard };
 
 /** Cards of level 3 that start hidden. */
