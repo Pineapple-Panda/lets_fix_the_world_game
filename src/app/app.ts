@@ -286,7 +286,7 @@ export class AppComponent {
   }
 
   reset(): void {
-    if (window.confirm('Reset all sprint progress, including saved data?')) {
+    if (window.confirm('Reset the whole game, including saved data?')) {
       try {
         this.savedSnapshot = window.localStorage.getItem(saveKey);
         this.storageBlocked = false;
