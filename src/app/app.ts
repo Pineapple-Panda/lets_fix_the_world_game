@@ -14,7 +14,7 @@ import { DuelDialogComponent } from './components/duel-dialog/duel-dialog';
 import { GameOverComponent } from './components/game-over/game-over';
 import { UtopiaWonComponent } from './components/utopia-won/utopia-won';
 import {
-  activateUtopiaPerk, closeDuel, dismissOutcome, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+  activateUtopiaPerk, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
 } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
@@ -65,6 +65,15 @@ export class AppComponent {
   readonly news = computed(() => {
     const live = this.launched();
     return live ? newsFeed(live) : [];
+  });
+  /** Level 3 duel: points per push right now, and the boost moves you can use in the dialog. */
+  readonly duelGain = computed(() => {
+    const world = this.utopia();
+    return world ? duelClickGain(world) : 0;
+  });
+  readonly duelBoosts = computed(() => {
+    const world = this.utopia();
+    return world ? duelBoostCards(world).map(card => ({ id: card.id, name: card.name, summary: cardSummary(card), blocker: cardBlocker(world, card.id) })) : [];
   });
   /** The special event waiting for an answer (not while the victory dialog is open). */
   readonly pendingEvent = computed(() => {

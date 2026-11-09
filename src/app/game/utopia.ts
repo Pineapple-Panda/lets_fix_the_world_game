@@ -301,6 +301,7 @@ export function cardSummary(card: ActionCard): string {
       case 'corpPower': return `${sign(effect.amount)}% power for ${effect.target === 'self' ? 'its corporation' : effect.target === 'all' ? 'every corporation' : 'the strongest corporation'}${timed ? '/s' : ''}`;
       case 'powerShield': return 'No power loss';
       case 'firewall': return `MegaCorp effects reach you at ${Math.round(effect.factor * 100)}%`;
+      case 'duelBoost': return `Battle push +${effect.clickGain}% per click`;
     }
   });
   return parts.join(', ') + (timed ? ` for ${card.duration}s` : '');
@@ -452,8 +453,21 @@ export function closeDuel(state: UtopiaGame): UtopiaGame | null {
   return state.duel?.result ? { ...state, duel: null, duelCooldown: duelRules.cooldown } : null;
 }
 
+/** Points one push moves the duel bar: 1.2, or more while a boost (Battle Cry) runs. */
+export function duelClickGain(state: UtopiaGame): number {
+  return state.effects.reduce((gain, active) => {
+    const boost = actionCard(active.cardId)?.effects.find(effect => effect.kind === 'duelBoost');
+    return boost && boost.kind === 'duelBoost' ? Math.max(gain, boost.clickGain) : gain;
+  }, duelRules.clickGain);
+}
+
+/** Your cards that boost duels and can be played right now. */
+export function duelBoostCards(state: UtopiaGame): ActionCard[] {
+  return ownedCards(state).filter(card => card.effects.some(effect => effect.kind === 'duelBoost'));
+}
+
 /** One step of the duel bar: clicks add, time drains; the result once it hits 0% or 100%. */
-export function duelStep(bar: number, clicks: number, seconds: number): { bar: number; result: 'won' | 'lost' | null } {
-  const next = Math.max(0, Math.min(100, bar + clicks * duelRules.clickGain - seconds * duelRules.drainPerSecond));
+export function duelStep(bar: number, clicks: number, seconds: number, clickGain = duelRules.clickGain): { bar: number; result: 'won' | 'lost' | null } {
+  const next = Math.max(0, Math.min(100, bar + clicks * clickGain - seconds * duelRules.drainPerSecond));
   return { bar: next, result: next >= 100 ? 'won' : next <= 0 ? 'lost' : null };
 }

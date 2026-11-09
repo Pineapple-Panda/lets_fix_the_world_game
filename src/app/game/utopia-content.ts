@@ -35,6 +35,8 @@ export const utopiaPerks: UtopiaPerk[] = [
   { id: 'hyper-scaling', name: 'Hyper-Scaling', description: 'Every server, every process, every intern at full throttle. TCA and budget per second ×10.', icon: 'HS',
     actionsRequired: 310000000, cost: 5000000, effect: { kind: 'rateBoost', value: 10 } },
   // One perk per locked action card.
+  { id: 'rally-network', name: 'Rally Network', description: 'Unlocks the move "Battle Cry": in a battle, each push moves the bar by 2% for 15s.', icon: 'RN',
+    actionsRequired: 0, cost: 10000000, effect: { kind: 'unlockAction', action: 'battle-cry' } },
   { id: 'housing-policy', name: 'Housing Policy Desk', description: 'Unlocks the move "Cut Rent Taxes": Housing +0.1%/s and Credibility +0.5/s for 15s.', icon: 'HP',
     actionsRequired: 285000000, cost: 2000000, effect: { kind: 'unlockAction', action: 'rent-tax-cut' } },
   { id: 'kitchen-network', name: 'Kitchen Network', description: 'Unlocks the move "Community Kitchens": Food +3 at once.', icon: 'KN',
@@ -109,6 +111,8 @@ export const playerCards: ActionCard[] = [
     description: 'Sues the strongest corporation for being a monopoly. Which it is.', effects: [{ kind: 'corpPower', target: 'strongest', amount: -10 }] },
   { id: 'leak', actor: 'player', category: 'damage', name: 'Leak the Emails', cooldown: 90, locked: true,
     description: 'Publishes how MegaCorp really talks about its customers.', effects: [{ kind: 'corpPower', target: 'all', amount: -3 }, { kind: 'credibility', amount: 2 }] },
+  { id: 'battle-cry', actor: 'player', category: 'powerup', name: 'Battle Cry', duration: 15, cooldown: 60, locked: true,
+    description: 'Your supporters rally behind you. Usable in a battle.', effects: [{ kind: 'duelBoost', clickGain: 2 }] },
   { id: 'community-kitchens', actor: 'player', category: 'powerup', name: 'Community Kitchens', cooldown: 45, locked: true,
     description: 'Opens a kitchen on every corner. Nobody eats alone.', effects: [{ kind: 'metric', metric: 'food', amount: 3 }] }
 ];

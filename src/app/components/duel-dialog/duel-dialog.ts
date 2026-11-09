@@ -24,7 +24,12 @@ import type { Duel } from '../../models/utopia.model';
         </p>
         <button class="intro-button" type="button" autofocus (click)="closed.emit()">Close</button>
       } @else {
-        <button class="intro-button duel-push" type="button" autofocus (click)="push()">Push back! (+{{ rules.clickGain }}%)</button>
+        <button class="intro-button duel-push" type="button" autofocus (click)="push()">Push back! (+{{ clickGain() }}%)</button>
+        @for (boost of boosts(); track boost.id) {
+          <button class="intro-button duel-boost" type="button" [disabled]="!!boost.blocker" (click)="boosted.emit(boost.id)">
+            {{ boost.name }}<small>{{ boost.blocker ?? boost.summary }}</small>
+          </button>
+        }
       }
     </dialog>
   `
@@ -32,6 +37,11 @@ import type { Duel } from '../../models/utopia.model';
 export class DuelDialogComponent {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly duel = input.required<Duel>();
+  /** Points one push moves the bar right now. */
+  readonly clickGain = input(duelRules.clickGain);
+  /** Your boost moves (Battle Cry) with what they do, or why they are not ready. */
+  readonly boosts = input<{ id: string; name: string; summary: string; blocker: string | null }[]>([]);
+  readonly boosted = output<string>();
   readonly finished = output<boolean>();
   readonly closed = output<void>();
 
@@ -51,7 +61,7 @@ export class DuelDialogComponent {
 
   private step(clicks: number, seconds: number): void {
     if (this.duel().result) return;
-    const next = duelStep(this.bar(), clicks, seconds);
+    const next = duelStep(this.bar(), clicks, seconds, this.clickGain());
     this.bar.set(next.bar);
     if (next.result) this.finished.emit(next.result === 'won');
   }

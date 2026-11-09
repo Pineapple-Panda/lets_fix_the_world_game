@@ -1919,7 +1919,7 @@ test('initiatives cost budget', () => {
 });
 
 test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
   assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
@@ -2040,6 +2040,20 @@ test('Hyper-Scaling multiplies TCA and budget per second by ten for 5,000,000', 
   const next = utopia.tickUtopia({ ...boosted, nextAttack: 99 }, () => 0.99);
   assert.equal(next.actions, boosted.actions + 130000);
   assert.equal(utopia.activateUtopiaPerk({ ...base, budget: 4999999 }, 'hyper-scaling'), null, 'costs 5,000,000');
+});
+
+test('Battle Cry (Rally Network perk, 10M) pushes the duel bar by 2% per click for 15 seconds', () => {
+  assert.equal(utopia.cardBlocker(opened(), 'battle-cry'), 'Needs its perk');
+  const perk = utopia.activateUtopiaPerk(opened(), 'rally-network');
+  assert.equal(perk.budget, opened().budget - 10000000);
+  assert.deepEqual(utopia.duelBoostCards(perk).map(card => card.id), ['battle-cry']);
+  assert.equal(utopia.duelClickGain(perk), 1.2, 'normal push');
+  let state = utopia.playPlayerCard(utopia.startDuel(perk), 'battle-cry');
+  assert.equal(utopia.duelClickGain(state), 2, 'boosted push');
+  assert.deepEqual(utopia.duelStep(50, 1, 0, utopia.duelClickGain(state)), { bar: 52, result: null });
+  for (let second = 0; second < 15; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(utopia.duelClickGain(state), 1.2, 'over after 15 seconds');
+  assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'battle-cry')), 'Battle push +2% per click for 15s');
 });
 
 test('level 3 saves and loads', () => {
