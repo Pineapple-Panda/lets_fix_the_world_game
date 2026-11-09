@@ -595,7 +595,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -625,14 +625,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -1666,6 +1666,52 @@ test('every program needs a server slot, times the major version of its product'
   assert.equal(launched.usedSlots(running), 2);
   assert.equal(launched.programBlocker(running, 'methane-leak-watch'), 'Needs 2 free server slots');
   assert.equal(launched.programBlocker(greenWorldActive({ serverSlots: 0 }), 'greenwashing-campaign'), 'Needs 1 free server slot', 'even income programs need a slot');
+});
+
+const allApps = [{ id: 'green-world', major: 1, minor: 0, active: true }, { id: 'fair-share', major: 1, minor: 0, active: true },
+  { id: 'peace-integrity', major: 1, minor: 0, active: true }];
+
+test('special event: the EdisonX donation, or a lawsuit against all three applications', () => {
+  const ready = liveState({ budget: 1000000, integrity: 60, products: allApps, worldProgress: { climate: 10, war: 10, hunger: 10, poverty: 0, corruption: 0 } });
+  assert.equal(launched.tickLaunched({ ...ready, products: allApps.slice(0, 2) }, () => 0.99).pendingEvent, null, 'needs all three applications');
+  assert.equal(launched.tickLaunched({ ...ready, worldProgress: { ...ready.worldProgress, hunger: 9 } }, () => 0.99).pendingEvent, null, 'needs three problems at 10%');
+  const offer = launched.tickLaunched(ready, () => 0.99);
+  assert.equal(offer.pendingEvent, 'edisonx-donation');
+  assert.equal(launched.tickLaunched({ ...offer, pendingEvent: null }, () => 0.99).pendingEvent, null, 'only once');
+  const accepted = launched.answerEvent(offer, true);
+  assert.equal(accepted.pendingEvent, null);
+  assert.equal(accepted.budget, offer.budget + 5000000);
+  assert.ok(Math.abs(accepted.integrity - (offer.integrity - 20)) < 1e-9, '−20 integrity');
+  const declined = launched.answerEvent(offer, false);
+  assert.equal(launched.lawsuitCase(declined).plaintiff, 'EdisonX');
+  assert.deepEqual(launched.suedProducts(declined), ['green-world', 'fair-share', 'peace-integrity']);
+  assert.equal(launched.settlementCost(declined), 1500000, 'three times the usual settlement');
+  assert.equal(declined.stats.lawsuits, 1);
+});
+
+test('special event: the leaked NSA contract after one minute of NSA', () => {
+  let live = liveState({ budget: 6000000, perks: ['network-financing'], serverSlots: 5, rentals: ['nsa'] });
+  for (let second = 0; second < 59; second++) live = launched.tickLaunched(live, () => 0.99);
+  assert.equal(live.pendingEvent, null);
+  live = launched.tickLaunched(live, () => 0.99);
+  assert.equal(live.pendingEvent, 'nsa-leak', 'after 60 seconds with the NSA');
+  assert.equal(launched.answerEvent(live, true).budget, live.budget - 5000000);
+  assert.ok(Math.abs(launched.answerEvent(live, false).integrity - (live.integrity - 10)) < 1e-9);
+  assert.equal(launched.answerEvent({ ...live, budget: 4999999 }, true), null, 'paying needs 5,000,000');
+});
+
+test('special event: the UN asks for servers at 80% integrity', () => {
+  const ready = liveState({ integrity: 80, serverSlots: 6 });
+  const asked = launched.tickLaunched(ready, () => 0.99);
+  assert.equal(asked.pendingEvent, 'un-drought');
+  assert.equal(launched.tickLaunched(liveState({ integrity: 81 }), () => 0.99).pendingEvent, null, 'only right at 80%');
+  let helped = launched.answerEvent(asked, true);
+  assert.equal(helped.worldProgress.hunger, 2, 'Hunger +2%');
+  assert.equal(launched.usedSlots(helped), 5, 'five slots lent');
+  for (let second = 0; second < 60; second++) helped = launched.tickLaunched(helped, () => 0.99);
+  assert.equal(launched.usedSlots(helped), 0, 'back after 60 seconds');
+  assert.equal(launched.answerEvent({ ...asked, serverSlots: 4 }, true), null, 'needs five free slots');
+  assert.equal(launched.answerEvent(asked, false).worldProgress.hunger, 0, 'not now: nothing happens');
 });
 
 test('pitching to investors adds budget per click and grows with the income', () => {

@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, suedProducts, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -74,6 +74,8 @@ export class LevelTwoComponent {
       rented: rentedSlots(state),
       programSlots: programSlots(state),
       usedSlots: usedSlots(state),
+      aidSlots: state.aidSlots,
+      aidSeconds: state.aidSeconds,
       rentalIncome: rentalIncome(state),
       worldProgress: worldProblems.map(problem => ({
         ...problem,
@@ -174,7 +176,7 @@ export class LevelTwoComponent {
       problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id], solved: problemSolved(state, id) })),
       frozen: integrityBlocked(state),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
-      lawsuit: state.lawsuit && lawsuitCase(state)?.product === productId ? {
+      lawsuit: state.lawsuit && suedProducts(state).includes(productId) ? {
         ...lawsuitCase(state)!,
         courtSeconds: state.lawsuit.courtSeconds,
         canSettle: state.budget >= settlementCost(state)
@@ -183,7 +185,7 @@ export class LevelTwoComponent {
       courtDamages: courtDamages(state),
       winChance: Math.round(winChance(state) * 100),
       lawyer: lawyerOnCase(state),
-      verdict: !state.lawsuit && state.verdict?.product === productId ? state.verdict : null,
+      verdict: !state.lawsuit && (state.verdict?.product === productId || state.verdict?.product === 'all') ? state.verdict : null,
       courtDuration: courtDuration(state),
       resistanceGrowth: Math.round(resistanceGrowth(state) * 10) / 10,
       robots: robotsOnSite(state),

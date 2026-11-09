@@ -1,5 +1,5 @@
 import type {
-  EpicDefinition, LaunchedPerk, LawsuitCase, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
+  EpicDefinition, LaunchedPerk, LawsuitCase, SpecialEvent, ProductDefinition, ProgramDefinition, RentalClient, WorldGoal, WorldProblem
 } from '../models/launched.model.ts';
 
 /** Perks of level 2. Level 1 perks that were never activated are gone after the launch. */
@@ -657,5 +657,39 @@ export const lawsuits: LawsuitCase[] = [
   { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'claims its 400 shell companies are “a hobby” and taxing hobbies is unconstitutional.' },
   { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'Mississippi Corp', accusation: 'argues that its offshore accounts are technically a boat and boats are tax-free.' },
   { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'Bananas Inc.', accusation: 'sues because your tax evidence called its yacht “suspiciously cheap”, which hurt its feelings.' },
-  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'demands its taxes back because it “basically owns the planet anyway”.' }
+  { product: 'peace-integrity', program: 'tax-the-rich', plaintiff: 'EdisonX', accusation: 'demands its taxes back because it “basically owns the planet anyway”.' },
+  // Special: filed when you turn down the EdisonX donation. Never drawn at random.
+  { product: 'green-world', products: ['green-world', 'fair-share', 'peace-integrity'], special: true, costFactor: 3, plaintiff: 'EdisonX',
+    accusation: 'sues all three of your applications for "emotional damage" after you turned down its generous donation.' }
+];
+
+/** Special events: a dialog pops up once when its moment comes, and the player picks one of two answers. */
+export const specialEvents: SpecialEvent[] = [
+  {
+    id: 'edisonx-donation',
+    title: 'A generous offer',
+    text: 'EdisonX offers your platform a donation of 5 million. No strings attached, says the press release. There are always strings.',
+    accept: 'Accept',
+    acceptEffect: '+5,000,000 budget · −20 integrity',
+    decline: 'Decline',
+    declineEffect: 'EdisonX sues all three of your applications'
+  },
+  {
+    id: 'nsa-leak',
+    title: 'Leaked: your NSA contract',
+    text: 'A journalist got hold of your contract with the NSA. The story goes live in an hour, unless somebody makes it worth their while.',
+    accept: 'Pay the journalists',
+    acceptEffect: '−5,000,000 budget',
+    decline: 'Let it run',
+    declineEffect: '−10 integrity'
+  },
+  {
+    id: 'un-drought',
+    title: 'The UN asks for help',
+    text: 'A drought threatens the harvest in three countries. The UN needs computing power to coordinate water and food deliveries.',
+    accept: 'Send servers',
+    acceptEffect: '5 server slots for 60 s · Hunger +2%',
+    decline: 'Not now',
+    declineEffect: 'Nothing happens'
+  }
 ];

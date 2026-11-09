@@ -295,7 +295,7 @@
                 <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>
             </div>
             <small class="upgrade-hint" id="rented-slots">
-                {{ v.running }} for epics · {{ v.programSlots }} for programs · {{ v.rented }} rented
+                {{ v.running }} for epics · {{ v.programSlots }} for programs · {{ v.rented }} rented@if (v.aidSlots) { · {{ v.aidSlots }} lent to the UN ({{ v.aidSeconds }}s)}
             </small>
 
             @if (v.infrastructure.length) {

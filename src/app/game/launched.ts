@@ -1,9 +1,10 @@
 import type { Game } from '../models/game.model.ts';
 import type {
   EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
+  SpecialEvent,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, lawsuits, products, programs, rentalClients, worldGoals, worldProblems } from './launched-content.ts';
+import { epics, launchedPerks, lawsuits, products, programs, rentalClients, specialEvents, worldGoals, worldProblems } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -54,7 +55,12 @@ function newLaunchedState(actions: number, budget: number): LaunchedGame {
     lawsuitsFiled: 0,
     verdict: null,
     stats: noStats(),
-    victorySeen: false
+    victorySeen: false,
+    eventsSeen: [],
+    pendingEvent: null,
+    nsaSeconds: 0,
+    aidSlots: 0,
+    aidSeconds: 0
   };
 }
 
@@ -292,6 +298,7 @@ export function tickLaunched(
   // Lawsuits first: a case filed this second freezes the sued product's programs right away.
   runLawsuit(next, random);
   runPrograms(next, random);
+  runEvents(next);
   // A citizens assembly keeps integrity at 40% or more.
   if (citizensAssembly(next)) next.integrity = Math.max(assemblyIntegrity, next.integrity);
   // Clients walk out once integrity leaves their range (Green-Left below 70%, EdisonX above 20%).
@@ -473,7 +480,7 @@ export function runningEpics(state: LaunchedGame): number {
 
 /** Server slots taken by running epics and rented clients. */
 export function usedSlots(state: LaunchedGame): number {
-  return runningEpics(state) + rentedSlots(state) + programSlots(state);
+  return runningEpics(state) + rentedSlots(state) + programSlots(state) + state.aidSlots;
 }
 
 // ---------- Problem solving cards: programs, integrity and protests ----------
@@ -691,7 +698,7 @@ export function programFunded(state: LaunchedGame, id: string): boolean {
 function runPrograms(next: LaunchedGame, random: () => number): void {
   if (!next.programs.length || integrityBlocked(next)) return;
   // A court injunction freezes the programs of the sued product while the lawsuit is open.
-  const sued = lawsuitCase(next)?.product;
+  const sued = suedProducts(next);
   const growth = resistanceGrowth(next);
   // With a citizens assembly nobody needs to protest any more.
   const chance = citizensAssembly(next) ? 0 : protestChance(next);
@@ -701,7 +708,7 @@ function runPrograms(next: LaunchedGame, random: () => number): void {
   const before = { ...next };
   const running = next.programs.map(entry => {
     const program = programDefinition(entry.id);
-    if (!program || program.product === sued) return entry;
+    if (!program || sued.includes(program.product)) return entry;
     // A protest grows with distrust and shrinks while robots are on site; the program waits meanwhile.
     if (inProtest(entry)) {
       return { ...entry, resistance: lowerResistance(Math.min(maxResistance, entry.resistance + growth), robots) };
@@ -741,7 +748,7 @@ export function worldFixed(state: LaunchedGame): boolean {
 /** Whether a running program makes progress this second (not frozen, no protest, funded, requirements met). */
 export function programWorking(state: LaunchedGame, entry: ProgramState): boolean {
   const program = programDefinition(entry.id);
-  return !!program && !integrityBlocked(state) && lawsuitCase(state)?.product !== program.product &&
+  return !!program && !integrityBlocked(state) && !suedProducts(state).includes(program.product) &&
     !inProtest(entry) && programFunded(state, entry.id) && !missingPrograms(state, entry.id).length;
 }
 
@@ -998,7 +1005,7 @@ function escalation(state: LaunchedGame): number {
 
 /** Budget to settle the current lawsuit. */
 export function settlementCost(state: LaunchedGame): number {
-  return Math.round(baseSettlementCost * escalation(state));
+  return Math.round(baseSettlementCost * escalation(state) * (lawsuitCase(state)?.costFactor ?? 1));
 }
 
 /** Seconds in court for the current lawsuit. */
@@ -1050,7 +1057,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
     const won = random() < winChance(next);
     const damages = won ? 0 : courtDamages(next);
     next.budget = Math.max(0, next.budget - damages);
-    next.verdict = { product: sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };
+    next.verdict = { product: sued?.products ? 'all' : sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won, damages };
     next.lawsuit = null;
     next.stats = { ...next.stats, [won ? 'lawsuitsWon' : 'lawsuitsLost']: next.stats[won ? 'lawsuitsWon' : 'lawsuitsLost'] + 1 };
     return;
@@ -1059,7 +1066,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
   if (next.lawsuitsFiled > 0 && next.seconds % lawsuitCooldown === 0) next.lawsuitsFiled = next.lawsuitsFiled - 1;
   // Only one lawsuit at a time; the case is drawn from those against the products at risk. Cases tied to a
   // program are filed while that program runs.
-  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.program
+  const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.special ? false : entry.program
     ? next.programs.some(running => running.id === entry.program) && productActive(next, entry.product)
     : lawsuitRisk(next, entry.product));
   if (open.length && random() < currentLawsuitChance(next)) {
@@ -1072,6 +1079,103 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
 
 export function lawsuitCase(state: LaunchedGame): LawsuitCase | undefined {
   return state.lawsuit ? lawsuits[state.lawsuit.caseId] : undefined;
+}
+
+/** Products whose programs the current lawsuit freezes (one, or all three for the EdisonX lawsuit). */
+export function suedProducts(state: LaunchedGame): string[] {
+  const sued = lawsuitCase(state);
+  return sued ? sued.products ?? [sued.product] : [];
+}
+
+/** Files a lawsuit right away (used by special events). */
+function fileLawsuit(state: LaunchedGame, caseId: number): LaunchedGame {
+  return {
+    ...state,
+    lawsuit: { caseId, courtSeconds: null },
+    lawsuitsFiled: state.lawsuitsFiled + 1,
+    verdict: null,
+    stats: { ...state.stats, lawsuits: state.stats.lawsuits + 1 }
+  };
+}
+
+// ---------- Special events ----------
+
+/** The NSA leak comes after the NSA has been a client for this many seconds in total. */
+export const nsaLeakSeconds = 60;
+/** UN drought aid: slots lent, for how long, and the hunger progress it brings. */
+export const aidSlotCount = 5;
+export const aidDuration = 60;
+export const aidHunger = 2;
+export const donationBudget = 5000000;
+export const donationIntegrity = 20;
+export const leakPayment = 5000000;
+export const leakIntegrity = 10;
+
+export function specialEvent(id: string | null): SpecialEvent | undefined {
+  return specialEvents.find(entry => entry.id === id);
+}
+
+/** Whether a special event's moment has come. */
+export function eventDue(state: LaunchedGame, id: string): boolean {
+  switch (id) {
+    case 'edisonx-donation':
+      // All three applications activated and at least three problems at 10% or more; needs a free court.
+      return ['green-world', 'fair-share', 'peace-integrity'].every(productId => productActive(state, productId)) &&
+        Object.values(state.worldProgress).filter(value => value >= 10).length >= 3 && !state.lawsuit;
+    case 'nsa-leak':
+      return state.nsaSeconds >= nsaLeakSeconds;
+    case 'un-drought':
+      // Integrity right at 80% (79.5 to 80.5).
+      return Math.round(state.integrity) === 80;
+    default:
+      return false;
+  }
+}
+
+/** Whether the "accept" answer is possible right now (enough budget or free slots). */
+export function canAcceptEvent(state: LaunchedGame, id: string): boolean {
+  if (id === 'nsa-leak') return state.budget >= leakPayment;
+  if (id === 'un-drought') return usedSlots(state) + aidSlotCount <= state.serverSlots;
+  return true;
+}
+
+/** One second of event logic (mutates `next`): counts NSA time, ends the UN aid, and raises the next due event. */
+function runEvents(next: LaunchedGame): void {
+  if (next.rentals.includes('nsa')) next.nsaSeconds = next.nsaSeconds + 1;
+  if (next.aidSeconds > 0) {
+    next.aidSeconds = next.aidSeconds - 1;
+    if (next.aidSeconds === 0) next.aidSlots = 0;
+  }
+  if (next.pendingEvent) return;
+  const due = specialEvents.find(entry => !next.eventsSeen.includes(entry.id) && eventDue(next, entry.id));
+  if (due) {
+    next.pendingEvent = due.id;
+    next.eventsSeen = [...next.eventsSeen, due.id];
+  }
+}
+
+/** The player's answer to the pending event. */
+export function answerEvent(state: LaunchedGame, accept: boolean): LaunchedGame | null {
+  const id = state.pendingEvent;
+  if (!id || (accept && !canAcceptEvent(state, id))) return null;
+  const closed: LaunchedGame = { ...state, pendingEvent: null };
+  switch (id) {
+    case 'edisonx-donation':
+      return accept
+        ? { ...closed, budget: cap(closed.budget + donationBudget), integrity: percent(closed.integrity - donationIntegrity) }
+        : fileLawsuit(closed, lawsuits.findIndex(entry => entry.special));
+    case 'nsa-leak':
+      return accept
+        ? { ...closed, budget: closed.budget - leakPayment }
+        : { ...closed, integrity: percent(closed.integrity - leakIntegrity) };
+    case 'un-drought':
+      return accept
+        ? { ...closed, aidSlots: aidSlotCount, aidSeconds: aidDuration,
+            worldProgress: { ...closed.worldProgress, hunger: percent(closed.worldProgress.hunger + aidHunger) } }
+        : closed;
+    default:
+      return closed;
+  }
 }
 
 /** Pay to make it go away. */

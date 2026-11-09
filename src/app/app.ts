@@ -8,6 +8,7 @@ import { LevelTwoComponent } from './components/level-two/level-two';
 import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import { VictoryComponent } from './components/victory/victory';
+import { EventDialogComponent } from './components/event-dialog/event-dialog';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
   assistantOutput, autoCoverageRate, clicksPerPress, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
@@ -17,7 +18,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work
 } from './game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { newsFeed } from './game/news';
 import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
@@ -33,7 +34,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -54,6 +55,12 @@ export class AppComponent {
   readonly news = computed(() => {
     const live = this.launched();
     return live ? newsFeed(live) : [];
+  });
+  /** The special event waiting for an answer (not while the victory dialog is open). */
+  readonly pendingEvent = computed(() => {
+    const live = this.launched();
+    const event = live && !this.victory() ? specialEvent(live.pendingEvent) : undefined;
+    return live && event ? { event, canAccept: canAcceptEvent(live, event.id) } : null;
   });
   /** The "world fixed" summary while its dialog is due. */
   readonly victory = computed(() => {
@@ -285,6 +292,10 @@ export class AppComponent {
 
   activateProduct(goal: string): void {
     this.updateLaunched(state => activateProduct(state, goal));
+  }
+
+  answerEvent(accept: boolean): void {
+    this.updateLaunched(state => answerEvent(state, accept));
   }
 
   pitch(): void {

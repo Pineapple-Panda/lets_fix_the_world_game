@@ -1527,3 +1527,45 @@ footer {
 .pitch-button:active {
     transform: translateY(1px);
 }
+
+/* Special events: a dialog with two answers. */
+.event-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.event-choices .intro-button {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+}
+
+.event-choices small {
+    font-weight: 400;
+    font-size: 11px;
+    opacity: .85;
+}
+
+.event-choices .intro-button:disabled {
+    background: var(--surface-2);
+    color: var(--faint);
+    cursor: not-allowed;
+}
+
+.intro-button.event-decline {
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--ink);
+}
+
+.intro-button.event-decline:hover {
+    background: var(--surface-2);
+}
+
+.event-hint {
+    color: var(--muted);
+    font-size: 12px;
+}

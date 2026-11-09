@@ -73,7 +73,7 @@ export function breakingNews(state: LaunchedGame): NewsLine[] {
   const lines: NewsLine[] = [];
   const lawsuit = lawsuitCase(state);
   if (lawsuit) {
-    const target = productDefinition(lawsuit.product)?.name ?? lawsuit.product;
+    const target = lawsuit.products ? 'all three of your applications' : productDefinition(lawsuit.product)?.name ?? lawsuit.product;
     lines.push({ text: `BREAKING: ${lawsuit.plaintiff} sues ${target}.`, breaking: true });
   }
   for (const entry of state.programs.filter(inProtest)) {
