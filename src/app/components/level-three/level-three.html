@@ -149,10 +149,19 @@
                     <strong>{{ entry.initiative.name }}</strong>
                     <small>{{ entry.initiative.description }}</small>
                     <small class="client-terms">
-                        {{ format(entry.initiative.cost) }} to start · −{{ format(entry.upkeep) }} budget/sec ·
+                        {{ format(entry.initiative.cost) }} to initialize · −{{ format(entry.upkeep) }} budget/sec ·
                         <span class="good">{{ entry.metricName }} +{{ entry.rate }}%/sec</span>
                     </small>
-                    @if (entry.running) {
+                    @if (entry.stage === 'new') {
+                        <small>Takes {{ entry.initiative.buildTime }}s to build. Its effect grows with your credibility.</small>
+                        @if (entry.initializeBlocker) { <small class="panel-warning">{{ entry.initializeBlocker }}</small> }
+                        <button class="tool-button" type="button" [disabled]="!!entry.initializeBlocker"
+                                [attr.aria-label]="'Initialize ' + entry.initiative.name + ' for ' + entry.initiative.cost + ' budget'"
+                                (click)="initiativeInitialized.emit(entry.initiative.id)">Initialize</button>
+                    } @else if (entry.stage === 'building') {
+                        <small>Building · {{ entry.buildSeconds }}s / {{ entry.initiative.buildTime }}s</small>
+                        <div class="progress-track"><div class="progress-fill" [style.width.%]="entry.buildProgress"></div></div>
+                    } @else if (entry.running) {
                         <small [class.panel-warning]="!entry.funded" [class.epic-done]="entry.funded">
                             {{ entry.funded ? 'Running' : 'Paused: not enough budget for the upkeep' }}
                         </small>

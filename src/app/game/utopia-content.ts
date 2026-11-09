@@ -129,12 +129,15 @@ export const counterInitiatives: CounterInitiative[] = [
     metric: 'housing', rate: 0.2, launchAfter: 150 }
 ];
 
-/** Your initiatives: programs that run continuously, like the program cards of level 2. */
+/**
+ * Your initiatives: first initialized (paid, then built for `buildTime` seconds), then started and stopped freely.
+ * While running they pay their upkeep and raise their bar by rate × credibility every second.
+ */
 export const initiatives: Initiative[] = [
   { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.',
-    metric: 'employment', cost: 1000000, upkeep: 1000, rate: 0.02 },
+    metric: 'employment', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.02 },
   { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.',
-    metric: 'housing', cost: 1000000, upkeep: 1000, rate: 0.02 },
+    metric: 'housing', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.02 },
   { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.',
-    metric: 'food', cost: 1000000, upkeep: 1000, rate: 0.02 }
+    metric: 'food', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.02 }
 ];

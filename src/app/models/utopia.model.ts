@@ -21,7 +21,11 @@ export interface UtopiaGame {
   metrics: Record<UtopiaMetric, number>;
   /** Power of every corporation in percent; 0 means defeated. */
   corpPower: Record<string, number>;
-  /** AI initiatives that are running. */
+  /** Initiatives that are built and can be started. */
+  built: string[];
+  /** Initiatives being built: seconds of building done so far. */
+  building: Record<string, number>;
+  /** Initiatives that are running. */
   running: string[];
   /** Seconds since MegaCorp showed itself; its counter initiatives launch one after another. */
   megacorpSeconds: number;
@@ -93,8 +97,10 @@ export interface Initiative {
   name: string;
   description: string;
   metric: UtopiaMetric;
-  /** Budget to start it. */
+  /** Budget to initialize (build) it. */
   cost: number;
+  /** Seconds it takes to build before it can be started. */
+  buildTime: number;
   /** Budget per second while it runs. */
   upkeep: number;
   /** Percentage points per second while it runs. */

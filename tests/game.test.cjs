@@ -1813,20 +1813,30 @@ test('level 3 starts with 65% employment and three corporations at 75% power', (
   assert.equal(state.battle, null);
 });
 
-test('bars erode every second; AI initiatives run like programs: start once, upkeep and progress every second', () => {
+test('initiatives are initialized, built for 30 seconds, then started; credibility multiplies their effect', () => {
   const next = utopia.tickUtopia(opened(), () => 0.99);
   assert.ok(next.metrics.employment < 65 && next.metrics.housing < 70 && next.metrics.food < 75);
-  const started = utopia.startInitiative({ ...opened(), perks: ['utopia-blueprint'], budgetRate: 0 }, 'career-match');
-  assert.equal(started.budget, 20000000 - 1000000, '1,000,000 to start');
-  assert.deepEqual(started.running, ['career-match']);
-  assert.equal(utopia.initiativeBlocker(started, 'career-match'), 'Already running');
+  const base = { ...opened(), perks: ['utopia-blueprint'], budgetRate: 0 };
+  assert.equal(utopia.startInitiative(base, 'career-match'), null, 'not built yet');
+  assert.equal(utopia.initiativeBlocker(base, 'career-match'), 'Needs to be initialized first');
+  let state = utopia.initializeInitiative(base, 'career-match');
+  assert.equal(state.budget, base.budget - 1000000, '1,000,000 to initialize');
+  assert.equal(utopia.initiativeStage(state, 'career-match'), 'building');
+  assert.equal(utopia.initializeInitiative(state, 'career-match'), null, 'only once');
+  for (let second = 0; second < 29; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(utopia.initiativeStage(state, 'career-match'), 'building');
+  state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(utopia.initiativeStage(state, 'career-match'), 'built', 'built after 30 seconds');
+  const started = utopia.startInitiative(state, 'career-match');
+  assert.equal(started.budget, state.budget, 'starting is free once built');
+  assert.equal(utopia.initiativeRate(started, 'career-match'), 0.01, '0.02 × 50% credibility');
+  assert.equal(utopia.initiativeRate({ ...started, integrity: 100 }, 'career-match'), 0.02);
   let later = started;
   for (let second = 0; second < 100; second++) later = utopia.tickUtopia(later, () => 0.99);
-  assert.ok(Math.abs(later.metrics.employment - (65 + 100 * (0.02 - 0.01))) < 1e-9, '+0.02%/s against −0.01%/s drift');
+  assert.ok(Math.abs(later.metrics.employment - (started.metrics.employment + 100 * (0.01 - 0.01))) < 1e-9, 'cancels the drift at 50% credibility');
   assert.equal(later.budget, started.budget - 100 * 1000, '1,000 budget per second');
-  const broke = utopia.tickUtopia({ ...started, budget: 999 }, () => 0.99);
-  assert.ok(broke.metrics.employment < 65, 'paused without budget for the upkeep');
-  assert.deepEqual(utopia.stopInitiative(started, 'career-match').running, []);
+  const stopped = utopia.stopInitiative(started, 'career-match');
+  assert.equal(utopia.initiativeStage(stopped, 'career-match'), 'built', 'stays built after stopping');
 });
 
 test('MegaCorp attacks every 45 seconds, weaker corporations hit softer', () => {
@@ -1894,8 +1904,8 @@ test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing the
 
 test('initiatives cost budget; defamation costs integrity; battles move it', () => {
   const poor = { ...opened(), budget: 999999 };
-  assert.equal(utopia.startInitiative(poor, 'career-match'), null, 'needs 1,000,000');
-  assert.equal(utopia.initiativeBlocker(poor, 'career-match'), 'Not enough budget');
+  assert.equal(utopia.initializeInitiative(poor, 'career-match'), null, 'needs 1,000,000');
+  assert.equal(utopia.initializeBlocker(poor, 'career-match'), 'Not enough budget');
   const smeared = utopia.attack({ ...opened(), corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0.99);
   assert.equal(smeared.integrity, 46, 'influencer smear: −4 integrity');
   let won = utopia.startBattle(opened(), 'bananas');
@@ -1920,7 +1930,7 @@ test('level 3 keeps only the two unlock perks; the effect kinds still work for n
     assert.ok(utopia.openUtopiaPerks(state).length <= 5, 'at most five shown');
     for (const perk of extra) state = utopia.activateUtopiaPerk(state, perk.id);
     assert.equal(state.budget, opened().budget - 1000, 'pays the price');
-    assert.equal(utopia.initiativeRate(state, 'career-match'), 0.04);
+    assert.equal(utopia.initiativeRate(state, 'career-match'), 0.02, '0.02 × 50% credibility × 2');
     assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500);
     assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
     const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
@@ -1941,7 +1951,7 @@ test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total 
   for (let second = 0; second < 50; second++) later = utopia.tickUtopia(later, () => 0);
   assert.deepEqual(later.metrics, start.metrics, 'the bars wait for the Utopia card');
   assert.equal(later.nextAttack, start.nextAttack, 'MegaCorp waits too');
-  assert.equal(utopia.initiativeBlocker({ ...later, budget: 1000000 }, 'career-match'), 'Utopia is locked', 'no initiatives yet');
+  assert.equal(utopia.initializeBlocker({ ...later, budget: 1000000 }, 'career-match'), 'Utopia is locked', 'no initiatives yet');
   assert.equal(utopia.startBattle(later, 'bananas'), null, 'no battles yet');
   later = utopia.activateUtopiaPerk(later, 'utopia-blueprint');
   assert.equal(later.budget, 0, 'free');
@@ -1968,7 +1978,7 @@ test('MegaCorp launches counter initiatives one after another, scaled by power',
 
 test('each utopia bar shows its current change per second', () => {
   let state = { ...opened(), running: ['career-match'], megacorpSeconds: 90 };
-  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.02 - 0.15)) < 1e-12, 'drift + initiative − counter initiative');
+  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.01 - 0.15)) < 1e-12, 'drift + initiative − counter initiative');
   assert.ok(Math.abs(utopia.metricRate(state, 'food') - (-0.008 - 0.15)) < 1e-12);
   assert.equal(utopia.metricRate({ ...state, perks: [] }, 'food'), 0, 'nothing moves while Utopia is locked');
   const before = state.metrics.housing;

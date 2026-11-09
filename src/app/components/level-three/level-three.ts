@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionsGained, canFight, cardUnlocked, corporation, metricRate, counterRate, launchedCounters, initiativeBlocker, initiativeFunded, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
+  actionsGained, canFight, cardUnlocked, corporation, metricRate, counterRate, launchedCounters, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeStage, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
   utopiaPerkAvailable
 } from '../../game/utopia';
 import { attackRules, battleRules, corporations, initiatives, megaCorpName, metrics, playerMoves, utopiaPerks } from '../../game/utopia-content';
@@ -15,6 +15,7 @@ import type { UtopiaGame } from '../../models/utopia.model';
 })
 export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
+  readonly initiativeInitialized = output<string>();
   readonly initiativeStarted = output<string>();
   readonly initiativeStopped = output<string>();
   readonly fightStarted = output<string>();
@@ -38,6 +39,10 @@ export class LevelThreeComponent {
         rate: Math.round(initiativeRate(state, initiative.id) * 100000) / 100000,
         upkeep: initiativeUpkeep(state, initiative.id),
         running: state.running.includes(initiative.id),
+        stage: initiativeStage(state, initiative.id),
+        buildProgress: (state.building[initiative.id] ?? 0) / initiative.buildTime * 100,
+        buildSeconds: state.building[initiative.id] ?? 0,
+        initializeBlocker: initializeBlocker(state, initiative.id),
         funded: initiativeFunded(state, initiative.id),
         blocker: state.running.includes(initiative.id) ? null : initiativeBlocker(state, initiative.id)
       })),

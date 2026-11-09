@@ -25,6 +25,8 @@ export function newUtopia(
     perks: [],
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, metric.start])) as Record<UtopiaMetric, number>,
     corpPower: Object.fromEntries(corporations.map(corp => [corp.id, corpStartPower])),
+    built: [],
+    building: {},
     running: [],
     megacorpSeconds: 0,
     nextAttack: attackRules.interval,
@@ -112,6 +114,12 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
       ? Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>
       : state.metrics,
   };
+  next.building = Object.fromEntries(Object.entries(state.building).map(([id, seconds]) => [id, seconds + 1]));
+  const finished = Object.entries(next.building).filter(([id, seconds]) => seconds >= (initiative(id)?.buildTime ?? 0)).map(([id]) => id);
+  if (finished.length) {
+    next.built = [...next.built, ...finished];
+    next.building = Object.fromEntries(Object.entries(next.building).filter(([id]) => !finished.includes(id)));
+  }
   runInitiatives(next);
   if (cardUnlocked(state, 'megacorp')) {
     next.megacorpSeconds = state.megacorpSeconds + 1;
@@ -147,9 +155,9 @@ export function initiative(id: string): Initiative | undefined {
   return initiatives.find(entry => entry.id === id);
 }
 
-/** Percentage points per second an initiative adds to its bar, with perks. */
+/** Percentage points per second an initiative adds to its bar: its rate × credibility (50% credibility: half), with perks. */
 export function initiativeRate(state: UtopiaGame, id: string): number {
-  return (initiative(id)?.rate ?? 0) * perkValue(state, 'initiativeGain');
+  return (initiative(id)?.rate ?? 0) * state.integrity / 100 * perkValue(state, 'initiativeGain');
 }
 
 /** Budget per second an initiative costs, with perks. */
@@ -157,21 +165,44 @@ export function initiativeUpkeep(state: UtopiaGame, id: string): number {
   return (initiative(id)?.upkeep ?? 0) * perkValue(state, 'upkeep');
 }
 
-/** Why an initiative cannot start right now, or null when it can. */
-export function initiativeBlocker(state: UtopiaGame, id: string): string | null {
+/** Where an initiative stands: not built yet, building, built (ready to start) or running. */
+export function initiativeStage(state: UtopiaGame, id: string): 'new' | 'building' | 'built' | 'running' {
+  if (state.running.includes(id)) return 'running';
+  if (state.built.includes(id)) return 'built';
+  return id in state.building ? 'building' : 'new';
+}
+
+/** Why an initiative cannot be initialized right now, or null when it can. */
+export function initializeBlocker(state: UtopiaGame, id: string): string | null {
   const entry = initiative(id);
   if (!entry) return 'Unknown initiative';
   if (!cardUnlocked(state, 'utopia')) return 'Utopia is locked';
-  if (state.running.includes(id)) return 'Already running';
+  if (initiativeStage(state, id) !== 'new') return 'Already initialized';
   if (state.budget < entry.cost) return 'Not enough budget';
   return null;
 }
 
-/** Starts an AI initiative: pays its start price; from then on it runs every second. */
-export function startInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
+/** Pays for an initiative and starts building it; after its build time it can be started. */
+export function initializeInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
   const entry = initiative(id);
-  if (!entry || initiativeBlocker(state, id)) return null;
-  return { ...state, budget: state.budget - entry.cost, running: [...state.running, id] };
+  if (!entry || initializeBlocker(state, id)) return null;
+  return { ...state, budget: state.budget - entry.cost, building: { ...state.building, [id]: 0 } };
+}
+
+/** Why an initiative cannot start right now, or null when it can. */
+export function initiativeBlocker(state: UtopiaGame, id: string): string | null {
+  if (!initiative(id)) return 'Unknown initiative';
+  if (!cardUnlocked(state, 'utopia')) return 'Utopia is locked';
+  const stage = initiativeStage(state, id);
+  if (stage === 'running') return 'Already running';
+  if (stage !== 'built') return 'Needs to be initialized first';
+  return null;
+}
+
+/** Starts a built initiative; from then on it runs every second. */
+export function startInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
+  if (initiativeBlocker(state, id)) return null;
+  return { ...state, running: [...state.running, id] };
 }
 
 export function stopInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
