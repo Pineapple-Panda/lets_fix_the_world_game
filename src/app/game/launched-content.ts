@@ -31,7 +31,7 @@ export const launchedPerks: LaunchedPerk[] = [
     name: 'Pitch Deck Generator',
     description: 'Turns any idea into 40 slides with hockey-stick charts. Unlocks "Pitch to investors": every click brings in budget.',
     icon: 'PD',
-    actionsRequired: 1000000
+    actionsRequired: 100000
   },
   {
     id: 'mediation-academy',
