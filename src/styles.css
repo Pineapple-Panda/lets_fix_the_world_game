@@ -1314,26 +1314,6 @@ footer {
     gap: 12px;
 }
 
-.dev-toggle {
-    padding: 1px 6px;
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: transparent;
-    color: var(--faint);
-    font: inherit;
-    cursor: pointer;
-}
-
-.dev-toggle:hover {
-    color: var(--ink);
-}
-
-.dev-toggle.on {
-    border-color: var(--yellow);
-    background: rgba(242, 197, 92, .15);
-    color: var(--yellow);
-}
-
 .reset {
     border: 0;
     background: none;

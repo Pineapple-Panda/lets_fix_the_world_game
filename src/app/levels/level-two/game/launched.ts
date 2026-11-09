@@ -101,7 +101,7 @@ export function level2Summary(state: LaunchedGame): LevelSummary {
   };
 }
 
-/** Starting values when level 1 is skipped with the dev button. */
+/** Starting values of level 2 when level 1 is disabled in the game config. */
 export const skipLevelActions = 34000;
 export const skipLevelBudget = 3000;
 
@@ -264,32 +264,14 @@ export function averageBudgetPerSecond(state: LaunchedGame): number {
   return Math.round(payout + rentalIncome(state) + programs);
 }
 
-/** Dev mode: epics take at most this many seconds. */
-export const devEpicDuration = 5;
-export const devBoostActions = 1000000;
-export const devBoostBudget = 1000000;
-
 /** True after migrating to data centres. */
 export function dataCentersActive(state: LaunchedGame): boolean {
   return state.perks.includes(dataCentersPerk);
 }
 
-/** Seconds an epic needs: halved (rounded up) after migrating to data centres, capped at 5 in dev mode. */
-export function epicDuration(epic: EpicDefinition, fastEpics = false, dataCenters = false): number {
-  const duration = dataCenters ? Math.ceil(epic.duration / 2) : epic.duration;
-  return fastEpics ? Math.min(devEpicDuration, duration) : duration;
-}
-
-/**
- * Dev shortcut: +1,000,000 actions and +1,000,000 budget. The extra actions are not paid out as budget again.
- */
-export function devBoost(state: LaunchedGame): LaunchedGame {
-  return {
-    ...state,
-    actions: cap(state.actions + devBoostActions),
-    budgetActions: cap(state.budgetActions + devBoostActions),
-    budget: cap(state.budget + devBoostBudget)
-  };
+/** Seconds an epic needs: halved (rounded up) after migrating to data centres. */
+export function epicDuration(epic: EpicDefinition, dataCenters = false): number {
+  return dataCenters ? Math.ceil(epic.duration / 2) : epic.duration;
 }
 
 /**
@@ -299,8 +281,7 @@ export function devBoost(state: LaunchedGame): LaunchedGame {
  */
 export function tickLaunched(
   state: LaunchedGame,
-  random: () => number = Math.random,
-  fastEpics = false
+  random: () => number = Math.random
 ): LaunchedGame {
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
   // Every server slot adds a full share of actions per second.
@@ -314,7 +295,7 @@ export function tickLaunched(
       if (epic.done) return epic;
       const progress = epic.progress + 1;
       const definition = epicDefinition(epic.id);
-      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, fastEpics, dataCenters) : 0) };
+      return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, dataCenters) : 0) };
     })
   };
   if (next.seconds % budgetInterval === 0) {

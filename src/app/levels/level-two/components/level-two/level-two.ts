@@ -24,8 +24,6 @@ const problemName = (id: string) => worldProblems.find(entry => entry.id === id)
 })
 export class LevelTwoComponent {
   readonly state = input.required<LaunchedGame>();
-  /** Dev mode: epics take at most 5 seconds. */
-  readonly fastEpics = input(false);
   readonly perkActivated = output<string>();
   readonly epicStarted = output<string>();
   readonly productActivated = output<string>();
@@ -43,7 +41,6 @@ export class LevelTwoComponent {
 
   protected readonly view = computed(() => {
     const state = this.state();
-    const fast = this.fastEpics();
     const halved = dataCentersActive(state);
     const factor = clientFactor(state);
     return {
@@ -115,7 +112,7 @@ export class LevelTwoComponent {
       slots: state.serverSlots,
       // Special epics unlocked by programs; hidden again once done.
       infrastructure: infrastructureEpics(state).filter(epic => !epicDone(state, epic.id)).map(epic => ({
-        ...this.epicCard(state, epic, fast, halved),
+        ...this.epicCard(state, epic, halved),
         missingPerk: epicPerkMissing(state, epic.id)
       })),
       // One block per world goal that has epics: finished epics, then the next one in the chain.
@@ -137,7 +134,7 @@ export class LevelTwoComponent {
             ? `Released: ${productTitle(released)}`
             : `Goal reached · ${target?.name ?? 'The product'} also needs ${missing.join(' and ')}`,
           next: next && {
-            ...this.epicCard(state, next, fast, halved),
+            ...this.epicCard(state, next, halved),
             // Within a system epics run one after another (Peace & Integrity: war first, then corruption).
             waitingFor: epicUnlocked(state, next.id) ? undefined : previousEpic(next.id)?.title
           }
@@ -150,9 +147,9 @@ export class LevelTwoComponent {
   protected readonly openGoals = computed(() => this.view().goals.filter(goal => !goal.complete));
 
   /** An epic as shown on the server card: its effective duration, whether it runs and how far it is. */
-  private epicCard(state: LaunchedGame, epic: EpicDefinition, fast: boolean, halved: boolean) {
+  private epicCard(state: LaunchedGame, epic: EpicDefinition, halved: boolean) {
     const entry = state.epics.find(candidate => candidate.id === epic.id);
-    const duration = epicDuration(epic, fast, halved);
+    const duration = epicDuration(epic, halved);
     return {
       epic: { ...epic, duration },
       running: !!entry,

@@ -554,7 +554,7 @@ export function level3Summary(state: UtopiaGame): LevelSummary {
   };
 }
 
-/** All three levels for the final summary; levels that were skipped (dev buttons) are marked as such. */
+/** All three levels for the final summary; levels that were not played (disabled in the game config) are marked as such. */
 export function gameSummary(state: UtopiaGame): LevelSummary[] {
   const skipped = (level: number, title: string): LevelSummary => ({ level, title, facts: [{ label: 'Skipped', value: 'No stats from this run' }] });
   const level1 = state.history.find(entry => entry.level === 1) ?? skipped(1, 'Level 1 · Building the platform');

@@ -798,10 +798,9 @@ test('"Migrate to Data Centers": 80,000 actions, 350,000 budget, epics take half
   assert.equal(free.budget, 0, 'perks without a price stay free');
 
   const epic = launched.epicDefinition('climate-collect-measurements');
-  assert.equal(launched.epicDuration(epic, false, true), 60, '2 minutes become 1');
-  assert.equal(launched.epicDuration(launched.epicDefinition('war-verify-footage'), false, true), 45);
-  assert.equal(launched.epicDuration(launched.epicDefinition('war-early-warning'), false, true), 15);
-  assert.equal(launched.epicDuration(epic, true, true), 5, 'dev mode still caps at 5 seconds');
+  assert.equal(launched.epicDuration(epic, true), 60, '2 minutes become 1');
+  assert.equal(launched.epicDuration(launched.epicDefinition('war-verify-footage'), true), 45);
+  assert.equal(launched.epicDuration(launched.epicDefinition('war-early-warning'), true), 15);
   let fast = liveState({ perks: ['data-centers'], epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
   for (let second = 0; second < 60; second++) fast = launched.tickLaunched(fast, () => 0);
   assert.equal(fast.epics[0].done, true, 'done after 60 instead of 120 seconds');
@@ -1076,26 +1075,6 @@ test('rental clients and world problems are defined', () => {
   }
 });
 
-test('level 2 dev mode: 5-second epics and a boost of 1,000,000 actions and budget', () => {
-  const boosted = launched.devBoost(liveState({ actions: 40000, budget: 10, budgetActions: 40000 }));
-  assert.equal(boosted.actions, 1040000);
-  assert.equal(boosted.budget, 1000010);
-  let paid = boosted;
-  for (let second = 0; second < 5; second++) paid = launched.tickLaunched(paid, () => 0);
-  assert.equal(paid.budget, 1000010 + 5 * 50, 'the boosted actions are not paid out as budget again');
-
-  const epic = launched.epicDefinition('climate-collect-measurements');
-  assert.equal(launched.epicDuration(epic), 120);
-  assert.equal(launched.epicDuration(epic, true), 5);
-  assert.equal(launched.epicDuration(launched.epicDefinition('climate-algorithm'), true), 5);
-  let live = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
-  for (let second = 0; second < 5; second++) live = launched.tickLaunched(live, () => 0, true);
-  assert.equal(live.epics[0].done, true, 'done after 5 seconds in dev mode');
-  let normal = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
-  for (let second = 0; second < 5; second++) normal = launched.tickLaunched(normal, () => 0);
-  assert.equal(normal.epics[0].done, false);
-});
-
 const greenWorldActive = overrides => liveState({
   perks: ['workflow-abstraction', 'network-financing'], serverSlots: 2, budget: 10000000,
   products: [{ id: 'green-world', major: 1, minor: 0, active: true }], ...overrides
@@ -1172,7 +1151,7 @@ test('the connector epic needs real data centres and adds 20% climate solution o
   live = launched.startEpic(withDc, 'data-center-green-connector');
   assert.equal(live.budget, 5000000 - 1500000);
   const climateBefore = live.worldProgress.climate;
-  const seconds = launched.epicDuration(launched.epicDefinition('data-center-green-connector'), false, true);
+  const seconds = launched.epicDuration(launched.epicDefinition('data-center-green-connector'), true);
   assert.equal(seconds, 90, '3 minutes, halved by the data centres');
   for (let second = 0; second < seconds; second++) live = launched.tickLaunched({ ...live, programs: [] }, () => 0.99);
   assert.equal(launched.epicDone(live, 'data-center-green-connector'), true);

@@ -26,7 +26,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
 } from './levels/level-one/game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './levels/level-two/game/launched';
 import { newsFeed } from './levels/level-two/game/news';
 import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './shared/game/storage';
@@ -36,9 +36,8 @@ import type { Item } from './levels/level-one/models/item.model';
 import type { LaunchedGame } from './levels/level-two/models/launched.model';
 import type { PerkId } from './levels/level-one/models/perk.model';
 import { formatVersion, nextVersion } from './levels/level-one/models/version.model';
+import { gameConfig } from './game.config';
 
-/** Actions per click while dev mode is on. */
-const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
@@ -55,8 +54,8 @@ export class AppComponent {
 
   readonly saveWarning = signal('');
   readonly showIntro = signal(false);
-  /** Dev mode: every Write code / Fix bug click counts as `devModeActions` actions. Not saved. */
-  readonly devMode = signal(false);
+  /** Which levels can be played. */
+  protected readonly config = gameConfig;
   /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
   readonly launched = signal<LaunchedGame | null>(null);
   /** Level 3 state; null while the player is in level 1 or 2. Also restored by `game`. */
@@ -193,7 +192,7 @@ export class AppComponent {
       }
       const launched = this.launched();
       if (launched) {
-        const next = tickLaunched(launched, Math.random, this.devMode());
+        const next = tickLaunched(launched, Math.random);
         this.launched.set(next);
         this.persistLaunched(next);
         return;
@@ -231,12 +230,10 @@ export class AppComponent {
 
   code(): void {
     if (!this.view().selected) return;
-    const devMode = this.devMode();
     this.update(game => {
-      // Each performance upgrade adds one extra click; in dev mode every click is worth 30 actions.
+      // Each performance upgrade adds one extra click.
       // Only the work the item still needs is counted: surplus clicks are lost, not credited as actions.
-      const amount = clicksPerPress(game) * (devMode ? devModeActions : 1);
-      work(game, game.selected, amount);
+      work(game, game.selected, clicksPerPress(game));
     });
   }
 
@@ -297,25 +294,25 @@ export class AppComponent {
         this.storageBlocked = true;
         this.saveWarning.set('Unable to access browser storage. Progress is not being saved.');
       }
-      this.launched.set(null);
-      this.utopia.set(null);
-      this.update(() => newGame());
+      this.startFirstLevel();
     }
   }
 
-  /** Dev shortcut: jump to level 2 with 34,000 actions and 3,000 budget. Level 1 progress is dropped. */
-  skipLevel(): void {
-    if (!window.confirm('Skip to level 2? Your level 1 progress will be lost.')) return;
-    const state = skippedLevelTwo();
-    this.showIntro.set(false);
-    this.launched.set(state);
-    this.persistLaunched(state);
-  }
-
-  toggleDevMode(): void {
-    this.devMode.update(on => !on);
-    // In level 2, switching dev mode on also grants +1,000,000 actions and +1,000,000 budget.
-    if (this.devMode()) this.updateLaunched(state => devBoost(state));
+  /** A new game in the first level the game config enables. */
+  private startFirstLevel(): void {
+    this.launched.set(null);
+    this.utopia.set(null);
+    this.update(() => newGame());
+    if (gameConfig.levelOneEnabled) return;
+    if (gameConfig.levelTwoEnabled) {
+      const state = skippedLevelTwo();
+      this.launched.set(state);
+      this.persistLaunched(state);
+    } else if (gameConfig.levelThreeEnabled) {
+      const state = newUtopia();
+      this.utopia.set(state);
+      this.persistUtopia(state);
+    }
   }
 
   activateLaunchedPerk(id: string): void {
@@ -336,34 +333,30 @@ export class AppComponent {
 
   /** After completing level 2: a new run of level 1 with 10,000 TCA. */
   restartLevelOne(): void {
+    if (!gameConfig.levelOneEnabled) return;
     this.launched.set(null);
     this.update(() => headStartGame());
   }
 
   /** After completing level 2: a new run of level 2 with 10,000,000 TCA and 20,000,000 budget. */
   restartLevelTwo(): void {
+    if (!gameConfig.levelTwoEnabled) return;
     const state = replayLevelTwo();
     this.launched.set(state);
     this.persistLaunched(state);
   }
 
-  /** Leaves level 2 for good: level 3 starts fresh. */
-  /** From the victory dialog: TCA, budget, credibility and the rates per second carry over from level 2. */
-  startLevelThree(carryOver = true): void {
-    const live = carryOver ? this.launched() : null;
-    const state = newUtopia(live ? {
+  /** From the victory dialog: leaves level 2 for good; TCA, budget, credibility and the rates per second carry over. */
+  startLevelThree(): void {
+    const live = this.launched();
+    if (!live || !gameConfig.levelThreeEnabled) return;
+    const state = newUtopia({
       actions: live.actions, budget: live.budget, integrity: live.integrity,
       actionRate: averageActionsPerSecond(live), budgetRate: averageBudgetPerSecond(live)
-    } : undefined, live ? [...live.history, level2Summary(live)] : []);
+    }, [...live.history, level2Summary(live)]);
     this.launched.set(null);
     this.utopia.set(state);
     this.persistUtopia(state);
-  }
-
-  /** Dev shortcut from level 2: jump straight to level 3 with the default start (280M TCA, 20M budget, 13,000/s each). */
-  skipToLevelThree(): void {
-    if (!window.confirm('Skip to level 3? Your level 2 progress will be lost.')) return;
-    this.startLevelThree(false);
   }
 
   activateUtopiaPerk(id: string): void {
@@ -476,6 +469,7 @@ export class AppComponent {
 
   /** Leaves level 1 for good: the save is reduced to actions and budget. */
   launchApplication(): void {
+    if (!gameConfig.levelTwoEnabled) return;
     const state = launch(this.game());
     if (!state) return;
     this.launched.set(state);
@@ -496,19 +490,27 @@ export class AppComponent {
     }
     // An incompatible or corrupt save is ignored: the player starts over and the next save replaces it.
     this.savedSnapshot = snapshot;
-    const utopia = loadUtopia(storage);
+    // A save in a level the game config disables is not resumed.
+    const utopia = gameConfig.levelThreeEnabled ? loadUtopia(storage) : null;
     if (utopia) {
       this.utopia.set(utopia);
       return newGame();
     }
-    const launched = loadLaunched(storage);
+    const launched = gameConfig.levelTwoEnabled ? loadLaunched(storage) : null;
     if (launched) {
       this.launched.set(launched);
       return newGame();
     }
-    const savedGame = loadGame(storage);
-    this.showIntro.set(savedGame === null);
-    return savedGame ?? newGame();
+    const savedGame = gameConfig.levelOneEnabled ? loadGame(storage) : null;
+    if (savedGame) return savedGame;
+    if (gameConfig.levelOneEnabled) {
+      this.showIntro.set(true);
+    } else if (gameConfig.levelTwoEnabled) {
+      this.launched.set(skippedLevelTwo());
+    } else if (gameConfig.levelThreeEnabled) {
+      this.utopia.set(newUtopia());
+    }
+    return newGame();
   }
 
   private persistGame(game: Game): void {
