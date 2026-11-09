@@ -377,7 +377,7 @@ test('the perk list', () => {
   assert.deepEqual(perks.map(perk => [perk.id, perk.actionsRequired]), [
     ['stack-overflow', 50], ['build-pipeline', 200], ['code-assistant', 700], ['multi-agent', 1000],
     ['ram-upgrade', 2000], ['ai-subscription', 4000], ['auto-assigner', 6000], ['bug-fix-agent', 10000],
-    ['earl', 17000], ['testing-skills', 20000], ['auto-testing', 25000], ['ai-testing-subscription', 28000],
+    ['ai-max-plan', 12000], ['earl', 17000], ['testing-skills', 20000], ['auto-testing', 25000], ['ai-testing-subscription', 28000],
     ['auto-deploy', 32000]
   ]);
   assert.equal(new Set(perks.map(perk => perk.icon)).size, perks.length, 'icons are unique');
@@ -400,13 +400,13 @@ test('the perk list previews the next perks in unlock order', () => {
   const byId = id => perks.find(perk => perk.id === id);
   const state = newGame();
   assert.deepEqual(openPerks(state), perks.slice(0, 3));
-  state.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
+  state.activatedPerks = perks.slice(0, 9).map(perk => perk.id);
   state.actions = 16999;
   assert.deepEqual(openPerks(state), [byId('earl'), byId('testing-skills'), byId('auto-testing')], 'locked testing perks are previewed like any other perk');
-  state.activatedPerks = perks.slice(0, 6).map(perk => perk.id);
+  state.activatedPerks = perks.slice(0, 7).map(perk => perk.id);
   state.actions = 7000;
-  assert.deepEqual(openPerks(state), [byId('auto-assigner'), byId('bug-fix-agent'), byId('earl')], 'Earl shows up as soon as it is among the next three');
-  state.activatedPerks = perks.slice(0, 8).map(perk => perk.id);
+  assert.deepEqual(openPerks(state), [byId('bug-fix-agent'), byId('ai-max-plan'), byId('earl')], 'Earl shows up as soon as it is among the next three');
+  state.activatedPerks = perks.slice(0, 9).map(perk => perk.id);
   state.actions = 21000;
   assert.deepEqual(openPerks(state), [byId('auto-testing'), byId('earl'), byId('testing-skills')], 'unlocked testing perks are promoted');
   state.activatedPerks.push('earl', 'testing-skills');
@@ -450,6 +450,8 @@ test('assistants: buying, upgrading and output', () => {
   assert.equal(game.clicksPerPress(state), 3);
   grant(state, 'ai-subscription');
   assert.equal(assistantOutput(state), 2);
+  grant(state, 'ai-max-plan');
+  assert.equal(assistantOutput(state), 4, 'the AI Max Plan doubles it again');
 });
 
 test('multi agent assignments and auto assigner', () => {

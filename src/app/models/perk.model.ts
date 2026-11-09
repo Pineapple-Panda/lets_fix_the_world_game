@@ -7,6 +7,7 @@ export type PerkId =
   | 'ai-subscription'
   | 'auto-assigner'
   | 'bug-fix-agent'
+  | 'ai-max-plan'
   | 'earl'
   | 'testing-skills'
   | 'auto-testing'
@@ -90,6 +91,14 @@ export const perks: Perk[] = [
     icon: 'B+',
     kind: 'simple',
     actionsRequired: 10000
+  },
+  {
+    id: 'ai-max-plan',
+    name: 'AI Max Plan',
+    description: 'Double the output of every assistant again. Same models, bigger invoice, fewer rate limits.',
+    icon: 'AX',
+    kind: 'simple',
+    actionsRequired: 12000
   },
   {
     id: 'earl',
