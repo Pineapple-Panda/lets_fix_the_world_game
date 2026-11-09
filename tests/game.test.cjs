@@ -1884,12 +1884,12 @@ test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing the
   assert.equal(carried.budget, 4000000);
   assert.equal(carried.integrity, 81);
   assert.deepEqual(carried.perks, []);
-  assert.deepEqual([opened().actions, opened().budget, opened().integrity], [10000000, 20000000, 50]);
+  assert.deepEqual([opened().actions, opened().budget, opened().integrity], [280000000, 20000000, 50]);
   const next = utopia.tickUtopia(carried, () => 0);
   assert.equal(next.actions, 123456789 + 12000, 'the actions per second from level 2');
   assert.equal(next.budget, 4000000 + 3500, 'the budget per second from level 2');
   assert.equal(utopia.newUtopia({ actions: 0, budget: 0, integrity: 50, actionRate: 100, budgetRate: -300 }).budgetRate, 0, 'never negative');
-  assert.equal(opened().actionRate, 175);
+  assert.equal(opened().actionRate, 13000);
 });
 
 test('initiatives cost budget; defamation costs integrity; battles move it', () => {
@@ -1907,7 +1907,7 @@ test('level 3 perks: at most five, available first, each with its own effect', (
   const rich = { ...opened(), actions: 500000000, budget: 100000000 };
   assert.ok(utopia.openUtopiaPerks(rich).length <= 5);
   assert.equal(utopia.openUtopiaPerks({ ...utopia.newUtopia(), actions: 30000000 })[0].id, 'utopia-blueprint', 'available first, then by threshold');
-  assert.equal(utopia.activateUtopiaPerk(opened(), 'counter-lobby'), null, 'needs 270M total TCA');
+  assert.equal(utopia.activateUtopiaPerk({ ...opened(), actions: 269999999 }, 'counter-lobby'), null, 'needs 270M total TCA');
   let state = utopia.activateUtopiaPerk(rich, 'open-source-ai');
   assert.equal(state.budget, 100000000 - 5000000);
   assert.equal(utopia.initiativeRate(state, 'career-match'), 0.04, 'twice as fast');

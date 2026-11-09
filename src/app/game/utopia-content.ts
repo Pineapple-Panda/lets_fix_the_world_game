@@ -11,7 +11,7 @@ export const megaCorpName = 'MegaCorp';
  * Starting values when level 3 is not reached from level 2. Otherwise TCA, budget and integrity carry over, and so
  * do the average actions and budget per second level 2 ended with: they keep TCA and budget running.
  */
-export const utopiaStart = { actions: 10000000, budget: 20000000, integrity: 50, actionRate: 175, budgetRate: 175 };
+export const utopiaStart = { actions: 280000000, budget: 20000000, integrity: 50, actionRate: 13000, budgetRate: 13000 };
 
 /** Credibility (stored as integrity) change after a battle. */
 export const integrityRules = { battleWon: 5, battleLost: -10 };

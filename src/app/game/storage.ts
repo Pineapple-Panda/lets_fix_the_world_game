@@ -84,8 +84,8 @@ const isPercentRecord = (value: unknown): boolean => isObject(value) && Object.v
 export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null {
   const game = readSnapshot(storage, 3);
   // Level 3 saves from before TCA, budget, integrity and perks existed get the starting values.
-  if (game && game.actions === undefined) Object.assign(game, { actions: 10000000, budget: 20000000, integrity: 50, perks: [] });
-  if (game && game.actionRate === undefined) Object.assign(game, { actionRate: 175, budgetRate: 175 });
+  if (game && game.actions === undefined) Object.assign(game, { actions: 280000000, budget: 20000000, integrity: 50, perks: [] });
+  if (game && game.actionRate === undefined) Object.assign(game, { actionRate: 13000, budgetRate: 13000 });
   if (game && game.startActions === undefined) game.startActions = game.actions;
   if (game && game.running === undefined) { game.running = []; delete game.cooldowns; }
   if (game && game.megacorpSeconds === undefined) game.megacorpSeconds = 0;
