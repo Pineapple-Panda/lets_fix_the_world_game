@@ -23,6 +23,8 @@ export interface UtopiaGame {
   corpPower: Record<string, number>;
   /** AI initiatives that are running. */
   running: string[];
+  /** Seconds since MegaCorp showed itself; its counter initiatives launch one after another. */
+  megacorpSeconds: number;
   /** Seconds until MegaCorp attacks again. */
   nextAttack: number;
   /** Latest MegaCorp attacks, newest first. */
@@ -97,6 +99,19 @@ export interface Initiative {
   upkeep: number;
   /** Percentage points per second while it runs. */
   rate: number;
+}
+
+/** A MegaCorp program against the utopia: it pushes a bar down every second while its corporation has power. */
+export interface CounterInitiative {
+  id: string;
+  corpId: string;
+  name: string;
+  description: string;
+  metric: UtopiaMetric;
+  /** Percentage points per second it takes at full corporation power. */
+  rate: number;
+  /** Seconds after MegaCorp shows itself before it starts. */
+  launchAfter: number;
 }
 
 /** What a level 3 perk changes. Add a kind here and handle it in `utopia.ts` to create new effects. */

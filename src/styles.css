@@ -1768,3 +1768,33 @@ footer {
 .utopia .live-stat strong {
     font-size: 17px;
 }
+
+/* Level 3 initiatives: yours on the left, MegaCorp's counter initiatives (red tint) on the right. */
+.initiative-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
+}
+
+.initiative-column {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.initiative-column-title {
+    color: var(--muted);
+    font: 600 10px var(--mono);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.program.counter {
+    background: color-mix(in srgb, var(--bg) 88%, var(--red));
+}
+
+.program.counter.running {
+    border-color: color-mix(in srgb, var(--red) 60%, var(--line));
+}

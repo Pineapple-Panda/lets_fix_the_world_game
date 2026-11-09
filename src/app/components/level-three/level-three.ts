@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionsGained, canFight, cardUnlocked, corporation, initiativeBlocker, initiativeFunded, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
+  actionsGained, canFight, cardUnlocked, corporation, counterRate, launchedCounters, initiativeBlocker, initiativeFunded, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
   utopiaPerkAvailable
 } from '../../game/utopia';
 import { attackRules, battleRules, corporations, initiatives, megaCorpName, metrics, playerMoves, utopiaPerks } from '../../game/utopia-content';
@@ -39,6 +39,13 @@ export class LevelThreeComponent {
         running: state.running.includes(initiative.id),
         funded: initiativeFunded(state, initiative.id),
         blocker: state.running.includes(initiative.id) ? null : initiativeBlocker(state, initiative.id)
+      })),
+      counters: launchedCounters(state).map(counter => ({
+        counter,
+        corp: corporation(counter.corpId),
+        metricName: metrics.find(metric => metric.id === counter.metric)?.name ?? counter.metric,
+        rate: Math.round(counterRate(state, counter) * 100000) / 100000,
+        power: state.corpPower[counter.corpId] ?? 0
       })),
       corps: corporations.map(corp => ({
         corp,

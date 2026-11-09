@@ -1813,7 +1813,7 @@ test('level 3 starts with 65% employment and three corporations at full power', 
 test('bars erode every second; AI initiatives run like programs: start once, upkeep and progress every second', () => {
   const next = utopia.tickUtopia(opened(), () => 0.99);
   assert.ok(next.metrics.employment < 65 && next.metrics.housing < 70 && next.metrics.food < 75);
-  const started = utopia.startInitiative({ ...opened(), budgetRate: 0 }, 'career-match');
+  const started = utopia.startInitiative({ ...opened(), perks: ['utopia-blueprint'], budgetRate: 0 }, 'career-match');
   assert.equal(started.budget, 20000000 - 1000000, '1,000,000 to start');
   assert.deepEqual(started.running, ['career-match']);
   assert.equal(utopia.initiativeBlocker(started, 'career-match'), 'Already running');
@@ -1938,6 +1938,21 @@ test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total 
   assert.ok(utopia.tickUtopia(later, () => 0).metrics.employment < 65, 'now the bars erode');
   assert.equal(utopia.activateUtopiaPerk(later, 'opposition-research'), null, 'needs 260M');
   assert.equal(utopia.cardUnlocked(utopia.activateUtopiaPerk({ ...later, actions: 260000000 }, 'opposition-research'), 'megacorp'), true);
+});
+
+test('MegaCorp launches counter initiatives one after another, scaled by power', () => {
+  let state = { ...opened(), metrics: { employment: 50, housing: 50, food: 50 } };
+  assert.deepEqual(utopia.launchedCounters(state), [], 'nothing at first');
+  for (let second = 0; second < 30; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.deepEqual(utopia.launchedCounters(state).map(counter => counter.id), ['monoculture'], 'Bananas Inc. after 30 seconds');
+  const counter = utopiaContent.counterInitiatives[0];
+  assert.equal(utopia.counterRate(state, counter), 0.01, 'full power');
+  assert.equal(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 50 } }, counter), 0.005, 'half power, half the effect');
+  assert.equal(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 0 } }, counter), 0, 'stopped once defeated');
+  const next = utopia.tickUtopia(state, () => 0.99);
+  assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.008 - 0.01)) < 1e-9, 'drift plus the counter initiative');
+  assert.deepEqual(utopia.launchedCounters({ ...state, megacorpSeconds: 150 }).length, 3, 'all three after 150 seconds');
+  assert.deepEqual(utopia.launchedCounters({ ...state, perks: ['utopia-blueprint'], megacorpSeconds: 500 }), [], 'only once MegaCorp is visible');
 });
 
 test('level 3 saves and loads', () => {

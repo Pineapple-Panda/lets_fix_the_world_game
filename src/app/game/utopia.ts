@@ -1,6 +1,6 @@
-import type { Battle, BattleMove, Corporation, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
+import type { Battle, BattleMove, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, battleRules, corporations, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
+  attackRules, battleRules, corporations, counterInitiatives, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
@@ -26,6 +26,7 @@ export function newUtopia(
     metrics: Object.fromEntries(metrics.map(metric => [metric.id, metric.start])) as Record<UtopiaMetric, number>,
     corpPower: Object.fromEntries(corporations.map(corp => [corp.id, 100])),
     running: [],
+    megacorpSeconds: 0,
     nextAttack: attackRules.interval,
     attackLog: [],
     battle: null
@@ -112,6 +113,10 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
       : state.metrics,
   };
   runInitiatives(next);
+  if (cardUnlocked(state, 'megacorp')) {
+    next.megacorpSeconds = state.megacorpSeconds + 1;
+    runCounterInitiatives(next);
+  }
   // MegaCorp only attacks once you know about it, and not during a battle.
   if (!cardUnlocked(state, 'megacorp') || (next.battle && !next.battle.result)) return next;
   next.nextAttack = state.nextAttack - 1;
@@ -172,6 +177,32 @@ export function startInitiative(state: UtopiaGame, id: string): UtopiaGame | nul
 export function stopInitiative(state: UtopiaGame, id: string): UtopiaGame | null {
   if (!state.running.includes(id)) return null;
   return { ...state, running: state.running.filter(entry => entry !== id) };
+}
+
+// ---------- Counter initiatives ----------
+
+/** Whether a counter initiative has launched (MegaCorp visible long enough). */
+export function counterLaunched(state: UtopiaGame, counter: CounterInitiative): boolean {
+  return cardUnlocked(state, 'megacorp') && state.megacorpSeconds >= counter.launchAfter;
+}
+
+/** Percentage points per second a counter initiative takes right now: scaled by power, halved by fact-checkers. */
+export function counterRate(state: UtopiaGame, counter: CounterInitiative): number {
+  if (!counterLaunched(state, counter)) return 0;
+  return counter.rate * (state.corpPower[counter.corpId] ?? 0) / 100 * perkValue(state, 'attackShield');
+}
+
+/** Counter initiatives that have launched, in config order. */
+export function launchedCounters(state: UtopiaGame): CounterInitiative[] {
+  return counterInitiatives.filter(counter => counterLaunched(state, counter));
+}
+
+/** One second of MegaCorp's counter initiatives (mutates `next`). */
+function runCounterInitiatives(next: UtopiaGame): void {
+  for (const counter of counterInitiatives) {
+    const rate = counterRate(next, counter);
+    if (rate > 0) next.metrics = { ...next.metrics, [counter.metric]: percent(next.metrics[counter.metric] - rate) };
+  }
 }
 
 /** Whether a running initiative can pay this second's upkeep. */

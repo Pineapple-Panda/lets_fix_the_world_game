@@ -2,7 +2,7 @@
  * Level 3 content and balance. Everything you might want to tune lives here: bars, corporations, battle moves,
  * attacks, initiatives and the effects of winning or losing a battle.
  */
-import type { BattleMove, Corporation, Initiative, MetricDefinition, UtopiaMetric, UtopiaPerk } from '../models/utopia.model.ts';
+import type { BattleMove, Corporation, CounterInitiative, Initiative, MetricDefinition, UtopiaMetric, UtopiaPerk } from '../models/utopia.model.ts';
 
 /** Working title of the alliance of EdisonX, Mississippi Corp and Bananas Inc. */
 export const megaCorpName = 'MegaCorp';
@@ -13,7 +13,7 @@ export const megaCorpName = 'MegaCorp';
  */
 export const utopiaStart = { actions: 10000000, budget: 20000000, integrity: 50, actionRate: 175, budgetRate: 175 };
 
-/** Integrity change after a battle. */
+/** Credibility (stored as integrity) change after a battle. */
 export const integrityRules = { battleWon: 5, battleLost: -10 };
 
 /** The utopia's bars, in display order. */
@@ -117,7 +117,20 @@ export const corporations: Corporation[] = [
   }
 ];
 
-/** AI initiatives: programs that run continuously, like the program cards of level 2. */
+/**
+ * MegaCorp's counter initiatives: they launch one after another once MegaCorp shows itself and push a bar down every
+ * second, scaled by their corporation's power. A defeated corporation's counter initiative stops.
+ */
+export const counterInitiatives: CounterInitiative[] = [
+  { id: 'monoculture', corpId: 'bananas', name: 'Monoculture Land Grab', description: 'Every field becomes a banana plantation. Bananas for everyone, nothing else for anyone.',
+    metric: 'food', rate: 0.01, launchAfter: 30 },
+  { id: 'lights-out', corpId: 'mississippi', name: 'Lights-Out Warehouses', description: 'Fully automated warehouses, no humans, no lights, no jobs.',
+    metric: 'employment', rate: 0.01, launchAfter: 90 },
+  { id: 'mars-hype', corpId: 'edison', name: 'Mars Colony Real Estate', description: 'Buys up homes on Earth as “collateral” for apartments on Mars. Opening 2090, probably.',
+    metric: 'housing', rate: 0.01, launchAfter: 150 }
+];
+
+/** Your initiatives: programs that run continuously, like the program cards of level 2. */
 export const initiatives: Initiative[] = [
   { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.',
     metric: 'employment', cost: 1000000, upkeep: 1000, rate: 0.02 },
