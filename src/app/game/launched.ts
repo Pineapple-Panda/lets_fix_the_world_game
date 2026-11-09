@@ -187,6 +187,11 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
   return next === state.focus ? null : { ...state, focus: next };
 }
 
+/** Average actions per second right now: 175 (the middle of 50–300) × focus slider × server slots. */
+export function averageActionsPerSecond(state: LaunchedGame): number {
+  return Math.round((minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots);
+}
+
 /** Dev mode: epics take at most this many seconds. */
 export const devEpicDuration = 5;
 export const devBoostActions = 1000000;

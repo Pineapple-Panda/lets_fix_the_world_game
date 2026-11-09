@@ -191,7 +191,9 @@
             }
 
         <div class="live-stats live-stats-monitor">
-            <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong></div>
+            <div class="live-stat"><span>Actions</span><strong id="live-actions">{{ format(s.actions) }}</strong>
+                <small>≈ {{ format(v.actionsPerSecond) }} per second</small>
+            </div>
             <div class="live-monitor">
     <svg class="monitor" viewBox="0 0 240 160" role="img" aria-label="The board keeps working itself off: tasks move from to do to done">
                 <rect class="monitor-frame" x="6" y="6" width="228" height="128" rx="8" />

@@ -1631,6 +1631,7 @@ test('every server slot multiplies the actions per second', () => {
   assert.equal(launched.tickLaunched(liveState({ actions: 0 }), () => 0).actions, 50);
   assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 4 }), () => 0).actions, 200, '4 slots: ×4');
   assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 2, focus: -100 }), () => 0).actions, 205, 'with the slider: 50 × 2.05 × 2');
+  assert.equal(launched.averageActionsPerSecond(liveState({ serverSlots: 4 })), 700, '175 on average × 4 slots');
 });
 
 test('pitching to investors adds budget per click and grows with the income', () => {
