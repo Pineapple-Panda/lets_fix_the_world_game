@@ -158,9 +158,9 @@ export const counterInitiatives: CounterInitiative[] = [
  */
 export const initiatives: Initiative[] = [
   { id: 'career-match', name: 'AI Career Matchmaker', description: 'Finds every person a job the AI cannot do: care, craft, art, repair.',
-    metric: 'employment', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.03 },
+    metric: 'employment', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.3 },
   { id: 'housing-printer', name: 'Modular Housing Printer', description: 'Prints a neighbourhood a day. Ugly, warm, dry.',
-    metric: 'housing', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.03 },
+    metric: 'housing', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.3 },
   { id: 'vertical-farms', name: 'Vertical Farms', description: 'Lettuce on the 40th floor. The pigeons are thrilled.',
-    metric: 'food', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.03 }
+    metric: 'food', cost: 1000000, buildTime: 30, upkeep: 1000, rate: 0.3 }
 ];

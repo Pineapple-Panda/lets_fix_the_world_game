@@ -1825,11 +1825,11 @@ test('initiatives are initialized, built for 30 seconds, then started; credibili
   assert.equal(utopia.initiativeStage(state, 'career-match'), 'built', 'built after 30 seconds');
   const started = utopia.startInitiative(state, 'career-match');
   assert.equal(started.budget, state.budget, 'starting is free once built');
-  assert.equal(utopia.initiativeRate(started, 'career-match'), 0.015, '0.03 × 50% credibility');
-  assert.equal(utopia.initiativeRate({ ...started, integrity: 100 }, 'career-match'), 0.03);
+  assert.equal(utopia.initiativeRate(started, 'career-match'), 0.15, '0.3 × 50% credibility');
+  assert.equal(utopia.initiativeRate({ ...started, integrity: 100 }, 'career-match'), 0.3);
   let later = started;
   for (let second = 0; second < 100; second++) later = utopia.tickUtopia(later, () => 0.99);
-  assert.ok(Math.abs(later.metrics.employment - (started.metrics.employment + 100 * (0.015 - 0.01))) < 1e-9, 'beats the drift at 50% credibility');
+  assert.ok(Math.abs(later.metrics.employment - (Math.min(100, started.metrics.employment + 100 * (0.15 - 0.01)))) < 1e-9, 'beats the drift at 50% credibility');
   assert.equal(later.budget, started.budget - 100 * 1000, '1,000 budget per second');
   const stopped = utopia.stopInitiative(started, 'career-match');
   assert.equal(utopia.initiativeStage(stopped, 'career-match'), 'built', 'stays built after stopping');
@@ -1934,7 +1934,7 @@ test('level 3 perks: card unlocks and action unlocks; the effect kinds still wor
     assert.ok(utopia.openUtopiaPerks(state).length <= 5, 'at most five shown');
     for (const perk of extra) state = utopia.activateUtopiaPerk(state, perk.id);
     assert.equal(state.budget, opened().budget - 1000, 'pays the price');
-    assert.equal(utopia.initiativeRate(state, 'career-match'), 0.03, '0.03 × 50% credibility × 2');
+    assert.equal(utopia.initiativeRate(state, 'career-match'), 0.3, '0.3 × 50% credibility × 2');
     assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500);
     assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
     const counter = utopiaContent.counterInitiatives[0];
@@ -1979,7 +1979,7 @@ test('MegaCorp launches counter initiatives one after another, scaled by power',
 
 test('each utopia bar shows its current change per second', () => {
   let state = { ...opened(), running: ['career-match'], megacorpSeconds: 90 };
-  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.015 - 0.15)) < 1e-12, 'drift + initiative − counter initiative');
+  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.15 - 0.15)) < 1e-12, 'drift + initiative − counter initiative');
   assert.ok(Math.abs(utopia.metricRate(state, 'food') - (-0.008 - 0.15)) < 1e-12);
   assert.equal(utopia.metricRate({ ...state, perks: [] }, 'food'), 0, 'nothing moves while Utopia is locked');
   const before = state.metrics.housing;
