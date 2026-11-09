@@ -2076,3 +2076,23 @@ footer {
     color: var(--faint);
     cursor: not-allowed;
 }
+
+/* A running MegaCorp move you can stop with Shut It Down. */
+.effect-chip.cancelable {
+    color: var(--ink);
+    cursor: pointer;
+    animation: chip-pulse 1.4s ease-in-out infinite;
+}
+
+.effect-chip.cancelable b {
+    margin-left: 4px;
+    color: var(--red);
+}
+
+.effect-chip.cancelable:hover {
+    background: color-mix(in srgb, var(--bg) 60%, var(--red));
+}
+
+@keyframes chip-pulse {
+    50% { border-color: var(--red); }
+}

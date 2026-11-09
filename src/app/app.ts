@@ -14,7 +14,7 @@ import { DuelDialogComponent } from './components/duel-dialog/duel-dialog';
 import { GameOverComponent } from './components/game-over/game-over';
 import { UtopiaWonComponent } from './components/utopia-won/utopia-won';
 import {
-  activateUtopiaPerk, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+  activateUtopiaPerk, cancelMegacorpEffect, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
 } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
@@ -376,6 +376,10 @@ export class AppComponent {
 
   dismissUtopiaWon(): void {
     this.updateUtopia(state => dismissOutcome(state));
+  }
+
+  cancelEffect(index: number): void {
+    this.updateUtopia(state => cancelMegacorpEffect(state, index));
   }
 
   startDuel(): void {

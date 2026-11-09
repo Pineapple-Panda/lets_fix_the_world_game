@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, canCancelEffect, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
 import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
@@ -17,6 +17,8 @@ export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
   readonly cardPlayed = output<string>();
   readonly duelStarted = output<void>();
+  /** Index of the running MegaCorp effect you stop with Shut It Down. */
+  readonly effectCancelled = output<number>();
   readonly initiativeInitialized = output<string>();
   readonly initiativeStarted = output<string>();
   readonly initiativeStopped = output<string>();
@@ -71,14 +73,16 @@ export class LevelThreeComponent {
         return card ? { key: index + '-' + move.cardId, card, summary: cardSummary(card), corp } : null;
       }).filter(move => move !== null).slice(0, 3),
       cards: ownedCards(state).map(card => ({ card, summary: cardSummary(card), blocker: cardBlocker(state, card.id) })),
-      activeEffects: state.effects.map(active => {
+      activeEffects: state.effects.map((active, index) => {
         const card = actionCard(active.cardId);
         return {
           id: active.cardId + '-' + (active.corpId ?? 'you') + '-' + active.remaining,
           name: card?.name ?? active.cardId,
           by: card?.actor === 'megacorp' ? corporation(active.corpId ?? '')?.name ?? megaCorpName : 'You',
           mine: card?.actor === 'player',
-          remaining: active.remaining
+          remaining: active.remaining,
+          index,
+          cancelable: canCancelEffect(state, index)
         };
       })
     };

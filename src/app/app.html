@@ -17,7 +17,7 @@
                 <app-duel-dialog [duel]="duel" [clickGain]="duelGain()" [boosts]="duelBoosts()" (boosted)="playCard($event)"
                                  (finished)="finishDuel($event)" (closed)="closeDuel()" />
             }
-            <app-level-three [state]="world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
+            <app-level-three [state]="world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (effectCancelled)="cancelEffect($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
                              (perkActivated)="activateUtopiaPerk($event)" />
             <footer><span>LEVEL 3 / BUILDING UTOPIA</span>
                 <span class="footer-actions">

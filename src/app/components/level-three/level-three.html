@@ -46,7 +46,12 @@
                 @if (v.activeEffects.length) {
                     <div class="effect-chips" aria-label="Running effects">
                         @for (effect of v.activeEffects; track effect.id) {
-                            <span class="effect-chip" [class.mine]="effect.mine">{{ effect.name }} · {{ effect.by }} · {{ effect.remaining }}s</span>
+                            @if (effect.cancelable) {
+                                <button class="effect-chip cancelable" type="button" [attr.aria-label]="'Shut down ' + effect.name + ' by ' + effect.by"
+                                        (click)="effectCancelled.emit(effect.index)">{{ effect.name }} · {{ effect.by }} · {{ effect.remaining }}s <b>✕ Stop</b></button>
+                            } @else {
+                                <span class="effect-chip" [class.mine]="effect.mine">{{ effect.name }} · {{ effect.by }} · {{ effect.remaining }}s</span>
+                            }
                         }
                     </div>
                 }

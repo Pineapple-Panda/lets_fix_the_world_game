@@ -1919,7 +1919,7 @@ test('initiatives cost budget', () => {
 });
 
 test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
   assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
@@ -2054,6 +2054,22 @@ test('Battle Cry (Rally Network perk, 10M) pushes the duel bar by 2% per click f
   for (let second = 0; second < 15; second++) state = utopia.tickUtopia(state, () => 0.99);
   assert.equal(utopia.duelClickGain(state), 1.2, 'over after 15 seconds');
   assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'battle-cry')), 'Battle push +2% per click for 15s');
+});
+
+test('Shut It Down (Rapid Response Team perk, 10M) stops a running MegaCorp move you pick, every 120 seconds', () => {
+  const perk = utopia.activateUtopiaPerk(opened(), 'rapid-response');
+  assert.equal(perk.budget, opened().budget - 10000000);
+  assert.equal(utopia.cardBlocker(perk, 'shut-it-down'), 'No running MegaCorp move');
+  const attacked = { ...perk, effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 20 }, { cardId: 'rent-tax-cut', remaining: 10 }, { cardId: 'bribery', corpId: 'edison', remaining: 50 }] };
+  assert.equal(utopia.cardBlocker(attacked, 'shut-it-down'), 'Pick a running MegaCorp move above');
+  assert.equal(utopia.playPlayerCard(attacked, 'shut-it-down'), null, 'not played like a normal card');
+  assert.equal(utopia.canCancelEffect(attacked, 1), false, 'your own effects cannot be stopped');
+  assert.equal(utopia.canCancelEffect(attacked, 0), true);
+  const stopped = utopia.cancelMegacorpEffect(attacked, 0);
+  assert.deepEqual(stopped.effects.map(active => active.cardId), ['rent-tax-cut', 'bribery'], 'the picked warehouse grab is gone');
+  assert.equal(utopia.cardBlocker(stopped, 'shut-it-down'), 'Ready in 120s');
+  assert.equal(utopia.cancelMegacorpEffect(stopped, 1), null, 'cooling down');
+  assert.equal(utopia.canCancelEffect({ ...attacked, perks: ['utopia-blueprint', 'opposition-research'] }, 0), false, 'needs the perk');
 });
 
 test('level 3 saves and loads', () => {

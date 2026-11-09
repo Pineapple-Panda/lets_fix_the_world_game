@@ -202,6 +202,29 @@ export function firewallFactor(state: UtopiaGame): number {
   }, 1);
 }
 
+/** Your owned card that stops a MegaCorp move (Shut It Down), if it is off cooldown. */
+function readyCanceller(state: UtopiaGame): ActionCard | undefined {
+  return playerCards.find(card => card.effects.some(effect => effect.kind === 'cancelMove') && cardOwned(state, card.id) &&
+    cardUnlocked(state, 'megacorp') && (state.cardCooldowns[card.id] ?? 0) <= 0);
+}
+
+/** Whether you can stop the running effect at this position: it is MegaCorp's and Shut It Down is ready. */
+export function canCancelEffect(state: UtopiaGame, index: number): boolean {
+  const active = state.effects[index];
+  return !!active && actionCard(active.cardId)?.actor === 'megacorp' && !!readyCanceller(state) && !state.outcome;
+}
+
+/** Stops the running MegaCorp move you picked; Shut It Down then cools down. */
+export function cancelMegacorpEffect(state: UtopiaGame, index: number): UtopiaGame | null {
+  const card = readyCanceller(state);
+  if (!card || !canCancelEffect(state, index)) return null;
+  return {
+    ...state,
+    effects: state.effects.filter((_, position) => position !== index),
+    cardCooldowns: { ...state.cardCooldowns, [card.id]: card.cooldown ?? 0 }
+  };
+}
+
 /** Whether MegaCorp is protected from losing power (bribed government). */
 export function powerShielded(state: UtopiaGame): boolean {
   return state.effects.some(active => actionCard(active.cardId)?.effects.some(effect => effect.kind === 'powerShield'));
@@ -279,6 +302,10 @@ export function cardBlocker(state: UtopiaGame, id: string): string | null {
   if (!cardOwned(state, id)) return 'Needs its perk';
   if (!cardUnlocked(state, 'megacorp')) return 'MegaCorp is unknown';
   if ((state.cardCooldowns[id] ?? 0) > 0) return `Ready in ${state.cardCooldowns[id]}s`;
+  // Cancelling is not played like a card: you pick the running MegaCorp move to stop.
+  if (card.effects.some(effect => effect.kind === 'cancelMove')) {
+    return state.effects.some(active => actionCard(active.cardId)?.actor === 'megacorp') ? 'Pick a running MegaCorp move above' : 'No running MegaCorp move';
+  }
   return null;
 }
 
@@ -302,6 +329,7 @@ export function cardSummary(card: ActionCard): string {
       case 'powerShield': return 'No power loss';
       case 'firewall': return `MegaCorp effects reach you at ${Math.round(effect.factor * 100)}%`;
       case 'duelBoost': return `Battle push +${effect.clickGain}% per click`;
+      case 'cancelMove': return 'Stops a running MegaCorp move of your choice';
     }
   });
   return parts.join(', ') + (timed ? ` for ${card.duration}s` : '');

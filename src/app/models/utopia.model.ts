@@ -75,7 +75,9 @@ export type CardEffect =
   /** Only this share of MegaCorp's card effects reaches you while it holds. */
   | { kind: 'firewall'; factor: number }
   /** Each push in a duel moves the bar by this many points while it holds. */
-  | { kind: 'duelBoost'; clickGain: number };
+  | { kind: 'duelBoost'; clickGain: number }
+  /** Lets you stop a running MegaCorp move of your choice (picked from the effect chips). */
+  | { kind: 'cancelMove' };
 
 /** An action card for you or MegaCorp. */
 export interface ActionCard {
