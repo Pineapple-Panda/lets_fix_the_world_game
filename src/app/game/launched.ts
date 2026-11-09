@@ -332,11 +332,11 @@ export function launchedPerkUnlocked(state: LaunchedGame, perk: LaunchedPerk): b
   return state.actions >= perk.actionsRequired;
 }
 
-/** Add Server is bought with budget: 25,000 for the first server, 10% more for each further one. */
-export const addServerBasePrice = 25000;
+/** Add Server is bought with budget: 10,000 for the first server, 10% more for each further one. */
+export const addServerBasePrice = 10000;
 export const addServerPriceStep = 1.1;
 
-/** Budget price of the next server: 25,000 × 1.1 per server already added (rounded). */
+/** Budget price of the next server: 10,000 × 1.1 per server already added (rounded). */
 export function addServerPrice(state: LaunchedGame): number {
   return Math.round(addServerBasePrice * addServerPriceStep ** addedServers(state));
 }

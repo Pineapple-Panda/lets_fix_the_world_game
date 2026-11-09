@@ -727,22 +727,22 @@ test('the first level 2 perk unlocks at 35,000 actions and brings the server onl
   assert.equal(launched.activateLaunchedPerk(ready, 'earl'), null, 'level 1 perks are not available any more');
 });
 
-test('Add Server costs budget: 25,000 for the first, 10% more for every further server', () => {
+test('Add Server costs budget: 10,000 for the first, 10% more for every further server', () => {
   const offline = liveState({ budget: 1000000 });
   assert.equal(launched.activateLaunchedPerk(offline, 'add-server'), null, 'needs the server first');
-  let live = liveState({ actions: 0, budget: 24999, perks: ['workflow-abstraction'] });
-  assert.equal(launched.addServerPrice(live), 25000);
+  let live = liveState({ actions: 0, budget: 9999, perks: ['workflow-abstraction'] });
+  assert.equal(launched.addServerPrice(live), 10000);
   assert.equal(launched.addServerPerk(live).actionsRequired, 0, 'no action threshold any more');
   assert.equal(launched.activateLaunchedPerk(live, 'add-server'), null, 'not enough budget');
   live = launched.activateLaunchedPerk({ ...live, budget: 1000000 }, 'add-server');
   assert.equal(live.serverSlots, 2);
-  assert.equal(live.budget, 975000);
-  assert.equal(launched.addServerPrice(live), 27500, '+10%');
+  assert.equal(live.budget, 990000);
+  assert.equal(launched.addServerPrice(live), 11000, '+10%');
   live = launched.activateLaunchedPerk(live, 'add-server');
-  assert.equal(live.budget, 947500);
-  assert.equal(launched.addServerPrice(live), 30250);
+  assert.equal(live.budget, 979000);
+  assert.equal(launched.addServerPrice(live), 12100);
   live = launched.activateLaunchedPerk(live, 'add-server');
-  assert.equal(launched.addServerPrice(live), 33275);
+  assert.equal(launched.addServerPrice(live), 13310);
   assert.equal(live.serverSlots, 4);
   assert.deepEqual(live.perks, ['workflow-abstraction'], 'Add Server is not stored as a one-time perk');
 });
