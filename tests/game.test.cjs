@@ -1798,9 +1798,6 @@ test('application versions', () => {
 
 const utopia = require('../src/app/game/utopia.ts');
 const utopiaContent = require('../src/app/game/utopia-content.ts');
-// Fights are switched off in the game for now; the battle tests switch them on.
-utopiaContent.battleRules.enabled = true;
-
 /** Level 3 with the Utopia and MegaCorp cards already open. */
 const opened = () => ({ ...utopia.newUtopia(), perks: ['utopia-blueprint', 'opposition-research'] });
 
@@ -1810,7 +1807,6 @@ test('level 3 starts with 65% employment and three corporations at 75% power', (
   assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 });
   assert.deepEqual(utopiaContent.corporations.map(corp => corp.id), ['bananas', 'mississippi', 'edison'], 'Bananas, Mississippi, EdisonX');
   assert.deepEqual(state.corpPower, { bananas: 75, mississippi: 75, edison: 75 });
-  assert.equal(state.battle, null);
 });
 
 test('initiatives are initialized, built for 30 seconds, then started; credibility multiplies their effect', () => {
@@ -1853,41 +1849,6 @@ test('MegaCorp attacks every 45 seconds, weaker corporations hit softer', () => 
   assert.deepEqual(utopia.attack({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }, () => 0).attackLog, [], 'no attacks once all are defeated');
 });
 
-test('a won battle costs the corporation 25% power', () => {
-  let state = utopia.startBattle(opened(), 'bananas');
-  assert.equal(state.battle.corpId, 'bananas');
-  assert.equal(utopia.canFight(state, 'edison'), false, 'one battle at a time');
-  // With 0.99 your fact-check hits for 24 and the corporation picks its unreliable move and misses.
-  let rounds = 0;
-  while (!state.battle.result && rounds < 20) { state = utopia.battleRound(state, 'fact-check', () => 0.99); rounds++; }
-  assert.equal(state.battle.result, 'won');
-  assert.equal(state.corpPower.bananas, 50, '75% − 25%');
-  assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 }, 'no penalty');
-  state = utopia.closeBattle(state);
-  assert.equal(state.battle, null);
-});
-
-test('a lost battle costs the utopia 25 points on every bar', () => {
-  let state = utopia.startBattle(opened(), 'edison');
-  let rounds = 0;
-  // Each round: your Open Data Leak misses (0.9), EdisonX picks its tweetstorm (0.1), hits (0.1) for 11 (0.1).
-  const rolls = [0.9, 0.1, 0.1, 0.1];
-  let roll = 0;
-  const random = () => rolls[roll++ % rolls.length];
-  while (!state.battle.result && rounds < 50) { state = utopia.battleRound(state, 'open-data', random); rounds++; }
-  assert.equal(state.battle.result, 'lost');
-  assert.deepEqual(state.metrics, { employment: 40, housing: 45, food: 50 });
-  assert.equal(state.corpPower.edison, 75);
-});
-
-test('defeated corporations cannot be fought, and the rules are easy to change', () => {
-  const beaten = { ...opened(), corpPower: { bananas: 0, mississippi: 100, edison: 100 } };
-  assert.equal(utopia.canFight(beaten, 'bananas'), false);
-  assert.equal(utopia.startBattle(beaten, 'bananas'), null);
-  assert.equal(utopiaContent.battleRules.winPowerLoss, 25);
-  assert.deepEqual(utopiaContent.battleRules.lossPenalty, { employment: 25, housing: 25, food: 25 });
-});
-
 test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing them', () => {
   const carried = utopia.newUtopia({ actions: 123456789, budget: 4000000, integrity: 81, actionRate: 12000, budgetRate: 3500 });
   assert.equal(carried.actions, 123456789);
@@ -1902,15 +1863,12 @@ test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing the
   assert.equal(opened().actionRate, 13000);
 });
 
-test('initiatives cost budget; defamation costs integrity; battles move it', () => {
+test('initiatives cost budget; defamation costs credibility', () => {
   const poor = { ...opened(), budget: 999999 };
   assert.equal(utopia.initializeInitiative(poor, 'career-match'), null, 'needs 1,000,000');
   assert.equal(utopia.initializeBlocker(poor, 'career-match'), 'Not enough budget');
   const smeared = utopia.attack({ ...opened(), corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0.99);
   assert.equal(smeared.integrity, 46, 'influencer smear: −4 integrity');
-  let won = utopia.startBattle(opened(), 'bananas');
-  while (!won.battle.result) won = utopia.battleRound(won, 'fact-check', () => 0.99);
-  assert.equal(won.integrity, 55, '+5 for a win');
 });
 
 test('level 3 keeps only the two unlock perks; the effect kinds still work for new perks', () => {
@@ -1918,8 +1876,7 @@ test('level 3 keeps only the two unlock perks; the effect kinds still work for n
   assert.ok(utopiaContent.utopiaPerks.every(perk => perk.cost === 0));
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
-    { id: 't-damage', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'battleDamage', value: 5 } },
-    { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'initiativeGain', value: 2 } },
+    { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'initiativeGain', value: 2 } },
     { id: 't-shield', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'attackShield', value: 0.5 } },
     { id: 't-drift', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'driftShield', value: 0.5 } },
     { id: 't-upkeep', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'upkeep', value: 0.5 } }
@@ -1935,8 +1892,6 @@ test('level 3 keeps only the two unlock perks; the effect kinds still work for n
     assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
     const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
     assert.equal(75 - shielded.metrics.food, 2, 'attacks hit half as hard');
-    const battle = utopia.battleRound(utopia.startBattle(state, 'bananas'), 'fact-check', () => 0);
-    assert.equal(battle.battle.corpHp, 100 - (16 + 5), '+5 battle damage');
   } finally {
     utopiaContent.utopiaPerks.splice(-extra.length);
   }
@@ -1952,7 +1907,6 @@ test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total 
   assert.deepEqual(later.metrics, start.metrics, 'the bars wait for the Utopia card');
   assert.equal(later.nextAttack, start.nextAttack, 'MegaCorp waits too');
   assert.equal(utopia.initializeBlocker({ ...later, budget: 1000000 }, 'career-match'), 'Utopia is locked', 'no initiatives yet');
-  assert.equal(utopia.startBattle(later, 'bananas'), null, 'no battles yet');
   later = utopia.activateUtopiaPerk(later, 'utopia-blueprint');
   assert.equal(later.budget, 0, 'free');
   assert.equal(utopia.cardUnlocked(later, 'utopia'), true);
@@ -1985,17 +1939,9 @@ test('each utopia bar shows its current change per second', () => {
   assert.ok(Math.abs(utopia.tickUtopia(state, () => 0.99).metrics.housing - (before + utopia.metricRate(state, 'housing'))) < 1e-9, 'matches the tick');
 });
 
-test('fights can be switched off in the config', () => {
-  utopiaContent.battleRules.enabled = false;
-  assert.equal(utopia.canFight(opened(), 'bananas'), false);
-  assert.equal(utopia.startBattle(opened(), 'bananas'), null);
-  utopiaContent.battleRules.enabled = true;
-  assert.equal(utopia.canFight(opened(), 'bananas'), true);
-});
-
 test('level 3 saves and loads', () => {
   const store = memoryStorage();
-  const state = utopia.startBattle(opened(), 'mississippi');
+  const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: ['An attack'] };
   storage.saveUtopia(store, state);
   assert.deepEqual(storage.loadUtopia(store), state);
   assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');

@@ -1,73 +1,95 @@
 @let v = view();
 <div class="utopia">
-    <!-- Top half: the arena. A battle when one is running, otherwise MegaCorp's latest moves. -->
+    <!-- Top: you on the left, MegaCorp on the right, what MegaCorp is up to in between. -->
     <section class="ops-card arena" aria-labelledby="arena-title">
-        @if (v.battle; as battle) {
-            <h2 class="tool-heading" id="arena-title">Battle · Round {{ battle.round }}</h2>
-            <div class="arena-sides">
-                <div class="fighter">
-                    <span class="fighter-icon" aria-hidden="true">🤖</span>
-                    <strong>Your AI System</strong>
-                    <div class="world-track" role="meter" aria-label="Your resolve" aria-valuemin="0" [attr.aria-valuemax]="100"
-                         [attr.aria-valuenow]="battle.playerHp">
-                        <div class="world-fill hp-fill" [class.low]="battle.playerPercent < 30" [style.width.%]="battle.playerPercent"></div>
-                    </div>
-                    <small>Resolve {{ battle.playerHp }}</small>
+        <figure class="avatar avatar-player">
+            <svg viewBox="0 0 120 120" role="img" aria-label="Your AI system: a friendly robot with a leaf on its antenna">
+                <circle class="avatar-backdrop" cx="60" cy="60" r="56" />
+                <!-- antenna with a leaf -->
+                <line class="robot-line" x1="60" y1="30" x2="60" y2="16" />
+                <path class="robot-leaf" d="M60 16 C 52 6, 70 2, 72 10 C 68 16, 62 17, 60 16 Z" />
+                <!-- head -->
+                <rect class="robot-head" x="32" y="30" width="56" height="44" rx="14" />
+                <rect class="robot-visor" x="39" y="39" width="42" height="20" rx="9" />
+                <circle class="robot-eye" cx="51" cy="49" r="4.5" />
+                <circle class="robot-eye" cx="69" cy="49" r="4.5" />
+                <path class="robot-line" d="M50 65 Q 60 71 70 65" fill="none" />
+                <!-- ears -->
+                <rect class="robot-head" x="26" y="45" width="7" height="14" rx="3" />
+                <rect class="robot-head" x="87" y="45" width="7" height="14" rx="3" />
+                <!-- body with a heart -->
+                <path class="robot-body" d="M30 112 C 30 90, 40 80, 60 80 C 80 80, 90 90, 90 112 Z" />
+                <path class="robot-heart" d="M60 104 C 50 96, 50 89, 55 88 C 58 87.5, 60 90, 60 91 C 60 90, 62 87.5, 65 88 C 70 89, 70 96, 60 104 Z" />
+            </svg>
+            <figcaption>
+                <strong>Your AI</strong>
+                <div class="world-track" role="meter" aria-label="Credibility" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
+                    <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70" [style.width.%]="v.integrity"></div>
                 </div>
-                <span class="arena-versus" aria-hidden="true">VS</span>
-                <div class="fighter">
-                    <span class="fighter-icon" aria-hidden="true">{{ battle.corp.icon }}</span>
-                    <strong>{{ battle.corp.name }}</strong>
-                    <div class="world-track" role="meter" [attr.aria-label]="battle.corp.name + ' influence'" aria-valuemin="0" [attr.aria-valuemax]="100"
-                         [attr.aria-valuenow]="battle.corpHp">
-                        <div class="world-fill hp-fill corp" [class.low]="battle.corpPercent < 30" [style.width.%]="battle.corpPercent"></div>
-                    </div>
-                    <small>Influence {{ battle.corpHp }}</small>
-                </div>
-            </div>
-            @if (battle.result) {
-                <div class="battle-result" [class.won]="battle.result === 'won'" role="status">
-                    <strong>{{ battle.result === 'won' ? 'Victory!' : 'Defeat.' }}</strong>
-                    <button class="intro-button" type="button" (click)="battleClosed.emit()">Back to work</button>
-                </div>
-            } @else {
-                <div class="battle-moves">
-                    @for (move of moves; track move.id) {
-                        <button class="tool-button battle-move" type="button" (click)="moveChosen.emit(move.id)">
-                            {{ move.name }}
-                            <small>
-                                @if (move.damage) { {{ move.damage[0] }}–{{ move.damage[1] }} damage }
-                                @if (move.heal) { +{{ move.heal }} HP }
-                                @if (move.accuracy) { · {{ move.accuracy * 100 }}% hit }
-                            </small>
-                        </button>
-                    }
-                </div>
-            }
-            <ol class="battle-log" aria-label="Battle log">
-                @for (line of battle.log; track $index) {
-                    <li>{{ line }}</li>
-                }
-            </ol>
-        } @else {
+                <small>Credibility {{ v.integrity | number: '1.0-0' }}%</small>
+            </figcaption>
+        </figure>
+
+        <div class="arena-feed">
             @if (!v.megacorpOpen) {
                 <h2 class="tool-heading" id="arena-title">The world is fixed. Now make it good.</h2>
                 <p class="arena-intro">Your AI runs the world's systems. Next: a place where everyone has work, a home and enough to eat.
                     Somewhere, somebody does not like where this is going.</p>
             } @else {
-            <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} is watching</h2>
-            <p class="arena-intro">EdisonX, Mississippi Corp and Bananas Inc. have joined forces. Your utopia threatens their business,
-                so they fight back with lawsuits and defamation.@if (battlesEnabled) { Pick a fight to take away their power.}</p>
-            <small class="upgrade-hint">Next attack in {{ v.nextAttack }}s</small>
-            @if (v.attackLog.length) {
-                <ol class="battle-log" aria-label="Latest attacks">
-                    @for (line of v.attackLog; track $index) {
-                        <li>{{ line }}</li>
-                    }
-                </ol>
+                <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} is watching</h2>
+                <p class="arena-intro">EdisonX, Mississippi Corp and Bananas Inc. have joined forces. Your utopia threatens their business,
+                    so they fight back with lawsuits, defamation and counter initiatives.</p>
+                <small class="upgrade-hint">Next attack in {{ v.nextAttack }}s</small>
+                @if (v.attackLog.length) {
+                    <ol class="battle-log" aria-label="Latest attacks">
+                        @for (line of v.attackLog; track $index) {
+                            <li>{{ line }}</li>
+                        }
+                    </ol>
+                }
             }
-            }
-        }
+        </div>
+
+        <figure class="avatar avatar-megacorp" [class.unknown]="!v.megacorpOpen">
+            <svg viewBox="0 0 120 120" role="img" [attr.aria-label]="v.megacorpOpen ? megaCorpName + ': a grinning executive in a top hat' : 'An unknown opponent in the shadows'">
+                <circle class="avatar-backdrop" cx="60" cy="60" r="56" />
+                <!-- top hat -->
+                <rect class="mega-hat" x="40" y="10" width="40" height="26" rx="2" />
+                <rect class="mega-band" x="40" y="29" width="40" height="5" />
+                <rect class="mega-hat" x="30" y="34" width="60" height="6" rx="3" />
+                <!-- face -->
+                <ellipse class="mega-face" cx="60" cy="58" rx="22" ry="20" />
+                <path class="mega-brow" d="M44 50 L 55 53 M76 50 L 65 53" />
+                <circle class="mega-eye" cx="51" cy="57" r="2.6" />
+                <circle class="mega-monocle" cx="69" cy="57" r="6" />
+                <circle class="mega-eye" cx="69" cy="57" r="2.6" />
+                <line class="mega-chain" x1="75" y1="60" x2="80" y2="74" />
+                <path class="mega-grin" d="M48 67 Q 60 76 72 67 Q 60 71 48 67 Z" />
+                <!-- suit with tie -->
+                <path class="mega-suit" d="M24 114 C 24 92, 38 80, 60 80 C 82 80, 96 92, 96 114 Z" />
+                <path class="mega-shirt" d="M52 80 L 60 96 L 68 80 Z" />
+                <path class="mega-tie" d="M58 84 L 62 84 L 64 104 L 60 109 L 56 104 Z" />
+                <!-- the three corporations on the lapel -->
+                <circle class="mega-pin banana" cx="37" cy="98" r="4" />
+                <circle class="mega-pin box" cx="47" cy="102" r="4" />
+                <circle class="mega-pin rocket" cx="83" cy="99" r="4" />
+                @if (!v.megacorpOpen) {
+                    <text class="mega-unknown" x="60" y="66" text-anchor="middle">?</text>
+                }
+            </svg>
+            <figcaption>
+                @if (v.megacorpOpen) {
+                    <strong>{{ megaCorpName }}</strong>
+                    <div class="world-track" role="meter" [attr.aria-label]="megaCorpName + ' power'" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.megaPower">
+                        <div class="world-fill corp-power" [style.width.%]="v.megaPower"></div>
+                    </div>
+                    <small>Power {{ v.megaPower }}%</small>
+                } @else {
+                    <strong>???</strong>
+                    <small>Unknown</small>
+                }
+            </figcaption>
+        </figure>
     </section>
 
     <!-- Bottom left: your development (credibility, TCA, budget, perks). -->
@@ -82,7 +104,7 @@
             </div>
             <b>{{ v.integrity | number: '1.1-1' }}%</b>
         </div>
-        <small class="upgrade-hint">Defamation costs credibility. Winning a battle wins some back.</small>
+        <small class="upgrade-hint">Defamation costs credibility. Your initiatives work as well as people trust you.</small>
         <div class="live-stats">
             <div class="live-stat"><span>Actions</span><strong id="utopia-actions">{{ format(state().actions) }}</strong>
                 <small>+{{ format(v.actionsPerSecond) }} per second</small></div>
@@ -218,11 +240,6 @@
                         </div>
                         <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
                     </div>
-                    @if (battlesEnabled) {
-                        <button class="fight-button" type="button" [disabled]="!entry.canFight"
-                                [attr.aria-label]="'Fight ' + entry.corp.name" [title]="'Fight ' + entry.corp.name"
-                                (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
-                    }
                 </div>
             }
         </section>

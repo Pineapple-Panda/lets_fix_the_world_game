@@ -33,20 +33,6 @@ export interface UtopiaGame {
   nextAttack: number;
   /** Latest MegaCorp attacks, newest first. */
   attackLog: string[];
-  /** The battle currently shown in the arena, or null. */
-  battle: Battle | null;
-}
-
-export interface Battle {
-  corpId: string;
-  round: number;
-  /** Hit points of your AI system ("credibility") and of the corporation ("influence"). */
-  playerHp: number;
-  corpHp: number;
-  /** What happened, newest first. */
-  log: string[];
-  /** Set once the battle is decided; its effects are already applied. */
-  result: 'won' | 'lost' | null;
 }
 
 /** A bar of the utopia. */
@@ -60,20 +46,7 @@ export interface MetricDefinition {
   drift: number;
 }
 
-/** A move in battle: damage to the other side, or healing for yourself. */
-export interface BattleMove {
-  id: string;
-  name: string;
-  description: string;
-  /** Damage range (inclusive) when it hits. */
-  damage?: [number, number];
-  /** Hit points restored. */
-  heal?: number;
-  /** Chance to hit, 0–1 (default 1). */
-  accuracy?: number;
-}
-
-/** A MegaCorp attack outside of battle: lawsuits and defamation that lower your bars. */
+/** A MegaCorp attack: lawsuits and defamation that lower your bars. */
 export interface CorpAttack {
   name: string;
   /** Percentage points lost per bar at full corporation power. */
@@ -87,7 +60,6 @@ export interface Corporation {
   name: string;
   description: string;
   icon: string;
-  moves: BattleMove[];
   attacks: CorpAttack[];
 }
 
@@ -122,7 +94,6 @@ export interface CounterInitiative {
 
 /** What a level 3 perk changes. Add a kind here and handle it in `utopia.ts` to create new effects. */
 export type UtopiaPerkEffect =
-  | { kind: 'battleDamage'; value: number }
   | { kind: 'initiativeGain'; value: number }
   | { kind: 'attackShield'; value: number }
   | { kind: 'driftShield'; value: number }

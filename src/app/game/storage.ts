@@ -89,6 +89,8 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   if (game && game.startActions === undefined) game.startActions = game.actions;
   if (game && game.running === undefined) { game.running = []; delete game.cooldowns; }
   if (game && game.megacorpSeconds === undefined) game.megacorpSeconds = 0;
+  // Battles were removed; older saves may still carry one.
+  if (game) delete game.battle;
   // Initiatives that ran before building existed count as built.
   if (game && game.built === undefined) Object.assign(game, { built: Array.isArray(game.running) ? [...game.running] : [], building: {} });
   if (
@@ -99,10 +101,7 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !Array.isArray(game.running) || !game.running.every(id => typeof id === 'string') || !isCount(game.megacorpSeconds) ||
     !Array.isArray(game.built) || !game.built.every(id => typeof id === 'string') ||
     !isObject(game.building) || !Object.values(game.building).every(isCount) ||
-    !Array.isArray(game.attackLog) || !game.attackLog.every(line => typeof line === 'string') ||
-    !(game.battle === null || (isObject(game.battle) && typeof game.battle.corpId === 'string' &&
-      isCount(game.battle.playerHp) && isCount(game.battle.corpHp) && isCount(game.battle.round) &&
-      Array.isArray(game.battle.log) && [null, 'won', 'lost'].includes(game.battle.result as string | null)))
+    !Array.isArray(game.attackLog) || !game.attackLog.every(line => typeof line === 'string')
   ) return null;
   return game as unknown as UtopiaGame;
 }

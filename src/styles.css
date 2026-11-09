@@ -1602,9 +1602,96 @@ footer {
 
 .arena {
     grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) 150px;
+    align-items: center;
+    gap: 18px;
+}
+
+.arena-feed {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    min-width: 0;
+    align-self: start;
+}
+
+/* Avatars on the top card: your AI on the left, MegaCorp on the right. */
+.avatar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.avatar svg {
+    width: 130px;
+    height: 130px;
+}
+
+.avatar figcaption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    font-size: 12px;
+}
+
+.avatar figcaption .world-track {
+    width: 100%;
+}
+
+.avatar figcaption small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.avatar-backdrop { fill: var(--surface-2); }
+.avatar-player .avatar-backdrop { fill: color-mix(in srgb, var(--surface-2) 85%, var(--green)); }
+.avatar-megacorp .avatar-backdrop { fill: color-mix(in srgb, var(--surface-2) 85%, var(--red)); }
+
+.robot-head { fill: #cfd6de; }
+.robot-visor { fill: #1e2a33; }
+.robot-eye { fill: var(--green); }
+.robot-line { stroke: #1e2a33; stroke-width: 3; stroke-linecap: round; }
+.robot-head + .robot-visor ~ .robot-line { stroke: var(--green); }
+.robot-leaf { fill: var(--green); }
+.robot-body { fill: var(--blue); }
+.robot-heart { fill: #f78fa0; }
+
+.mega-hat { fill: #18181b; }
+.mega-band { fill: var(--purple); }
+.mega-face { fill: #e9c39b; }
+.mega-brow { stroke: #3b2a1a; stroke-width: 3; stroke-linecap: round; }
+.mega-eye { fill: #18181b; }
+.mega-monocle { fill: rgba(255, 255, 255, .25); stroke: var(--yellow); stroke-width: 2; }
+.mega-chain { stroke: var(--yellow); stroke-width: 1.5; }
+.mega-grin { fill: #f5f5f5; stroke: #3b2a1a; stroke-width: 1.5; }
+.mega-suit { fill: #2b2d42; }
+.mega-shirt { fill: #f5f5f5; }
+.mega-tie { fill: var(--red); }
+.mega-pin.banana { fill: var(--yellow); }
+.mega-pin.box { fill: #c89b6d; }
+.mega-pin.rocket { fill: #d0d4dc; }
+.mega-unknown { fill: var(--ink); font: 700 40px var(--mono); }
+
+/* Before MegaCorp shows itself it is only a silhouette. */
+.avatar-megacorp.unknown svg > :not(.avatar-backdrop):not(.mega-unknown) {
+    fill: #0f0f12;
+    stroke: #0f0f12;
+}
+
+@media (max-width: 760px) {
+    .arena {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .arena-feed {
+        grid-column: 1 / -1;
+        order: 3;
+    }
 }
 
 .arena-intro {
@@ -1614,70 +1701,17 @@ footer {
     max-width: 70ch;
 }
 
-.arena-sides {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: 16px;
-}
 
-.fighter {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
 
-.fighter-icon {
-    font-size: 34px;
-    line-height: 1;
-}
 
-.arena-versus {
-    font: 700 18px var(--mono);
-    color: var(--faint);
-}
 
-.hp-fill {
-    background: var(--green);
-}
 
-.hp-fill.corp {
-    background: var(--purple);
-}
 
-.hp-fill.low {
-    background: var(--red);
-}
 
-.battle-moves {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
 
-.battle-move {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 8px 12px;
-}
 
-.battle-move small {
-    font-weight: 400;
-    opacity: .85;
-}
 
-.battle-result {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    color: var(--red);
-    font-size: 16px;
-}
 
-.battle-result.won {
-    color: var(--green);
-}
 
 .battle-log {
     margin: 0;
@@ -1737,26 +1771,8 @@ footer {
     background: var(--purple);
 }
 
-.fight-button {
-    width: 44px;
-    height: 44px;
-    border: 1px solid var(--red);
-    border-radius: var(--radius);
-    background: var(--red-soft);
-    font-size: 20px;
-    cursor: pointer;
-}
 
-.fight-button:hover:not(:disabled) {
-    background: rgba(247, 84, 100, .3);
-}
 
-.fight-button:disabled {
-    border-color: var(--line);
-    background: var(--surface-2);
-    cursor: not-allowed;
-    filter: grayscale(1);
-}
 
 @media (max-width: 760px) {
     .utopia {

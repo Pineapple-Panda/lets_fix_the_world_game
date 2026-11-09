@@ -1,13 +1,13 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionsGained, canFight, cardUnlocked, corporation, metricRate, counterRate, launchedCounters, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeStage, initiativeRate, initiativeUpkeep, openUtopiaPerks, unlockPerk,
-  utopiaPerkAvailable
+  actionsGained, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
-import { attackRules, battleRules, corporations, initiatives, megaCorpName, metrics, playerMoves, utopiaPerks } from '../../game/utopia-content';
+import { attackRules, corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
 import type { UtopiaGame } from '../../models/utopia.model';
 
-/** Level 3: the battle arena on top; the utopia, your development and MegaCorp below. */
+/** Level 3: you and MegaCorp face each other on top; development, the utopia and MegaCorp's corporations below. */
 @Component({
   selector: 'app-level-three',
   imports: [DecimalPipe],
@@ -18,19 +18,13 @@ export class LevelThreeComponent {
   readonly initiativeInitialized = output<string>();
   readonly initiativeStarted = output<string>();
   readonly initiativeStopped = output<string>();
-  readonly fightStarted = output<string>();
-  readonly moveChosen = output<string>();
-  readonly battleClosed = output<void>();
   readonly perkActivated = output<string>();
 
   protected readonly megaCorpName = megaCorpName;
-  protected readonly moves = playerMoves;
-  protected readonly battlesEnabled = battleRules.enabled;
 
   protected readonly view = computed(() => {
     const state = this.state();
-    const battle = state.battle;
-    const opponent = battle && corporation(battle.corpId);
+    const power = corporations.map(corp => state.corpPower[corp.id] ?? 0);
     return {
       metrics: metrics.map(metric => ({ ...metric, value: state.metrics[metric.id], rate: Math.round(metricRate(state, metric.id) * 100000) / 100000 })),
       initiatives: initiatives.map(initiative => ({
@@ -53,30 +47,22 @@ export class LevelThreeComponent {
         rate: Math.round(counterRate(state, counter) * 100000) / 100000,
         power: state.corpPower[counter.corpId] ?? 0
       })),
-      corps: corporations.map(corp => ({
-        corp,
-        power: state.corpPower[corp.id] ?? 0,
-        canFight: canFight(state, corp.id)
-      })),
+      corps: corporations.map(corp => ({ corp, power: state.corpPower[corp.id] ?? 0 })),
+      /** MegaCorp's strength on the top card: the average power of its corporations. */
+      megaPower: Math.round(power.reduce((sum, value) => sum + value, 0) / Math.max(1, power.length)),
       integrity: state.integrity,
+      actionsPerSecond: state.actionRate,
+      budgetPerSecond: state.budgetRate,
       utopiaOpen: cardUnlocked(state, 'utopia'),
       megacorpOpen: cardUnlocked(state, 'megacorp'),
       utopiaPerkName: unlockPerk('utopia')?.name ?? '',
       megacorpPerkName: unlockPerk('megacorp')?.name ?? '',
       actionsGained: actionsGained(state),
-      actionsPerSecond: state.actionRate,
-      budgetPerSecond: state.budgetRate,
       activePerks: utopiaPerks.filter(perk => state.perks.includes(perk.id)),
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,
       attackInterval: attackRules.interval,
-      attackLog: state.attackLog,
-      battle: battle && opponent ? {
-        ...battle,
-        corp: opponent,
-        playerPercent: battle.playerHp / battleRules.playerHp * 100,
-        corpPercent: battle.corpHp / battleRules.corpHp * 100
-      } : null
+      attackLog: state.attackLog
     };
   });
 
