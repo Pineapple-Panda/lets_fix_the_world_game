@@ -123,11 +123,11 @@ export const corporations: Corporation[] = [
  */
 export const counterInitiatives: CounterInitiative[] = [
   { id: 'monoculture', corpId: 'bananas', name: 'Monoculture Land Grab', description: 'Every field becomes a banana plantation. Bananas for everyone, nothing else for anyone.',
-    metric: 'food', rate: 0.01, launchAfter: 30 },
+    metric: 'food', rate: 0.02, launchAfter: 30 },
   { id: 'lights-out', corpId: 'mississippi', name: 'Lights-Out Warehouses', description: 'Fully automated warehouses, no humans, no lights, no jobs.',
-    metric: 'employment', rate: 0.01, launchAfter: 90 },
+    metric: 'employment', rate: 0.02, launchAfter: 90 },
   { id: 'mars-hype', corpId: 'edison', name: 'Mars Colony Real Estate', description: 'Buys up homes on Earth as “collateral” for apartments on Mars. Opening 2090, probably.',
-    metric: 'housing', rate: 0.01, launchAfter: 150 }
+    metric: 'housing', rate: 0.02, launchAfter: 150 }
 ];
 
 /** Your initiatives: programs that run continuously, like the program cards of level 2. */
