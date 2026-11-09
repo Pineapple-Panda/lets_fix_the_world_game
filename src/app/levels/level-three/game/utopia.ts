@@ -1,4 +1,4 @@
-import type { LevelSummary } from '../models/launched.model.ts';
+import type { LevelSummary } from '../../level-two/models/launched.model.ts';
 import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
   attackRules, corporations, corpStartPower, counterInitiatives, duelRules, outcomeRules, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart

@@ -1,5 +1,5 @@
-import type { Game } from '../models/game.model.ts';
-import { formatVersion } from '../models/version.model.ts';
+import type { Game } from '../../level-one/models/game.model.ts';
+import { formatVersion } from '../../level-one/models/version.model.ts';
 import type {
   EpicDefinition, LaunchedGame, LaunchedPerk, LaunchedStats, LevelSummary, LaunchedProduct, LawsuitCase, ProductDefinition, ProgramDefinition, ProgramState,
   SpecialEvent,

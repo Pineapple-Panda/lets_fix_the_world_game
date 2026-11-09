@@ -1,5 +1,5 @@
 import { afterNextRender, Component, ElementRef, input, output, viewChild } from '@angular/core';
-import type { LevelSummary } from '../../models/launched.model';
+import type { LevelSummary } from '../../../level-two/models/launched.model';
 
 /** Level 3 is won: every utopia bar reached 100%. */
 @Component({

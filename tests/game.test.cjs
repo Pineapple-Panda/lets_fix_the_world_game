@@ -1,10 +1,10 @@
 // Gameplay checks. Run with `npm test`. Every check runs even if an earlier one fails.
 const assert = require('node:assert/strict');
-const game = require('../src/app/game/game.ts');
-const content = require('../src/app/game/content.ts');
-const storage = require('../src/app/game/storage.ts');
-const launched = require('../src/app/game/launched.ts');
-const version = require('../src/app/models/version.model.ts');
+const game = require('../src/app/levels/level-one/game/game.ts');
+const content = require('../src/app/levels/level-one/game/content.ts');
+const storage = require('../src/app/shared/game/storage.ts');
+const launched = require('../src/app/levels/level-two/game/launched.ts');
+const version = require('../src/app/levels/level-one/models/version.model.ts');
 
 const {
   newGame, perks, perkUnlocked, openPerks, activePerks, activatePerk, isAvailable, boardItems, boardColumns,
@@ -903,7 +903,7 @@ function shipGoal(live, goal) {
 }
 
 test('every world goal has a chain of epics ending in a big API epic', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual(content.worldGoals.map(goal => goal.id), ['climate', 'war', 'corruption', 'hunger-poverty']);
   assert.deepEqual(content.worldGoals.map(goal => launched.goalEpics(goal.id).length), [6, 6, 6, 7]);
   for (const goal of content.worldGoals) {
@@ -1062,7 +1062,7 @@ test('finished epics fill the solution progress bars', () => {
 });
 
 test('rental clients and world problems are defined', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
   assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx', 'mississippi-corp']);
   const green = content.rentalClients[0];
@@ -1307,7 +1307,7 @@ test('EdisonX robots resolve protests automatically', () => {
 });
 
 test('flimsy lawsuits: only at 30% climate solution and more than 80% integrity', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual([...new Set(content.lawsuits.map(entry => entry.plaintiff))], ['Mississippi Corp', 'Bananas Inc.', 'EdisonX']);
   const climate = value => ({ ...liveState().worldProgress, climate: value });
   assert.equal(launched.lawsuitRisk(greenWorldActive({ integrity: 90, worldProgress: climate(29.9) })), false, 'below 30% climate');
@@ -1460,7 +1460,7 @@ test('Peace & Integrity: diplomacy chatbot, tax the rich and high-tech weapons',
 });
 
 test('Tax the Rich triples the lawsuit chance and brings billionaire lawsuits', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.equal(launched.currentLawsuitChance(peaceActive()), 0.003);
   const taxing = launched.startProgram(peaceActive(), 'tax-the-rich');
   assert.ok(Math.abs(launched.currentLawsuitChance(taxing) - 0.009) < 1e-12, '×3 while Tax the Rich runs');
@@ -1563,7 +1563,7 @@ test('shady deals are counted every second', () => {
 
 test('protests take at most 50 clicks, mediators calm them faster and peacefully', () => {
   const protest = overrides => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }], ...overrides });
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
   assert.equal(perk.actionsRequired, 45000000);
   assert.deepEqual(perk.requiresProducts, ['green-world']);
@@ -1579,7 +1579,7 @@ test('protests take at most 50 clicks, mediators calm them faster and peacefully
 });
 
 test('the news ticker reacts to the world and breaks lawsuits and protests first', () => {
-  const news = require('../src/app/game/news.ts');
+  const news = require('../src/app/levels/level-two/game/news.ts');
   const feed = news.newsFeed(greenWorldActive({ seconds: 600 }));
   assert.equal(feed.length, 3);
   assert.ok(feed.every(line => !line.breaking && line.text.length > 10));
@@ -1597,7 +1597,7 @@ test('the news ticker reacts to the world and breaks lawsuits and protests first
 });
 
 test('Peace & Integrity has three corruption programs', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual(content.programs.filter(program => program.problem === 'corruption').map(program => program.id),
     ['tax-the-rich', 'open-budget-ledger', 'whistleblower-harbor']);
   assert.equal(launched.programBlocker(peaceActive(), 'whistleblower-harbor'), 'Needs v1.1');
@@ -1606,7 +1606,7 @@ test('Peace & Integrity has three corruption programs', () => {
 });
 
 test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens assembly', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   const perk = id => content.launchedPerks.find(entry => entry.id === id);
   assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
     [25000000, 100000000, 150000000, 200000000, 300000000]);
@@ -1648,7 +1648,7 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
 });
 
 test('Premium Hosting Contracts make clients pay ten times the rent', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.equal(content.launchedPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
   const online = { perks: ['workflow-abstraction', 'network-financing'], rentals: ['blue-helmets'] };
   assert.equal(launched.rentalIncome(liveState(online)), 500);
@@ -1670,7 +1670,7 @@ test('every server slot multiplies the actions per second', () => {
 });
 
 test('every program needs a server slot, times the major version of its product', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   const reforest = content.programs.find(program => program.id === 'reforestation-network');
   assert.equal(launched.programSlotsNeeded(greenWorldActive(), reforest), 1);
   const v2 = greenWorldActive({ serverSlots: 3, products: [{ id: 'green-world', major: 2, minor: 0, active: true }] });
@@ -1742,7 +1742,7 @@ test('after the world is fixed, a new run starts with a head start', () => {
 
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.equal(content.launchedPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
   const start = liveState({ budget: 1000, perks: ['pitch-deck'] });
   assert.equal(launched.pitchValue(start), 100, 'at least 100: 175 actions per second only make 35');
@@ -1796,8 +1796,8 @@ test('application versions', () => {
 
 // ---------- level 3 ----------
 
-const utopia = require('../src/app/game/utopia.ts');
-const utopiaContent = require('../src/app/game/utopia-content.ts');
+const utopia = require('../src/app/levels/level-three/game/utopia.ts');
+const utopiaContent = require('../src/app/levels/level-three/game/utopia-content.ts');
 /** Level 3 with the Utopia and MegaCorp cards already open. */
 const opened = () => ({ ...utopia.newUtopia(), perks: ['utopia-blueprint', 'opposition-research'] });
 
@@ -2096,7 +2096,7 @@ test('a fully defeated MegaCorp stops battles, moves and counter initiatives', (
 });
 
 test('winning level 3 shows a summary of all three levels', () => {
-  const game = require('../src/app/game/game.ts');
+  const game = require('../src/app/levels/level-one/game/game.ts');
   const level1 = launched.level1Summary({ ...game.newGame(), seconds: 1800, deployments: 12, bugCount: 7, actions: 40000 });
   assert.equal(level1.level, 1);
   assert.deepEqual(level1.facts.slice(0, 1), [{ label: 'Time', value: '30 min' }]);

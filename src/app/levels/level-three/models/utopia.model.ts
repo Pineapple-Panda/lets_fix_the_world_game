@@ -1,4 +1,4 @@
-import type { LevelSummary } from './launched.model.ts';
+import type { LevelSummary } from '../../level-two/models/launched.model.ts';
 /** Level 3: building a utopia while MegaCorp fights back. */
 
 /** The utopia's bars, each in percent (0–100). */

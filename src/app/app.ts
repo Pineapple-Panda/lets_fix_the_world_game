@@ -1,22 +1,22 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
-import { ActionBaseComponent } from './components/action-base/action-base';
-import { BoardComponent } from './components/board/board';
-import { EarlComponent } from './components/earl/earl';
-import { IntroComponent } from './components/intro/intro';
-import { LaunchComponent } from './components/launch/launch';
-import { LevelTwoComponent } from './components/level-two/level-two';
-import { PerksComponent } from './components/perks/perks';
-import { StatsComponent } from './components/stats/stats';
-import { VictoryComponent } from './components/victory/victory';
-import { EventDialogComponent } from './components/event-dialog/event-dialog';
-import { LevelThreeComponent } from './components/level-three/level-three';
-import { DuelDialogComponent } from './components/duel-dialog/duel-dialog';
-import { GameOverComponent } from './components/game-over/game-over';
-import { UtopiaWonComponent } from './components/utopia-won/utopia-won';
+import { ActionBaseComponent } from './levels/level-one/components/action-base/action-base';
+import { BoardComponent } from './levels/level-one/components/board/board';
+import { EarlComponent } from './levels/level-one/components/earl/earl';
+import { IntroComponent } from './levels/level-one/components/intro/intro';
+import { LaunchComponent } from './levels/level-one/components/launch/launch';
+import { LevelTwoComponent } from './levels/level-two/components/level-two/level-two';
+import { PerksComponent } from './levels/level-one/components/perks/perks';
+import { StatsComponent } from './levels/level-one/components/stats/stats';
+import { VictoryComponent } from './levels/level-two/components/victory/victory';
+import { EventDialogComponent } from './levels/level-two/components/event-dialog/event-dialog';
+import { LevelThreeComponent } from './levels/level-three/components/level-three/level-three';
+import { DuelDialogComponent } from './levels/level-three/components/duel-dialog/duel-dialog';
+import { GameOverComponent } from './levels/level-three/components/game-over/game-over';
+import { UtopiaWonComponent } from './levels/level-three/components/utopia-won/utopia-won';
 import {
   activateUtopiaPerk, cancelMegacorpEffect, gameSummary, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
-} from './game/utopia';
-import type { UtopiaGame } from './models/utopia.model';
+} from './levels/level-three/game/utopia';
+import type { UtopiaGame } from './levels/level-three/models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
   assistantOutput, autoCoverageRate, clicksPerPress, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
@@ -24,18 +24,18 @@ import {
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
   upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
-} from './game/game';
+} from './levels/level-one/game/game';
 import {
   activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
-  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
-import { newsFeed } from './game/news';
-import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './game/storage';
-import type { AppView } from './models/app-view.model';
-import type { Game } from './models/game.model';
-import type { Item } from './models/item.model';
-import type { LaunchedGame } from './models/launched.model';
-import type { PerkId } from './models/perk.model';
-import { formatVersion, nextVersion } from './models/version.model';
+  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './levels/level-two/game/launched';
+import { newsFeed } from './levels/level-two/game/news';
+import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './shared/game/storage';
+import type { AppView } from './levels/level-one/models/app-view.model';
+import type { Game } from './levels/level-one/models/game.model';
+import type { Item } from './levels/level-one/models/item.model';
+import type { LaunchedGame } from './levels/level-two/models/launched.model';
+import type { PerkId } from './levels/level-one/models/perk.model';
+import { formatVersion, nextVersion } from './levels/level-one/models/version.model';
 
 /** Actions per click while dev mode is on. */
 const devModeActions = 30;
