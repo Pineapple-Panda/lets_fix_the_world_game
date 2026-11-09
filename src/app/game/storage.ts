@@ -86,9 +86,10 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   // Level 3 saves from before TCA, budget, integrity and perks existed get the starting values.
   if (game && game.actions === undefined) Object.assign(game, { actions: 10000000, budget: 20000000, integrity: 50, perks: [] });
   if (game && game.actionRate === undefined) Object.assign(game, { actionRate: 175, budgetRate: 175 });
+  if (game && game.startActions === undefined) game.startActions = game.actions;
   if (
     !game || !isCount(game.seconds) || !isCount(game.nextAttack) || !isCount(game.actions) || !isCount(game.budget) ||
-    !isCount(game.actionRate) || !isCount(game.budgetRate) ||
+    !isCount(game.actionRate) || !isCount(game.budgetRate) || !isCount(game.startActions) ||
     !isPercent(game.integrity) || !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
     !isPercentRecord(game.metrics) || !isPercentRecord(game.corpPower) ||
     !isObject(game.cooldowns) || !Object.values(game.cooldowns).every(isCount) ||

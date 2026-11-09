@@ -50,6 +50,11 @@
                 }
             </ol>
         } @else {
+            @if (!v.megacorpOpen) {
+                <h2 class="tool-heading" id="arena-title">The world is fixed. Now make it good.</h2>
+                <p class="arena-intro">Your AI runs the world's systems. Next: a place where everyone has work, a home and enough to eat.
+                    Somewhere, somebody does not like where this is going.</p>
+            } @else {
             <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} is watching</h2>
             <p class="arena-intro">EdisonX, Mississippi Corp and Bananas Inc. have joined forces. Your utopia threatens their business,
                 so they fight back with lawsuits and defamation. Pick a fight to take away their power.</p>
@@ -61,38 +66,11 @@
                     }
                 </ol>
             }
+            }
         }
     </section>
 
-    <!-- Bottom left: the utopia. -->
-    <section class="ops-card" aria-labelledby="utopia-title">
-        <h2 class="tool-heading" id="utopia-title">Utopia</h2>
-        @for (metric of v.metrics; track metric.id) {
-            <div class="world-row">
-                <span>{{ metric.name }}</span>
-                <div class="world-track" role="progressbar" [attr.aria-label]="metric.name" aria-valuemin="0" aria-valuemax="100"
-                     [attr.aria-valuenow]="metric.value | number: '1.0-0'">
-                    <div class="world-fill" [class]="'utopia-' + metric.id" [style.width.%]="metric.value"></div>
-                </div>
-                <b>{{ metric.value | number: '1.1-1' }}%</b>
-            </div>
-            <small class="upgrade-hint">{{ metric.hint }}</small>
-        }
-        <h3 class="tool-heading ops-subheading">AI initiatives</h3>
-        @for (entry of v.initiatives; track entry.initiative.id) {
-            <div class="upgrade-row initiative">
-                <span><strong>{{ entry.initiative.name }}</strong><small>{{ entry.initiative.description }}</small>
-                    <small>Costs {{ format(entry.initiative.cost) }} budget</small></span>
-                <button class="tool-button" type="button" [disabled]="!entry.canRun"
-                        [attr.aria-label]="entry.initiative.name + ': ' + entry.metricName + ' +' + entry.gain + ' for ' + entry.initiative.cost + ' budget'"
-                        (click)="initiativeRun.emit(entry.initiative.id)">
-                    {{ entry.cooldown > 0 ? entry.cooldown + 's' : entry.metricName + ' +' + entry.gain }}
-                </button>
-            </div>
-        }
-    </section>
-
-    <!-- Bottom centre: your development (integrity, TCA, budget, perks). -->
+    <!-- Bottom left: your development (integrity, TCA, budget, perks). -->
     <section class="ops-card" aria-labelledby="development-three-title">
         <h2 class="tool-heading" id="development-three-title">Development</h2>
         <div class="world-row integrity-row">
@@ -131,7 +109,7 @@
                 <div class="tool-details">
                     <strong>{{ entry.perk.name }}</strong>
                     <small>{{ entry.perk.description }}</small>
-                    <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
+                    <small>Unlock: Gain {{ format(entry.perk.actionsRequired) }} coding actions in level 3 ({{ format(v.actionsGained < entry.perk.actionsRequired ? v.actionsGained : entry.perk.actionsRequired) }} so far)</small>
                     <small>Costs {{ format(entry.perk.cost) }} budget</small>
                     @if (entry.unlocked) {
                         <button class="tool-button" type="button" [attr.aria-label]="'Buy ' + entry.perk.name"
@@ -144,25 +122,62 @@
         }
     </section>
 
-    <!-- Bottom right: MegaCorp. -->
-    <section class="ops-card" aria-labelledby="megacorp-title">
-        <h2 class="tool-heading" id="megacorp-title">{{ megaCorpName }}</h2>
-        @for (entry of v.corps; track entry.corp.id) {
-            <div class="corp-row" [class.defeated]="entry.power <= 0">
-                <span class="corp-icon" aria-hidden="true">{{ entry.corp.icon }}</span>
-                <div class="corp-details">
-                    <strong>{{ entry.corp.name }}</strong>
-                    <small>{{ entry.corp.description }}</small>
-                    <div class="world-track" role="meter" [attr.aria-label]="entry.corp.name + ' power'" aria-valuemin="0" aria-valuemax="100"
-                         [attr.aria-valuenow]="entry.power">
-                        <div class="world-fill corp-power" [style.width.%]="entry.power"></div>
+    <!-- Bottom centre: the utopia, opened by its blueprint perk. -->
+    @if (v.utopiaOpen) {
+        <section class="ops-card" aria-labelledby="utopia-title">
+            <h2 class="tool-heading" id="utopia-title">Utopia</h2>
+            @for (metric of v.metrics; track metric.id) {
+                <div class="world-row">
+                    <span>{{ metric.name }}</span>
+                    <div class="world-track" role="progressbar" [attr.aria-label]="metric.name" aria-valuemin="0" aria-valuemax="100"
+                         [attr.aria-valuenow]="metric.value | number: '1.0-0'">
+                        <div class="world-fill" [class]="'utopia-' + metric.id" [style.width.%]="metric.value"></div>
                     </div>
-                    <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
+                    <b>{{ metric.value | number: '1.1-1' }}%</b>
                 </div>
-                <button class="fight-button" type="button" [disabled]="!entry.canFight"
-                        [attr.aria-label]="'Fight ' + entry.corp.name" [title]="'Fight ' + entry.corp.name"
-                        (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
-            </div>
-        }
-    </section>
+                <small class="upgrade-hint">{{ metric.hint }}</small>
+            }
+            <h3 class="tool-heading ops-subheading">AI initiatives</h3>
+            @for (entry of v.initiatives; track entry.initiative.id) {
+                <div class="upgrade-row initiative">
+                    <span><strong>{{ entry.initiative.name }}</strong><small>{{ entry.initiative.description }}</small>
+                        <small>Costs {{ format(entry.initiative.cost) }} budget</small></span>
+                    <button class="tool-button" type="button" [disabled]="!entry.canRun"
+                            [attr.aria-label]="entry.initiative.name + ': ' + entry.metricName + ' +' + entry.gain + ' for ' + entry.initiative.cost + ' budget'"
+                            (click)="initiativeRun.emit(entry.initiative.id)">
+                        {{ entry.cooldown > 0 ? entry.cooldown + 's' : entry.metricName + ' +' + entry.gain }}
+                    </button>
+                </div>
+            }
+        </section>
+    } @else {
+        <div class="ops-card ops-locked" aria-hidden="true"><span>Locked · {{ v.utopiaPerkName }}</span></div>
+    }
+
+    <!-- Bottom right: MegaCorp. -->
+    @if (v.megacorpOpen) {
+        <section class="ops-card" aria-labelledby="megacorp-title">
+            <h2 class="tool-heading" id="megacorp-title">{{ megaCorpName }}</h2>
+            @for (entry of v.corps; track entry.corp.id) {
+                <div class="corp-row" [class.defeated]="entry.power <= 0">
+                    <span class="corp-icon" aria-hidden="true">{{ entry.corp.icon }}</span>
+                    <div class="corp-details">
+                        <strong>{{ entry.corp.name }}</strong>
+                        <small>{{ entry.corp.description }}</small>
+                        <div class="world-track" role="meter" [attr.aria-label]="entry.corp.name + ' power'" aria-valuemin="0" aria-valuemax="100"
+                             [attr.aria-valuenow]="entry.power">
+                            <div class="world-fill corp-power" [style.width.%]="entry.power"></div>
+                        </div>
+                        <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
+                    </div>
+                    <button class="fight-button" type="button" [disabled]="!entry.canFight"
+                            [attr.aria-label]="'Fight ' + entry.corp.name" [title]="'Fight ' + entry.corp.name"
+                            (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
+                </div>
+            }
+        </section>
+    } @else {
+        <div class="ops-card ops-locked" aria-hidden="true"><span>Locked · {{ v.megacorpPerkName }}</span></div>
+    }
+
 </div>

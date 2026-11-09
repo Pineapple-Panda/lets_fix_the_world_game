@@ -15,6 +15,8 @@ export interface UtopiaGame {
   budgetRate: number;
   /** Activated level 3 perks. */
   perks: string[];
+  /** TCA when level 3 started; perk thresholds count the actions gained since. */
+  startActions: number;
   /** Current value of every bar in percent. */
   metrics: Record<UtopiaMetric, number>;
   /** Power of every corporation in percent; 0 means defeated. */
@@ -102,14 +104,18 @@ export type UtopiaPerkEffect =
   | { kind: 'initiativeGain'; value: number }
   | { kind: 'attackShield'; value: number }
   | { kind: 'driftShield'; value: number }
-  | { kind: 'cooldown'; value: number };
+  | { kind: 'cooldown'; value: number }
+  | { kind: 'unlock'; card: UtopiaCard };
+
+/** Cards of level 3 that start hidden. */
+export type UtopiaCard = 'utopia' | 'megacorp';
 
 export interface UtopiaPerk {
   id: string;
   name: string;
   description: string;
   icon: string;
-  /** Total coding actions needed before it can be taken. */
+  /** Coding actions to gain in level 3 before it can be taken. */
   actionsRequired: number;
   /** Budget price. */
   cost: number;

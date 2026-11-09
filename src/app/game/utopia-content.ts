@@ -37,18 +37,25 @@ export const battleRules = {
   logLength: 6
 };
 
-/** Level 3 perks, shown at most five at a time (available ones first). */
+/**
+ * Level 3 perks, shown at most five at a time (available ones first). `actionsRequired` counts the coding actions
+ * gained in level 3, so the thresholds work however many actions level 2 ended with.
+ */
 export const utopiaPerks: UtopiaPerk[] = [
+  { id: 'utopia-blueprint', name: 'Blueprint for Utopia', description: 'Your AI drafts a plan for a world where everyone has a job, a home and a full plate. Opens the Utopia card.', icon: 'BU',
+    actionsRequired: 50000, cost: 1000000, effect: { kind: 'unlock', card: 'utopia' } },
+  { id: 'opposition-research', name: 'Opposition Research', description: 'Somebody is buying up farmland, warehouses and influencers. Find out who. Opens the MegaCorp card, and MegaCorp starts fighting back.', icon: 'OR',
+    actionsRequired: 250000, cost: 2000000, effect: { kind: 'unlock', card: 'megacorp' } },
   { id: 'counter-lobby', name: 'Counter-Lobby Network', description: 'Ex-lobbyists who switched sides. Your battle attacks deal +5 damage.', icon: 'CL',
-    actionsRequired: 15000000, cost: 3000000, effect: { kind: 'battleDamage', value: 5 } },
+    actionsRequired: 1000000, cost: 3000000, effect: { kind: 'battleDamage', value: 5 } },
   { id: 'open-source-ai', name: 'Open-Source Initiatives', description: 'Anyone can improve your AI initiatives. They raise their bar twice as much.', icon: 'OS',
-    actionsRequired: 25000000, cost: 5000000, effect: { kind: 'initiativeGain', value: 2 } },
+    actionsRequired: 2000000, cost: 5000000, effect: { kind: 'initiativeGain', value: 2 } },
   { id: 'fact-checkers', name: 'Global Fact-Checker Guild', description: 'Every MegaCorp claim is checked within minutes. Their attacks hit half as hard.', icon: 'FC',
-    actionsRequired: 40000000, cost: 8000000, effect: { kind: 'attackShield', value: 0.5 } },
+    actionsRequired: 4000000, cost: 8000000, effect: { kind: 'attackShield', value: 0.5 } },
   { id: 'basic-services', name: 'Universal Basic Services', description: 'Homes, food and training as a right, not a product. The bars erode half as fast.', icon: 'UB',
-    actionsRequired: 60000000, cost: 12000000, effect: { kind: 'driftShield', value: 0.5 } },
+    actionsRequired: 6000000, cost: 12000000, effect: { kind: 'driftShield', value: 0.5 } },
   { id: 'ai-scheduler', name: 'AI Task Scheduler', description: 'Your AI plans the next initiative while the last one runs. Cooldowns are halved.', icon: 'TS',
-    actionsRequired: 80000000, cost: 15000000, effect: { kind: 'cooldown', value: 0.5 } }
+    actionsRequired: 8000000, cost: 15000000, effect: { kind: 'cooldown', value: 0.5 } }
 ];
 
 /** Your AI system's moves in battle. */

@@ -1,4 +1,4 @@
-import type { Battle, BattleMove, Corporation, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
+import type { Battle, BattleMove, Corporation, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
   attackRules, battleRules, corporations, initiatives, integrityRules, metrics, playerMoves, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
@@ -19,6 +19,7 @@ export function newUtopia(
     actions: carry.actions,
     budget: carry.budget,
     integrity: carry.integrity,
+    startActions: carry.actions,
     actionRate: Math.max(0, Math.round(carry.actionRate)),
     budgetRate: Math.max(0, Math.round(carry.budgetRate)),
     perks: [],
@@ -42,16 +43,33 @@ export function activeCorporations(state: UtopiaGame): Corporation[] {
 
 // ---------- Perks ----------
 
+type ValueEffect = Exclude<UtopiaPerkEffect, { kind: 'unlock' }>;
+
 /** The combined value of all activated perks of one kind (sums for damage, products for multipliers). */
-export function perkValue(state: UtopiaGame, kind: UtopiaPerkEffect['kind']): number {
-  const owned = utopiaPerks.filter(perk => state.perks.includes(perk.id) && perk.effect.kind === kind);
-  return kind === 'battleDamage'
-    ? owned.reduce((total, perk) => total + perk.effect.value, 0)
-    : owned.reduce((total, perk) => total * perk.effect.value, 1);
+export function perkValue(state: UtopiaGame, kind: ValueEffect['kind']): number {
+  const values = utopiaPerks
+    .filter(perk => state.perks.includes(perk.id) && perk.effect.kind === kind)
+    .map(perk => (perk.effect as ValueEffect).value);
+  return kind === 'battleDamage' ? values.reduce((total, value) => total + value, 0) : values.reduce((total, value) => total * value, 1);
+}
+
+/** Whether a hidden card (Utopia, MegaCorp) has been opened by its perk. */
+export function cardUnlocked(state: UtopiaGame, card: UtopiaCard): boolean {
+  return utopiaPerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlock' && perk.effect.card === card);
+}
+
+/** The perk that opens a hidden card. */
+export function unlockPerk(card: UtopiaCard): UtopiaPerk | undefined {
+  return utopiaPerks.find(perk => perk.effect.kind === 'unlock' && perk.effect.card === card);
+}
+
+/** Coding actions gained since level 3 started (what perk thresholds count). */
+export function actionsGained(state: UtopiaGame): number {
+  return Math.max(0, state.actions - state.startActions);
 }
 
 export function utopiaPerkAvailable(state: UtopiaGame, perk: UtopiaPerk): boolean {
-  return !state.perks.includes(perk.id) && state.actions >= perk.actionsRequired && state.budget >= perk.cost;
+  return !state.perks.includes(perk.id) && actionsGained(state) >= perk.actionsRequired && state.budget >= perk.cost;
 }
 
 /** Perks not taken yet: available ones first, then by TCA threshold; at most five. */
@@ -88,10 +106,14 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
     seconds: state.seconds + 1,
     actions: cap(state.actions + state.actionRate),
     budget: cap(state.budget + state.budgetRate),
-    metrics: Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>,
+    // The bars only start to erode once the Utopia card is open.
+    metrics: cardUnlocked(state, 'utopia')
+      ? Object.fromEntries(metrics.map(metric => [metric.id, percent(state.metrics[metric.id] + metric.drift * drift)])) as Record<UtopiaMetric, number>
+      : state.metrics,
     cooldowns: Object.fromEntries(Object.entries(state.cooldowns).map(([id, seconds]) => [id, Math.max(0, seconds - 1)]))
   };
-  if (next.battle && !next.battle.result) return next;
+  // MegaCorp only attacks once you know about it, and not during a battle.
+  if (!cardUnlocked(state, 'megacorp') || (next.battle && !next.battle.result)) return next;
   next.nextAttack = state.nextAttack - 1;
   if (next.nextAttack > 0) return next;
   next.nextAttack = attackRules.interval;
@@ -128,7 +150,7 @@ export function initiativeCooldown(state: UtopiaGame, id: string): number {
 
 export function canRunInitiative(state: UtopiaGame, id: string): boolean {
   const initiative = initiatives.find(entry => entry.id === id);
-  return !!initiative && (state.cooldowns[id] ?? 0) <= 0 && state.budget >= initiative.cost;
+  return !!initiative && cardUnlocked(state, 'utopia') && (state.cooldowns[id] ?? 0) <= 0 && state.budget >= initiative.cost;
 }
 
 /** Uses an AI initiative: costs budget, raises its bar, then it needs to cool down. */
@@ -147,7 +169,7 @@ export function runInitiative(state: UtopiaGame, id: string): UtopiaGame | null 
 
 /** Whether you can challenge a corporation right now. */
 export function canFight(state: UtopiaGame, corpId: string): boolean {
-  return !!corporation(corpId) && (state.corpPower[corpId] ?? 0) > 0 && !(state.battle && !state.battle.result);
+  return !!corporation(corpId) && cardUnlocked(state, 'megacorp') && (state.corpPower[corpId] ?? 0) > 0 && !(state.battle && !state.battle.result);
 }
 
 /** Opens a battle against a corporation in the arena. */
