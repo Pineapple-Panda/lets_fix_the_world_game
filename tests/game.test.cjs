@@ -1811,7 +1811,7 @@ test('level 3 starts with 65% employment and three corporations at 75% power', (
 
 test('initiatives are initialized, built for 30 seconds, then started; credibility multiplies their effect', () => {
   const next = utopia.tickUtopia(opened(), () => 0.99);
-  assert.ok(next.metrics.employment < 65 && next.metrics.housing < 70 && next.metrics.food < 75);
+  assert.deepEqual(next.metrics, opened().metrics, 'the bars do not move on their own');
   const base = { ...opened(), perks: ['utopia-blueprint'], budgetRate: 0 };
   assert.equal(utopia.startInitiative(base, 'career-match'), null, 'not built yet');
   assert.equal(utopia.initiativeBlocker(base, 'career-match'), 'Needs to be initialized first');
@@ -1829,7 +1829,7 @@ test('initiatives are initialized, built for 30 seconds, then started; credibili
   assert.equal(utopia.initiativeRate({ ...started, integrity: 100 }, 'career-match'), 0.3);
   let later = started;
   for (let second = 0; second < 100; second++) later = utopia.tickUtopia(later, () => 0.99);
-  assert.ok(Math.abs(later.metrics.employment - (Math.min(100, started.metrics.employment + 100 * (0.15 - 0.01)))) < 1e-9, 'beats the drift at 50% credibility');
+  assert.ok(Math.abs(later.metrics.employment - (Math.min(100, started.metrics.employment + 100 * 0.15))) < 1e-9, '+0.15% per second at 50% credibility');
   assert.equal(later.budget, started.budget - 100 * 1000, '1,000 budget per second');
   const stopped = utopia.stopInitiative(started, 'career-match');
   assert.equal(utopia.initiativeStage(stopped, 'career-match'), 'built', 'stays built after stopping');
@@ -1865,9 +1865,9 @@ test('cards: one-time hits, timed effects, own decks per corporation', () => {
   let state = { ...opened(), effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 30 }] };
   const housing = state.metrics.housing;
   state = utopia.tickUtopia(state, () => 0.99);
-  assert.ok(Math.abs(state.metrics.housing - (housing - 0.012 - 1)) < 1e-9, 'drift and the warehouse grab');
+  assert.ok(Math.abs(state.metrics.housing - (housing - 1)) < 1e-9, 'the warehouse grab');
   assert.equal(state.effects[0].remaining, 29);
-  assert.ok(Math.abs(utopia.metricRate(state, 'housing') - (-0.012 - 1)) < 1e-9, 'shown in the rate');
+  assert.ok(Math.abs(utopia.metricRate(state, 'housing') - -1) < 1e-9, 'shown in the rate');
   for (let second = 0; second < 29; second++) state = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
   assert.deepEqual(state.effects, [], 'over after 30 seconds');
 });
@@ -1957,7 +1957,7 @@ test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total 
   later = utopia.activateUtopiaPerk(later, 'utopia-blueprint');
   assert.equal(later.budget, 0, 'free');
   assert.equal(utopia.cardUnlocked(later, 'utopia'), true);
-  assert.ok(utopia.tickUtopia(later, () => 0).metrics.employment < 65, 'now the bars erode');
+  assert.equal(utopia.tickUtopia(later, () => 0).metrics.employment, 65, 'no drift: the bars wait for your initiatives');
   assert.equal(utopia.activateUtopiaPerk(later, 'opposition-research'), null, 'needs 260M');
   assert.equal(utopia.cardUnlocked(utopia.activateUtopiaPerk({ ...later, actions: 260000000 }, 'opposition-research'), 'megacorp'), true);
 });
@@ -1972,15 +1972,15 @@ test('MegaCorp launches counter initiatives one after another, scaled by power',
   assert.ok(Math.abs(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 50 } }, counter) - 0.1) < 1e-12, '0.2 × 50%');
   assert.equal(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 0 } }, counter), 0, 'stopped once defeated');
   const next = utopia.tickUtopia(state, () => 0.99);
-  assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.008 - 0.15)) < 1e-9, 'drift plus the counter initiative');
+  assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.15)) < 1e-9, 'the counter initiative');
   assert.deepEqual(utopia.launchedCounters({ ...state, megacorpSeconds: 150 }).length, 3, 'all three after 150 seconds');
   assert.deepEqual(utopia.launchedCounters({ ...state, perks: ['utopia-blueprint'], megacorpSeconds: 500 }), [], 'only once MegaCorp is visible');
 });
 
 test('each utopia bar shows its current change per second', () => {
   let state = { ...opened(), running: ['career-match'], megacorpSeconds: 90 };
-  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (-0.01 + 0.15 - 0.15)) < 1e-12, 'drift + initiative − counter initiative');
-  assert.ok(Math.abs(utopia.metricRate(state, 'food') - (-0.008 - 0.15)) < 1e-12);
+  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (0.15 - 0.15)) < 1e-12, 'initiative − counter initiative');
+  assert.ok(Math.abs(utopia.metricRate(state, 'food') - -0.15) < 1e-12);
   assert.equal(utopia.metricRate({ ...state, perks: [] }, 'food'), 0, 'nothing moves while Utopia is locked');
   const before = state.metrics.housing;
   assert.ok(Math.abs(utopia.tickUtopia(state, () => 0.99).metrics.housing - (before + utopia.metricRate(state, 'housing'))) < 1e-9, 'matches the tick');
@@ -2021,7 +2021,7 @@ test('level 3 is won with every bar at 100% and lost once all of them drop to 0%
   assert.equal(utopia.levelOutcome({ ...nearlyWon, perks: [] }), null, 'only once Utopia is open');
   assert.equal(utopia.levelOutcome({ ...nearlyWon, metrics: { employment: 100, housing: 99.9, food: 100 } }), null, 'all three are needed');
   assert.equal(utopia.tickUtopia({ ...opened(), metrics: { employment: 0.005, housing: 50, food: 50 } }, () => 0.99).outcome, null, 'one bar at 0% is not enough');
-  const lost = utopia.tickUtopia({ ...opened(), metrics: { employment: 0.005, housing: 0.005, food: 0.005 } }, () => 0.99);
+  const lost = utopia.tickUtopia({ ...opened(), metrics: { employment: 0, housing: 0, food: 0 } }, () => 0.99);
   assert.equal(lost.outcome, 'lost', 'all three dropped to 0%');
   assert.deepEqual(utopia.tickUtopia(lost, () => 0.99), lost, 'the game stops once decided');
   assert.equal(utopia.playPlayerCard(lost, 'antitrust'), null, 'no more moves');
@@ -2077,7 +2077,7 @@ test('Pop-Up Homes (Prefab Factory perk): Housing +3% per second for 5 seconds',
   assert.equal(perk.budget, opened().budget - 5000000);
   let state = utopia.playPlayerCard({ ...perk, metrics: { employment: 50, housing: 50, food: 50 } }, 'pop-up-homes');
   for (let second = 0; second < 5; second++) state = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
-  assert.ok(Math.abs(state.metrics.housing - (50 + 5 * (3 - 0.012))) < 1e-9, '+15% over 5 seconds, minus drift');
+  assert.ok(Math.abs(state.metrics.housing - (50 + 5 * 3)) < 1e-9, '+15% over 5 seconds');
   assert.deepEqual(state.effects, []);
   assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'pop-up-homes')), 'Housing +3%/s for 5s');
 });

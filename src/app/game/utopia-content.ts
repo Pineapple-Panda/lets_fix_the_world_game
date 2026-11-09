@@ -18,9 +18,9 @@ export const outcomeRules = { win: 100, lose: 0, loseWhen: 'all' as 'any' | 'all
 
 /** The utopia's bars, in display order. */
 export const metrics: MetricDefinition[] = [
-  { id: 'employment', name: 'Employment', hint: 'The AI does the work. Humans need new jobs worth doing.', start: 65, drift: -0.01 },
-  { id: 'housing', name: 'Housing', hint: 'People per home. Everyone stays alive now, so the world keeps getting fuller.', start: 70, drift: -0.012 },
-  { id: 'food', name: 'Food', hint: 'Meals per person. More people, same fields.', start: 75, drift: -0.008 }
+  { id: 'employment', name: 'Employment', hint: 'The AI does the work. Humans need new jobs worth doing.', start: 65, drift: 0 },
+  { id: 'housing', name: 'Housing', hint: 'People per home. Everyone stays alive now, so the world keeps getting fuller.', start: 70, drift: 0 },
+  { id: 'food', name: 'Food', hint: 'Meals per person. More people, same fields.', start: 75, drift: 0 }
 ];
 
 /**
