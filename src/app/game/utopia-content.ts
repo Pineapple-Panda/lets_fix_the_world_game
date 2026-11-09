@@ -39,22 +39,15 @@ export const battleRules = {
   logLength: 6
 };
 
-/** Level 3 perks, shown at most five at a time (available ones first). `actionsRequired` is total TCA, as in level 2. */
+/**
+ * Level 3 perks: for now only the two that open the Utopia and MegaCorp cards. More perks can use the other effect
+ * kinds (battleDamage, initiativeGain, attackShield, driftShield, upkeep). `actionsRequired` is total TCA, as in level 2.
+ */
 export const utopiaPerks: UtopiaPerk[] = [
   { id: 'utopia-blueprint', name: 'Blueprint for Utopia', description: 'Your AI drafts a plan for a world where everyone has a job, a home and a full plate. Opens the Utopia card.', icon: 'BU',
     actionsRequired: 250000000, cost: 0, effect: { kind: 'unlock', card: 'utopia' } },
   { id: 'opposition-research', name: 'Opposition Research', description: 'Somebody is buying up farmland, warehouses and influencers. Find out who. Opens the MegaCorp card, and MegaCorp starts fighting back.', icon: 'OR',
-    actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } },
-  { id: 'counter-lobby', name: 'Counter-Lobby Network', description: 'Ex-lobbyists who switched sides. Your battle attacks deal +5 damage.', icon: 'CL',
-    actionsRequired: 270000000, cost: 3000000, effect: { kind: 'battleDamage', value: 5 } },
-  { id: 'open-source-ai', name: 'Open-Source Initiatives', description: 'Anyone can improve your AI initiatives. They work twice as fast.', icon: 'OS',
-    actionsRequired: 290000000, cost: 5000000, effect: { kind: 'initiativeGain', value: 2 } },
-  { id: 'fact-checkers', name: 'Global Fact-Checker Guild', description: 'Every MegaCorp claim is checked within minutes. Their attacks hit half as hard.', icon: 'FC',
-    actionsRequired: 320000000, cost: 8000000, effect: { kind: 'attackShield', value: 0.5 } },
-  { id: 'basic-services', name: 'Universal Basic Services', description: 'Homes, food and training as a right, not a product. The bars erode half as fast.', icon: 'UB',
-    actionsRequired: 360000000, cost: 12000000, effect: { kind: 'driftShield', value: 0.5 } },
-  { id: 'ai-scheduler', name: 'AI Task Scheduler', description: 'Your AI shares servers and staff between initiatives. They cost half the upkeep.', icon: 'TS',
-    actionsRequired: 400000000, cost: 15000000, effect: { kind: 'upkeep', value: 0.5 } }
+    actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } }
 ];
 
 /** Your AI system's moves in battle. */

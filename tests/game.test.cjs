@@ -1903,25 +1903,33 @@ test('initiatives cost budget; defamation costs integrity; battles move it', () 
   assert.equal(won.integrity, 55, '+5 for a win');
 });
 
-test('level 3 perks: at most five, available first, each with its own effect', () => {
-  const rich = { ...opened(), actions: 500000000, budget: 100000000 };
-  assert.ok(utopia.openUtopiaPerks(rich).length <= 5);
-  assert.equal(utopia.openUtopiaPerks({ ...utopia.newUtopia(), actions: 30000000 })[0].id, 'utopia-blueprint', 'available first, then by threshold');
-  assert.equal(utopia.activateUtopiaPerk({ ...opened(), actions: 269999999 }, 'counter-lobby'), null, 'needs 270M total TCA');
-  let state = utopia.activateUtopiaPerk(rich, 'open-source-ai');
-  assert.equal(state.budget, 100000000 - 5000000);
-  assert.equal(utopia.initiativeRate(state, 'career-match'), 0.04, 'twice as fast');
-  state = utopia.activateUtopiaPerk(state, 'ai-scheduler');
-  assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500, 'half the upkeep');
-  state = utopia.activateUtopiaPerk(state, 'fact-checkers');
-  const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
-  assert.equal(75 - shielded.metrics.food, 2, 'attacks hit half as hard');
-  state = utopia.activateUtopiaPerk(state, 'basic-services');
-  assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
-  state = utopia.activateUtopiaPerk(state, 'counter-lobby');
-  let battle = utopia.startBattle(state, 'bananas');
-  battle = utopia.battleRound(battle, 'fact-check', () => 0);
-  assert.equal(battle.battle.corpHp, 100 - (16 + 5), 'counter-lobby adds 5 damage');
+test('level 3 keeps only the two unlock perks; the effect kinds still work for new perks', () => {
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research']);
+  assert.ok(utopiaContent.utopiaPerks.every(perk => perk.cost === 0));
+  // Try every effect kind with temporary perks, as a new perk in the config would.
+  const extra = [
+    { id: 't-damage', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'battleDamage', value: 5 } },
+    { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'initiativeGain', value: 2 } },
+    { id: 't-shield', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'attackShield', value: 0.5 } },
+    { id: 't-drift', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'driftShield', value: 0.5 } },
+    { id: 't-upkeep', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'upkeep', value: 0.5 } }
+  ];
+  utopiaContent.utopiaPerks.push(...extra);
+  try {
+    let state = opened();
+    assert.ok(utopia.openUtopiaPerks(state).length <= 5, 'at most five shown');
+    for (const perk of extra) state = utopia.activateUtopiaPerk(state, perk.id);
+    assert.equal(state.budget, opened().budget - 1000, 'pays the price');
+    assert.equal(utopia.initiativeRate(state, 'career-match'), 0.04);
+    assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500);
+    assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
+    const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
+    assert.equal(75 - shielded.metrics.food, 2, 'attacks hit half as hard');
+    const battle = utopia.battleRound(utopia.startBattle(state, 'bananas'), 'fact-check', () => 0);
+    assert.equal(battle.battle.corpHp, 100 - (16 + 5), '+5 battle damage');
+  } finally {
+    utopiaContent.utopiaPerks.splice(-extra.length);
+  }
 });
 
 test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total TCA', () => {
