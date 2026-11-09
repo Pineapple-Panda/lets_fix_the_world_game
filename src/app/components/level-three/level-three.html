@@ -36,17 +36,44 @@
                 <p class="arena-intro">Your AI runs the world's systems. Next: a place where everyone has work, a home and enough to eat.
                     Somewhere, somebody does not like where this is going.</p>
             } @else {
-                <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} is watching</h2>
-                <p class="arena-intro">EdisonX, Mississippi Corp and Bananas Inc. have joined forces. Your utopia threatens their business,
-                    so they fight back with lawsuits, defamation and counter initiatives.</p>
-                <small class="upgrade-hint">Next attack in {{ v.nextAttack }}s</small>
-                @if (v.attackLog.length) {
-                    <ol class="battle-log" aria-label="Latest attacks">
-                        @for (line of v.attackLog; track $index) {
-                            <li>{{ line }}</li>
+                <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} vs. you</h2>
+                @if (v.activeEffects.length) {
+                    <div class="effect-chips" aria-label="Running effects">
+                        @for (effect of v.activeEffects; track effect.id) {
+                            <span class="effect-chip" [class.mine]="effect.mine">{{ effect.name }} · {{ effect.by }} · {{ effect.remaining }}s</span>
                         }
-                    </ol>
+                    </div>
                 }
+                <div class="arena-columns">
+                    <div>
+                        <h3 class="tool-heading ops-subheading">Your moves</h3>
+                        <div class="action-cards">
+                            @for (entry of v.cards; track entry.card.id) {
+                                <button class="action-card" type="button" [class.damage]="entry.card.category === 'damage'"
+                                        [disabled]="!!entry.blocker" [attr.aria-label]="entry.card.name + ': ' + entry.summary"
+                                        (click)="cardPlayed.emit(entry.card.id)">
+                                    <strong>{{ entry.card.name }}</strong>
+                                    <small>{{ entry.card.description }}</small>
+                                    <small class="action-card-effect">{{ entry.summary }}</small>
+                                    @if (entry.blocker) { <small class="action-card-wait">{{ entry.blocker }}</small> }
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="tool-heading ops-subheading">{{ megaCorpName }}'s moves</h3>
+                        <small class="upgrade-hint">Next move in {{ v.nextAttack }}s</small>
+                        @if (v.attackLog.length) {
+                            <ol class="battle-log" aria-label="Latest MegaCorp moves">
+                                @for (line of v.attackLog; track $index) {
+                                    <li>{{ line }}</li>
+                                }
+                            </ol>
+                        } @else {
+                            <small class="upgrade-hint">Nothing yet.</small>
+                        }
+                    </div>
+                </div>
             }
         </div>
 

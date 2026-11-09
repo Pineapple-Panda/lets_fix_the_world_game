@@ -1,8 +1,8 @@
 /**
  * Level 3 content and balance. Everything you might want to tune lives here: start values, bars, corporations,
- * attacks, counter initiatives, initiatives and perks.
+ * action cards, counter initiatives, initiatives and perks.
  */
-import type { Corporation, CounterInitiative, Initiative, MetricDefinition, UtopiaMetric, UtopiaPerk } from '../models/utopia.model.ts';
+import type { ActionCard, Corporation, CounterInitiative, Initiative, MetricDefinition, UtopiaMetric, UtopiaPerk } from '../models/utopia.model.ts';
 
 /** Working title of the alliance of EdisonX, Mississippi Corp and Bananas Inc. */
 export const megaCorpName = 'MegaCorp';
@@ -31,14 +31,57 @@ export const utopiaPerks: UtopiaPerk[] = [
     actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } }
 ];
 
+/**
+ * When MegaCorp plays its next card: every 10 seconds while your bars average 70%, 0.2 seconds sooner per point
+ * above that (later below it), between 3 and 20 seconds.
+ */
 export const attackRules = {
-  /** Seconds between MegaCorp attacks. */
-  interval: 45,
-  /** Lines kept in the attack log. */
+  baseInterval: 10,
+  referenceLevel: 70,
+  secondsPerPoint: 0.2,
+  minInterval: 3,
+  maxInterval: 20,
+  /** Lines kept in the log of MegaCorp's moves. */
   logLength: 5
 };
 
-/** Power every corporation starts with, in percent. Attacks and counter initiatives are scaled by power. */
+/** MegaCorp's cards. A random corporation (weighted by power) plays a random one of those it may play. */
+export const megacorpCards: ActionCard[] = [
+  { id: 'propaganda', actor: 'megacorp', category: 'damage', name: 'Propaganda Flood',
+    description: 'Floods social media with propaganda against you.', effects: [{ kind: 'credibility', amount: -2 }] },
+  { id: 'warehouse-grab', actor: 'megacorp', category: 'damage', name: 'Warehouse Grab', duration: 30,
+    description: 'Buys up apartment buildings and turns them into factories and warehouses.', effects: [{ kind: 'metric', metric: 'housing', amount: -1 }] },
+  { id: 'insider-trading', actor: 'megacorp', category: 'powerup', name: 'Insider Trading',
+    description: 'Manipulates the stock market for some trading between friends.', effects: [{ kind: 'corpPower', target: 'self', amount: 5 }] },
+  { id: 'bribery', actor: 'megacorp', category: 'powerup', name: 'Government Bribe', duration: 60,
+    description: 'Pays the government to protect MegaCorp from any loss of power.', effects: [{ kind: 'powerShield' }] },
+  { id: 'gig-app', actor: 'megacorp', category: 'damage', name: 'Gig App Launch', duration: 20,
+    description: 'An app that turns every job into five worse ones. Employment statistics collapse.', effects: [{ kind: 'metric', metric: 'employment', amount: -0.3 }] },
+  { id: 'banana-blockade', actor: 'megacorp', category: 'damage', name: 'Banana Blockade', corpId: 'bananas',
+    description: 'Blocks the ports until the world buys only bananas.', effects: [{ kind: 'metric', metric: 'food', amount: -3 }] },
+  { id: 'job-thief-post', actor: 'megacorp', category: 'damage', name: 'Viral Smear', corpId: 'edison',
+    description: 'EdisonX posts that your AI “wants to steal your job”.', effects: [{ kind: 'credibility', amount: -2 }] },
+  { id: 'banana-free-dictatorship', actor: 'megacorp', category: 'damage', name: 'Influencer Campaign', corpId: 'bananas',
+    description: 'Bananas Inc. pays influencers to call your utopia “a banana-free dictatorship”.', effects: [{ kind: 'credibility', amount: -2 }] },
+  { id: 'robot-night-shift', actor: 'megacorp', category: 'damage', name: 'Robot Night Shift', corpId: 'mississippi',
+    description: 'Mississippi Corp replaces 10,000 warehouse workers with robots overnight.', effects: [{ kind: 'metric', metric: 'employment', amount: -2 }] }
+];
+
+/** Your cards. They will get a price later; until then a cooldown keeps them from being spammed. */
+export const playerCards: ActionCard[] = [
+  { id: 'rent-tax-cut', actor: 'player', category: 'powerup', name: 'Cut Rent Taxes', duration: 15, cooldown: 30,
+    description: 'Cuts the taxes on renting out apartments.', effects: [{ kind: 'metric', metric: 'housing', amount: 0.1 }, { kind: 'credibility', amount: 0.5 }] },
+  { id: 'firewall', actor: 'player', category: 'powerup', name: 'Stronger Firewalls', duration: 60, cooldown: 90,
+    description: 'Hardens your systems and channels against MegaCorp.', effects: [{ kind: 'firewall', factor: 0.5 }] },
+  { id: 'antitrust', actor: 'player', category: 'damage', name: 'Antitrust Lawsuit', cooldown: 60,
+    description: 'Sues the strongest corporation for being a monopoly. Which it is.', effects: [{ kind: 'corpPower', target: 'strongest', amount: -10 }] },
+  { id: 'leak', actor: 'player', category: 'damage', name: 'Leak the Emails', cooldown: 90,
+    description: 'Publishes how MegaCorp really talks about its customers.', effects: [{ kind: 'corpPower', target: 'all', amount: -3 }, { kind: 'credibility', amount: 2 }] },
+  { id: 'community-kitchens', actor: 'player', category: 'powerup', name: 'Community Kitchens', cooldown: 45,
+    description: 'Opens a kitchen on every corner. Nobody eats alone.', effects: [{ kind: 'metric', metric: 'food', amount: 3 }] }
+];
+
+/** Power every corporation starts with, in percent. Counter initiatives are scaled by power. */
 export const corpStartPower = 75;
 
 /** The three corporations, in display order. */
@@ -47,33 +90,19 @@ export const corporations: Corporation[] = [
     id: 'bananas',
     name: 'Bananas Inc.',
     description: 'Owns half the world’s plantations and the other half’s politicians.',
-    icon: '🍌',
-    attacks: [
-      { name: 'Bananas Inc. buys up farmland to grow only bananas', effects: { food: 4 } },
-      { name: 'Bananas Inc. sues your vertical farms for “unfair photosynthesis”', effects: { food: 2, housing: 1 }, integrity: 1 },
-      { name: 'Bananas Inc. pays influencers to call your utopia “a banana-free dictatorship”', effects: {}, integrity: 4 }
-    ]
+    icon: '🍌'
   },
   {
     id: 'mississippi',
     name: 'Mississippi Corp',
     description: 'The everything store, now also selling the idea that humans are optional.',
-    icon: '📦',
-    attacks: [
-      { name: 'Mississippi Corp replaces 10,000 warehouse workers with robots overnight', effects: { employment: 4 } },
-      { name: 'Mississippi Corp buys every empty building “for storage”', effects: { housing: 4 } },
-      { name: 'Mississippi Corp’s product reviews suddenly rate your AI one star', effects: { employment: 1 }, integrity: 3 }
-    ]
+    icon: '📦'
   },
   {
     id: 'edison',
     name: 'EdisonX',
     description: 'Rockets, robots, and a social network to tell everyone how great they are.',
-    icon: '🚀',
-    attacks: [
-      { name: 'EdisonX posts that your AI “wants to steal your job” — 400 million views', effects: { employment: 2, housing: 1, food: 1 }, integrity: 3 },
-      { name: 'EdisonX sues you for building homes in the path of its future launch pads', effects: { housing: 3 } }
-    ]
+    icon: '🚀'
   }
 ];
 

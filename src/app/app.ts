@@ -10,7 +10,7 @@ import { StatsComponent } from './components/stats/stats';
 import { VictoryComponent } from './components/victory/victory';
 import { EventDialogComponent } from './components/event-dialog/event-dialog';
 import { LevelThreeComponent } from './components/level-three/level-three';
-import { activateUtopiaPerk, initializeInitiative, newUtopia, startInitiative, stopInitiative, tickUtopia } from './game/utopia';
+import { activateUtopiaPerk, initializeInitiative, newUtopia, playPlayerCard, startInitiative, stopInitiative, tickUtopia } from './game/utopia';
 import type { UtopiaGame } from './models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
@@ -349,6 +349,10 @@ export class AppComponent {
 
   activateUtopiaPerk(id: string): void {
     this.updateUtopia(state => activateUtopiaPerk(state, id));
+  }
+
+  playCard(id: string): void {
+    this.updateUtopia(state => playPlayerCard(state, id));
   }
 
   initializeInitiative(id: string): void {

@@ -29,10 +29,59 @@ export interface UtopiaGame {
   running: string[];
   /** Seconds since MegaCorp showed itself; its counter initiatives launch one after another. */
   megacorpSeconds: number;
-  /** Seconds until MegaCorp attacks again. */
+  /** Seconds until MegaCorp plays its next card. */
   nextAttack: number;
-  /** Latest MegaCorp attacks, newest first. */
+  /** Latest cards MegaCorp played, newest first. */
   attackLog: string[];
+  /** Timed cards that are still running. */
+  effects: ActiveEffect[];
+  /** Seconds until each of your cards can be played again. */
+  cardCooldowns: Record<string, number>;
+}
+
+/** Who plays a card. */
+export type CardActor = 'player' | 'megacorp';
+/** Damage hurts the other side, a powerup helps the one who plays it. */
+export type CardCategory = 'damage' | 'powerup';
+
+/**
+ * What a card does. Without a duration the amounts apply once; with a duration they apply every second
+ * (powerShield and firewall simply hold for the duration).
+ */
+export type CardEffect =
+  /** Change a utopia bar by this many percentage points. */
+  | { kind: 'metric'; metric: UtopiaMetric; amount: number }
+  /** Change your credibility. */
+  | { kind: 'credibility'; amount: number }
+  /** Change corporation power: the one that plays the card, the strongest one, or all of them. */
+  | { kind: 'corpPower'; target: 'self' | 'strongest' | 'all'; amount: number }
+  /** MegaCorp loses no power while it holds. */
+  | { kind: 'powerShield' }
+  /** Only this share of MegaCorp's card effects reaches you while it holds. */
+  | { kind: 'firewall'; factor: number };
+
+/** An action card for you or MegaCorp. */
+export interface ActionCard {
+  id: string;
+  actor: CardActor;
+  category: CardCategory;
+  name: string;
+  description: string;
+  effects: CardEffect[];
+  /** Seconds the card keeps working; one-time hit without it. */
+  duration?: number;
+  /** Your cards: seconds before it can be played again (until cards get a price). */
+  cooldown?: number;
+  /** MegaCorp cards: only this corporation plays it (any of them without). */
+  corpId?: string;
+}
+
+/** A timed card that is still running. */
+export interface ActiveEffect {
+  cardId: string;
+  /** The corporation that played it (MegaCorp cards). */
+  corpId?: string;
+  remaining: number;
 }
 
 /** A bar of the utopia. */
@@ -46,21 +95,11 @@ export interface MetricDefinition {
   drift: number;
 }
 
-/** A MegaCorp attack: lawsuits and defamation that lower your bars. */
-export interface CorpAttack {
-  name: string;
-  /** Percentage points lost per bar at full corporation power. */
-  effects: Partial<Record<UtopiaMetric, number>>;
-  /** Integrity lost at full corporation power (defamation). */
-  integrity?: number;
-}
-
 export interface Corporation {
   id: string;
   name: string;
   description: string;
   icon: string;
-  attacks: CorpAttack[];
 }
 
 /** A program of your AI system: started once, then it raises a bar every second while it runs and pays its upkeep. */

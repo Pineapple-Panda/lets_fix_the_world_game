@@ -1,6 +1,6 @@
-import type { Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
+import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, corporations, corpStartPower, counterInitiatives, initiatives, metrics, utopiaPerks, utopiaStart
+  attackRules, corporations, corpStartPower, counterInitiatives, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
 } from './utopia-content.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
@@ -29,8 +29,10 @@ export function newUtopia(
     building: {},
     running: [],
     megacorpSeconds: 0,
-    nextAttack: attackRules.interval,
-    attackLog: []
+    nextAttack: attackRules.baseInterval,
+    attackLog: [],
+    effects: [],
+    cardCooldowns: {}
   };
 }
 
@@ -99,7 +101,7 @@ function shiftMetrics(state: UtopiaGame, changes: Partial<Record<UtopiaMetric, n
 
 /**
  * One second of level 3: TCA and budget grow, bars drift, initiatives build and run, MegaCorp's counter initiatives
- * push back, and every few seconds MegaCorp attacks with a lawsuit or a defamation campaign.
+ * push back, timed cards run, and every few seconds MegaCorp plays a card.
  */
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
   const drift = perkValue(state, 'driftShield');
@@ -124,30 +126,127 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
     next.megacorpSeconds = state.megacorpSeconds + 1;
     runCounterInitiatives(next);
   }
-  // MegaCorp only attacks once you know about it.
+  runCards(next);
+  // MegaCorp only plays cards once you know about it.
   if (!cardUnlocked(state, 'megacorp')) return next;
   next.nextAttack = state.nextAttack - 1;
   if (next.nextAttack > 0) return next;
-  next.nextAttack = attackRules.interval;
-  return attack(next, random);
+  const played = megacorpMove(next, random);
+  return { ...played, nextAttack: attackInterval(played) };
 }
 
-/** MegaCorp strikes: a random corporation (weighted by power) uses one of its attacks, scaled by its power. */
-export function attack(state: UtopiaGame, random: () => number): UtopiaGame {
+// ---------- Action cards ----------
+
+export function actionCard(id: string): ActionCard | undefined {
+  return [...megacorpCards, ...playerCards].find(card => card.id === id);
+}
+
+/** Seconds until MegaCorp's next card: 10 at an average of 70% on your bars, sooner when they are higher. */
+export function attackInterval(state: UtopiaGame): number {
+  const values = Object.values(state.metrics);
+  const average = values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+  const seconds = attackRules.baseInterval - (average - attackRules.referenceLevel) * attackRules.secondsPerPoint;
+  return Math.max(attackRules.minInterval, Math.min(attackRules.maxInterval, Math.round(seconds)));
+}
+
+/** Share of MegaCorp's card effects that reaches you (firewalls). */
+export function firewallFactor(state: UtopiaGame): number {
+  return state.effects.reduce((factor, active) => {
+    const card = actionCard(active.cardId);
+    const firewall = card?.effects.find(effect => effect.kind === 'firewall');
+    return firewall && firewall.kind === 'firewall' ? factor * firewall.factor : factor;
+  }, 1);
+}
+
+/** Whether MegaCorp is protected from losing power (bribed government). */
+export function powerShielded(state: UtopiaGame): boolean {
+  return state.effects.some(active => actionCard(active.cardId)?.effects.some(effect => effect.kind === 'powerShield'));
+}
+
+/** Applies a card's effects once (one-time cards) or for one second (timed cards). Mutates `next`. */
+function applyEffects(next: UtopiaGame, card: ActionCard, corpId?: string): void {
+  const incoming = card.actor === 'megacorp' ? firewallFactor(next) : 1;
+  for (const effect of card.effects) applyEffect(next, effect, incoming, corpId);
+}
+
+function applyEffect(next: UtopiaGame, effect: CardEffect, incoming: number, corpId?: string): void {
+  if (effect.kind === 'metric') {
+    next.metrics = { ...next.metrics, [effect.metric]: percent(next.metrics[effect.metric] + effect.amount * incoming) };
+  } else if (effect.kind === 'credibility') {
+    next.integrity = percent(next.integrity + effect.amount * incoming);
+  } else if (effect.kind === 'corpPower') {
+    if (effect.amount < 0 && powerShielded(next)) return;
+    const living = activeCorporations(next);
+    const targets = effect.target === 'all' ? living.map(corp => corp.id)
+      : effect.target === 'self' ? (corpId ? [corpId] : [])
+        : living.length ? [living.reduce((best, corp) => (next.corpPower[corp.id]! > next.corpPower[best.id]! ? corp : best)).id] : [];
+    next.corpPower = { ...next.corpPower };
+    for (const id of targets) next.corpPower[id] = percent((next.corpPower[id] ?? 0) + effect.amount);
+  }
+}
+
+/** One second of the timed cards that are running (mutates `next`); expired ones end. */
+function runCards(next: UtopiaGame): void {
+  next.cardCooldowns = Object.fromEntries(Object.entries(next.cardCooldowns).map(([id, seconds]) => [id, Math.max(0, seconds - 1)]));
+  for (const active of next.effects) {
+    const card = actionCard(active.cardId);
+    if (card) applyEffects(next, card, active.corpId);
+  }
+  next.effects = next.effects.map(active => ({ ...active, remaining: active.remaining - 1 })).filter(active => active.remaining > 0);
+}
+
+/** Plays a card: one-time effects hit now, timed cards start running. */
+function playCard(state: UtopiaGame, card: ActionCard, corpId?: string): UtopiaGame {
+  const next: UtopiaGame = { ...state };
+  if (card.duration) next.effects = [...state.effects, { cardId: card.id, corpId, remaining: card.duration }];
+  else applyEffects(next, card, corpId);
+  return next;
+}
+
+/** MegaCorp's move: a random corporation (weighted by power) plays a random card from its deck (shared cards plus its own). */
+export function megacorpMove(state: UtopiaGame, random: () => number): UtopiaGame {
   const active = activeCorporations(state);
   const total = active.reduce((sum, corp) => sum + state.corpPower[corp.id]!, 0);
   if (!total) return state;
   let roll = random() * total;
-  const attacker = active.find(corp => (roll -= state.corpPower[corp.id]!) < 0) ?? active[active.length - 1]!;
-  const strike = attacker.attacks[Math.min(attacker.attacks.length - 1, Math.floor(random() * attacker.attacks.length))]!;
-  const scale = state.corpPower[attacker.id]! / 100 * perkValue(state, 'attackShield');
-  const scaled = Object.fromEntries(Object.entries(strike.effects).map(([metric, amount]) => [metric, amount * scale]));
-  return {
-    ...state,
-    metrics: shiftMetrics(state, scaled, -1),
-    integrity: percent(state.integrity - (strike.integrity ?? 0) * scale),
-    attackLog: [strike.name, ...state.attackLog].slice(0, attackRules.logLength)
-  };
+  const corp = active.find(entry => (roll -= state.corpPower[entry.id]!) < 0) ?? active[active.length - 1]!;
+  const deck = megacorpCards.filter(entry => !entry.corpId || entry.corpId === corp.id);
+  const card = deck[Math.min(deck.length - 1, Math.floor(random() * deck.length))]!;
+  const next = playCard(state, card, corp.id);
+  return { ...next, attackLog: [`${corp.name}: ${card.name}`, ...state.attackLog].slice(0, attackRules.logLength) };
+}
+
+/** Why you cannot play one of your cards right now, or null when you can. */
+export function cardBlocker(state: UtopiaGame, id: string): string | null {
+  const card = playerCards.find(entry => entry.id === id);
+  if (!card) return 'Unknown card';
+  if (!cardUnlocked(state, 'megacorp')) return 'MegaCorp is unknown';
+  if ((state.cardCooldowns[id] ?? 0) > 0) return `Ready in ${state.cardCooldowns[id]}s`;
+  return null;
+}
+
+/** Plays one of your cards; it then cools down. */
+export function playPlayerCard(state: UtopiaGame, id: string): UtopiaGame | null {
+  const card = playerCards.find(entry => entry.id === id);
+  if (!card || cardBlocker(state, id)) return null;
+  const next = playCard(state, card);
+  return { ...next, cardCooldowns: { ...next.cardCooldowns, [id]: card.cooldown ?? 0 } };
+}
+
+/** A short line about what a card does, e.g. "Housing −1%/s for 30s". */
+export function cardSummary(card: ActionCard): string {
+  const timed = !!card.duration;
+  const parts = card.effects.map(effect => {
+    const sign = (value: number) => (value > 0 ? '+' : '−') + Math.abs(value);
+    switch (effect.kind) {
+      case 'metric': return `${metrics.find(entry => entry.id === effect.metric)?.name ?? effect.metric} ${sign(effect.amount)}%${timed ? '/s' : ''}`;
+      case 'credibility': return `Credibility ${sign(effect.amount)}${timed ? '/s' : ''}`;
+      case 'corpPower': return `${sign(effect.amount)}% power for ${effect.target === 'self' ? 'its corporation' : effect.target === 'all' ? 'every corporation' : 'the strongest corporation'}${timed ? '/s' : ''}`;
+      case 'powerShield': return 'No power loss';
+      case 'firewall': return `MegaCorp effects reach you at ${Math.round(effect.factor * 100)}%`;
+    }
+  });
+  return parts.join(', ') + (timed ? ` for ${card.duration}s` : '');
 }
 
 export function initiative(id: string): Initiative | undefined {
@@ -211,7 +310,7 @@ export function stopInitiative(state: UtopiaGame, id: string): UtopiaGame | null
 
 /**
  * How much a bar changes per second right now: drift (once Utopia is open), your funded running initiatives and
- * MegaCorp's counter initiatives. Attacks come on top every few seconds.
+ * MegaCorp's counter initiatives and running timed cards. One-time cards come on top.
  */
 export function metricRate(state: UtopiaGame, metric: UtopiaMetric): number {
   if (!cardUnlocked(state, 'utopia')) return 0;
@@ -220,7 +319,12 @@ export function metricRate(state: UtopiaGame, metric: UtopiaMetric): number {
     .filter(id => initiative(id)?.metric === metric && initiativeFunded(state, id))
     .reduce((total, id) => total + initiativeRate(state, id), 0);
   const theirs = counterInitiatives.filter(counter => counter.metric === metric).reduce((total, counter) => total + counterRate(state, counter), 0);
-  return drift + mine - theirs;
+  const cards = state.effects.reduce((total, active) => {
+    const card = actionCard(active.cardId);
+    const incoming = card?.actor === 'megacorp' ? firewallFactor(state) : 1;
+    return total + (card?.effects ?? []).reduce((sum, effect) => sum + (effect.kind === 'metric' && effect.metric === metric ? effect.amount * incoming : 0), 0);
+  }, 0);
+  return drift + mine - theirs + cards;
 }
 
 // ---------- Counter initiatives ----------

@@ -7,7 +7,7 @@
             @if (saveWarning()) {
                 <div class="console-line error" role="status">{{ saveWarning() }}</div>
             }
-            <app-level-three [state]="world" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
+            <app-level-three [state]="world" (cardPlayed)="playCard($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
                              (perkActivated)="activateUtopiaPerk($event)" />
             <footer><span>LEVEL 3 / BUILDING UTOPIA</span>
                 <span class="footer-actions">

@@ -89,6 +89,7 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   if (game && game.startActions === undefined) game.startActions = game.actions;
   if (game && game.running === undefined) { game.running = []; delete game.cooldowns; }
   if (game && game.megacorpSeconds === undefined) game.megacorpSeconds = 0;
+  if (game && game.effects === undefined) Object.assign(game, { effects: [], cardCooldowns: {} });
   // Battles were removed; older saves may still carry one.
   if (game) delete game.battle;
   // Initiatives that ran before building existed count as built.
@@ -101,7 +102,9 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !Array.isArray(game.running) || !game.running.every(id => typeof id === 'string') || !isCount(game.megacorpSeconds) ||
     !Array.isArray(game.built) || !game.built.every(id => typeof id === 'string') ||
     !isObject(game.building) || !Object.values(game.building).every(isCount) ||
-    !Array.isArray(game.attackLog) || !game.attackLog.every(line => typeof line === 'string')
+    !Array.isArray(game.attackLog) || !game.attackLog.every(line => typeof line === 'string') ||
+    !Array.isArray(game.effects) || !game.effects.every(entry => isObject(entry) && typeof entry.cardId === 'string' && isCount(entry.remaining)) ||
+    !isObject(game.cardCooldowns) || !Object.values(game.cardCooldowns).every(isCount)
   ) return null;
   return game as unknown as UtopiaGame;
 }

@@ -1,10 +1,10 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionsGained, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
+  actionCard, actionsGained, cardBlocker, cardSummary, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
-import { attackRules, corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
+import { corporations, initiatives, megaCorpName, metrics, playerCards, utopiaPerks } from '../../game/utopia-content';
 import type { UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: you and MegaCorp face each other on top; development, the utopia and MegaCorp's corporations below. */
@@ -15,6 +15,7 @@ import type { UtopiaGame } from '../../models/utopia.model';
 })
 export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
+  readonly cardPlayed = output<string>();
   readonly initiativeInitialized = output<string>();
   readonly initiativeStarted = output<string>();
   readonly initiativeStopped = output<string>();
@@ -61,8 +62,18 @@ export class LevelThreeComponent {
       activePerks: utopiaPerks.filter(perk => state.perks.includes(perk.id)),
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,
-      attackInterval: attackRules.interval,
-      attackLog: state.attackLog
+      attackLog: state.attackLog,
+      cards: playerCards.map(card => ({ card, summary: cardSummary(card), blocker: cardBlocker(state, card.id) })),
+      activeEffects: state.effects.map(active => {
+        const card = actionCard(active.cardId);
+        return {
+          id: active.cardId + '-' + (active.corpId ?? 'you') + '-' + active.remaining,
+          name: card?.name ?? active.cardId,
+          by: card?.actor === 'megacorp' ? corporation(active.corpId ?? '')?.name ?? megaCorpName : 'You',
+          mine: card?.actor === 'player',
+          remaining: active.remaining
+        };
+      })
     };
   });
 

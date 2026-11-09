@@ -1835,18 +1835,62 @@ test('initiatives are initialized, built for 30 seconds, then started; credibili
   assert.equal(utopia.initiativeStage(stopped, 'career-match'), 'built', 'stays built after stopping');
 });
 
-test('MegaCorp attacks every 45 seconds, weaker corporations hit softer', () => {
+test('MegaCorp plays a card every 10 seconds, sooner when your bars are higher', () => {
+  assert.equal(utopia.attackInterval(opened()), 10, 'bars average 70%');
+  assert.equal(utopia.attackInterval({ ...opened(), metrics: { employment: 90, housing: 90, food: 90 } }), 6);
+  assert.equal(utopia.attackInterval({ ...opened(), metrics: { employment: 100, housing: 100, food: 100 } }), 4);
+  assert.equal(utopia.attackInterval({ ...opened(), metrics: { employment: 0, housing: 0, food: 0 } }), 20, 'at most 20 seconds');
   let state = opened();
-  for (let second = 0; second < 44; second++) state = utopia.tickUtopia(state, () => 0);
+  for (let second = 0; second < 9; second++) state = utopia.tickUtopia(state, () => 0.99);
   assert.equal(state.attackLog.length, 0);
-  state = utopia.tickUtopia(state, () => 0);
-  assert.equal(state.attackLog.length, 1, 'the first attack');
-  assert.equal(state.attackLog[0], utopiaContent.corporations[0].attacks[0].name);
-  const full = utopia.attack(opened(), () => 0);
-  const weak = utopia.attack({ ...opened(), corpPower: { bananas: 50, mississippi: 0, edison: 0 } }, () => 0);
-  assert.equal(75 - full.metrics.food, 3, '4 points × 75% power');
-  assert.equal(75 - weak.metrics.food, 2, 'half power, half the damage');
-  assert.deepEqual(utopia.attack({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }, () => 0).attackLog, [], 'no attacks once all are defeated');
+  state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(state.attackLog.length, 1, 'the first move after 10 seconds');
+  assert.ok(state.nextAttack >= 3, 'the next one is scheduled');
+  assert.deepEqual(utopia.megacorpMove({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }, () => 0).attackLog, [], 'no moves once all are defeated');
+});
+
+test('cards: one-time hits, timed effects, own decks per corporation', () => {
+  const content = utopiaContent;
+  assert.ok(content.megacorpCards.every(card => card.actor === 'megacorp') && content.playerCards.every(card => card.actor === 'player'));
+  // Bananas Inc. (first by weight with random 0) plays the first card of its deck: Propaganda Flood, −2 credibility.
+  const smeared = utopia.megacorpMove(opened(), () => 0);
+  assert.equal(smeared.attackLog[0], 'Bananas Inc.: Propaganda Flood');
+  assert.equal(smeared.integrity, 48);
+  // Own cards only for their corporation.
+  const decks = { bananas: [], mississippi: [], edison: [] };
+  for (const card of content.megacorpCards) for (const id of Object.keys(decks)) if (!card.corpId || card.corpId === id) decks[id].push(card.id);
+  assert.ok(decks.mississippi.includes('robot-night-shift') && !decks.bananas.includes('robot-night-shift'));
+  assert.ok(decks.edison.includes('job-thief-post') && decks.bananas.includes('banana-free-dictatorship'));
+  // A timed card: −1% housing per second for 30 seconds.
+  let state = { ...opened(), effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 30 }] };
+  const housing = state.metrics.housing;
+  state = utopia.tickUtopia(state, () => 0.99);
+  assert.ok(Math.abs(state.metrics.housing - (housing - 0.012 - 1)) < 1e-9, 'drift and the warehouse grab');
+  assert.equal(state.effects[0].remaining, 29);
+  assert.ok(Math.abs(utopia.metricRate(state, 'housing') - (-0.012 - 1)) < 1e-9, 'shown in the rate');
+  for (let second = 0; second < 29; second++) state = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
+  assert.deepEqual(state.effects, [], 'over after 30 seconds');
+});
+
+test('your cards: rent tax cut, firewalls, antitrust; bribes protect MegaCorp', () => {
+  assert.equal(utopia.cardBlocker({ ...opened(), perks: ['utopia-blueprint'] }, 'antitrust'), 'MegaCorp is unknown');
+  let state = utopia.playPlayerCard(opened(), 'rent-tax-cut');
+  assert.equal(state.effects[0].cardId, 'rent-tax-cut');
+  assert.equal(utopia.cardBlocker(state, 'rent-tax-cut'), 'Ready in 30s');
+  assert.equal(utopia.playPlayerCard(state, 'rent-tax-cut'), null, 'cooling down');
+  const next = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
+  assert.ok(Math.abs(next.integrity - 50.5) < 1e-9, '+0.5 credibility per second');
+  // Firewalls halve MegaCorp's card effects.
+  const walled = utopia.playPlayerCard(opened(), 'firewall');
+  assert.equal(utopia.firewallFactor(walled), 0.5);
+  assert.equal(utopia.megacorpMove(walled, () => 0).integrity, 49, 'propaganda only costs 1');
+  // Antitrust takes 10 from the strongest corporation, unless MegaCorp bribed the government.
+  const strong = { ...opened(), corpPower: { bananas: 75, mississippi: 90, edison: 75 } };
+  assert.equal(utopia.playPlayerCard(strong, 'antitrust').corpPower.mississippi, 80);
+  const bribed = { ...strong, effects: [{ cardId: 'bribery', corpId: 'edison', remaining: 60 }] };
+  assert.equal(utopia.powerShielded(bribed), true);
+  assert.equal(utopia.playPlayerCard(bribed, 'antitrust').corpPower.mississippi, 90, 'no power loss while bribed');
+  assert.equal(utopia.cardSummary(utopiaContent.megacorpCards.find(card => card.id === 'warehouse-grab')), 'Housing −1%/s for 30s');
 });
 
 test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing them', () => {
@@ -1863,12 +1907,10 @@ test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing the
   assert.equal(opened().actionRate, 13000);
 });
 
-test('initiatives cost budget; defamation costs credibility', () => {
+test('initiatives cost budget', () => {
   const poor = { ...opened(), budget: 999999 };
   assert.equal(utopia.initializeInitiative(poor, 'career-match'), null, 'needs 1,000,000');
   assert.equal(utopia.initializeBlocker(poor, 'career-match'), 'Not enough budget');
-  const smeared = utopia.attack({ ...opened(), corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0.99);
-  assert.equal(smeared.integrity, 46, 'influencer smear: −4 integrity');
 });
 
 test('level 3 keeps only the two unlock perks; the effect kinds still work for new perks', () => {
@@ -1890,8 +1932,8 @@ test('level 3 keeps only the two unlock perks; the effect kinds still work for n
     assert.equal(utopia.initiativeRate(state, 'career-match'), 0.02, '0.02 × 50% credibility × 2');
     assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500);
     assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
-    const shielded = utopia.attack({ ...state, corpPower: { bananas: 100, mississippi: 0, edison: 0 } }, () => 0);
-    assert.equal(75 - shielded.metrics.food, 2, 'attacks hit half as hard');
+    const counter = utopiaContent.counterInitiatives[0];
+    assert.ok(Math.abs(utopia.counterRate({ ...state, megacorpSeconds: 999 }, counter) - 0.075) < 1e-12, 'counter initiatives hit half as hard');
   } finally {
     utopiaContent.utopiaPerks.splice(-extra.length);
   }
