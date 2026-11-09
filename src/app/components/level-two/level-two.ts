@@ -90,6 +90,7 @@ export class LevelTwoComponent {
         condition: client.minIntegrity !== undefined ? `Only works with you at ${client.minIntegrity}% integrity or more`
           : client.maxIntegrity !== undefined ? `Only works with you at ${client.maxIntegrity}% integrity or less` : '',
         income: clientIncome(state, client),
+        actions: (client.actions ?? 0) * state.serverSlots,
         effects: (Object.entries(client.progress) as [WorldProblem, number][]).map(([problem, delta]) => ({
           name: problemName(problem),
           delta: small(delta * factor)

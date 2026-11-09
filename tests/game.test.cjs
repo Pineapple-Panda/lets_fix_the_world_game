@@ -818,7 +818,7 @@ test('data centres make every client 25% stronger, good and bad', () => {
   assert.equal(launched.clientFactor(boosted), 1.25);
   assert.equal(launched.rentalIncome(boosted), Math.round(launched.rentalIncome(plain) * 1.25));
   assert.ok(Math.abs(launched.rentalProgress(boosted, 'hunger') - 0.003 * 1.25) < 1e-12, 'positive effects grow');
-  assert.ok(Math.abs(launched.rentalProgress(boosted, 'climate') + 0.005 * 1.25) < 1e-12, 'negative effects grow too');
+  assert.ok(Math.abs(launched.rentalProgress(boosted, 'climate') + 0.05 * 1.25) < 1e-12, 'negative effects grow too');
   const afterPlain = launched.tickLaunched(plain, () => 0);
   const afterBoosted = launched.tickLaunched(boosted, () => 0);
   assert.ok(Math.abs((15 - afterBoosted.integrity) - (15 - afterPlain.integrity) * 1.25) < 1e-9, 'integrity loss grows by 25%');
@@ -1031,7 +1031,7 @@ test('clients add or remove a tiny bit of solution progress every second', () =>
   let edison = launched.rentSlot(liveState({ ...online, integrity: 10,
     worldProgress: { climate: 1, war: 0, hunger: 0, poverty: 0, corruption: 0.002 } }), 'edisonx');
   edison = launched.tickLaunched(edison, () => 0);
-  assert.ok(Math.abs(edison.worldProgress.climate - 0.995) < 1e-9, 'EdisonX slows climate');
+  assert.ok(Math.abs(edison.worldProgress.climate - 0.95) < 1e-9, 'EdisonX slows climate');
   assert.equal(edison.worldProgress.corruption, 0, 'never below 0');
 
   let ministry = launched.rentSlot(liveState(online), 'ministry-digital');
@@ -1064,7 +1064,7 @@ test('finished epics fill the solution progress bars', () => {
 test('rental clients and world problems are defined', () => {
   const content = require('../src/app/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
-  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx']);
+  assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx', 'mississippi-corp']);
   const green = content.rentalClients[0];
   const edison = content.rentalClients.find(client => client.id === 'edisonx');
   assert.ok(green.income < edison.income, 'the green union pays less than EdisonX');
@@ -1072,7 +1072,7 @@ test('rental clients and world problems are defined', () => {
   assert.ok(green.progress.climate > 0 && green.integrity > 0 && green.minIntegrity === 70);
   assert.ok(edison.progress.climate < 0 && edison.progress.corruption < 0 && edison.integrity < 0 && edison.maxIntegrity === 20);
   for (const client of content.rentalClients) {
-    assert.ok(Object.values(client.progress).every(delta => Math.abs(delta) <= 0.01), client.id + ' progress is tiny');
+    assert.ok(Object.values(client.progress).every(delta => Math.abs(delta) <= 0.05), client.id + ' progress is small');
   }
 });
 
@@ -1264,6 +1264,19 @@ test('EdisonX robots: a perk only for EdisonX clients that works only while Edis
   assert.equal(offered(owner), false, 'bought once');
   assert.equal(launched.robotsOnSite(launched.endRental(owner, 'edisonx')), false, 'idle once EdisonX leaves');
   assert.equal(launched.robotsOnSite(launched.rentSlot(buyer(), 'edisonx')), false, 'EdisonX alone brings no robots');
+});
+
+test('Mississippi Corp pays in actions: 3,000 per second per server slot', () => {
+  const online = { perks: ['workflow-abstraction', 'network-financing'], serverSlots: 4 };
+  assert.equal(launched.clientAvailable(liveState({ ...online, integrity: 60 }), 'mississippi-corp'), true, '60% or less');
+  assert.equal(launched.clientAvailable(liveState({ ...online, integrity: 60.1 }), 'mississippi-corp'), false);
+  const rented = launched.rentSlot(liveState({ ...online, integrity: 50, actions: 0, budgetActions: 0 }), 'mississippi-corp');
+  assert.equal(launched.clientActions(rented), 12000, '3,000 × 4 slots');
+  const next = launched.tickLaunched(rented, () => 0);
+  assert.equal(next.actions, 50 * 4 + 12000, 'own actions plus client actions');
+  assert.equal(next.budgetActions, 12000, 'client actions are not paid out as budget');
+  assert.ok(Math.abs(next.integrity - 49.98) < 1e-9, '−0.02 integrity per second');
+  assert.equal(launched.averageActionsPerSecond(rented), 175 * 4 + 12000);
 });
 
 test('clients walk out when integrity leaves their range', () => {

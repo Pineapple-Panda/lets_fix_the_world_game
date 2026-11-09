@@ -198,9 +198,17 @@ export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | nul
   return next === state.focus ? null : { ...state, focus: next };
 }
 
-/** Average actions per second right now: 175 (the middle of 50–300) × focus slider × server slots. */
+/** Actions per second from clients (Mississippi Corp): their actions per slot × your server slots. */
+export function clientActions(state: LaunchedGame): number {
+  return state.rentals.reduce((total, id) => total + (rentalClient(id)?.actions ?? 0), 0) * state.serverSlots;
+}
+
+/**
+ * Average actions per second right now: 175 (the middle of 50–300) × focus slider × server slots, plus the
+ * actions from clients.
+ */
 export function averageActionsPerSecond(state: LaunchedGame): number {
-  return Math.round((minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots);
+  return Math.round((minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots + clientActions(state));
 }
 
 /**
@@ -275,6 +283,12 @@ export function tickLaunched(
   }
   // Rented slots pay every second, nudge the solution progress a tiny bit and move integrity.
   next.budget = cap(next.budget + rentalIncome(next));
+  // Client actions (Mississippi Corp) count as coding actions but are not paid out as budget again.
+  const outsourced = clientActions(next);
+  if (outsourced) {
+    next.actions = cap(next.actions + outsourced);
+    next.budgetActions = cap(next.budgetActions + outsourced);
+  }
   const progress = { ...next.worldProgress };
   const factor = clientFactor(next);
   for (const id of next.rentals) {

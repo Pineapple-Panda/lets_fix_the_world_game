@@ -156,9 +156,19 @@ export const rentalClients: RentalClient[] = [
     name: 'EdisonX',
     description: 'A billionaire’s rocket-car-tunnel-AI conglomerate. Pays brilliantly. Asks no questions you would like to answer.',
     income: 2500,
-    progress: { climate: -0.005, corruption: -0.005 },
+    progress: { climate: -0.05, corruption: -0.05 },
     integrity: -0.1,
     maxIntegrity: 20
+  },
+  {
+    id: 'mississippi-corp',
+    name: 'Mississippi Corp',
+    description: 'A worldwide online warehouse and cloud provider. Pays in compute instead of cash: its engineers code for you, as long as nobody asks about the warehouses.',
+    income: 0,
+    progress: { corruption: -0.02 },
+    integrity: -0.02,
+    maxIntegrity: 60,
+    actions: 3000
   }
 ];
 

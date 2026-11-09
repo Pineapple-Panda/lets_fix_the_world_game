@@ -131,7 +131,8 @@
                     <strong>{{ entry.client.name }}</strong>
                     <small>{{ entry.client.description }}</small>
                     <small class="client-terms">
-                        +{{ format(entry.income) }} budget/sec
+                        @if (entry.income) { +{{ format(entry.income) }} budget/sec }
+                        @if (entry.actions) { <span class="good">+{{ format(entry.actions) }} actions/sec</span> ({{ format(entry.client.actions ?? 0) }} per server slot) }
                         @for (effect of entry.effects; track effect.name) {
                             · <span [class.good]="effect.delta > 0" [class.bad]="effect.delta < 0">{{ effect.name }} {{ rate(effect.delta) }}%/sec</span>
                         }

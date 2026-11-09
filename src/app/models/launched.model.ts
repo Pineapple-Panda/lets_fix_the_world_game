@@ -172,6 +172,8 @@ export interface RentalClient {
   maxIntegrity?: number;
   /** Server slots the client rents at once (default 1). */
   slots?: number;
+  /** Coding actions per second per server slot you own, while rented. */
+  actions?: number;
 }
 
 /** A released product (e.g. Green World). Its version can be raised later. */
