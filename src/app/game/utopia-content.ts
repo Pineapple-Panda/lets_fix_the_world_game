@@ -14,7 +14,7 @@ export const megaCorpName = 'MegaCorp';
 export const utopiaStart = { actions: 280000000, budget: 20000000, integrity: 50, actionRate: 13000, budgetRate: 13000 };
 
 /** Level 3 is won once every utopia bar reaches `win`, and lost once `loseWhen` bars drop to `lose` ('any' or 'all'). */
-export const outcomeRules = { win: 100, lose: 0, loseWhen: 'any' as 'any' | 'all' };
+export const outcomeRules = { win: 100, lose: 0, loseWhen: 'all' as 'any' | 'all' };
 
 /** The utopia's bars, in display order. */
 export const metrics: MetricDefinition[] = [

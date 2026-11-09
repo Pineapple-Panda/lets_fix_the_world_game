@@ -112,7 +112,7 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
   return decide(advance(state, random));
 }
 
-/** Every bar at 100% wins level 3; a bar at 0% (with `loseWhen: 'any'`) ends it. Only once Utopia is open. */
+/** Every bar at 100% wins level 3; every bar at 0% ends it (`loseWhen: 'all'`; 'any' would end it at the first). Only once Utopia is open. */
 export function levelOutcome(state: UtopiaGame): 'won' | 'lost' | null {
   if (!cardUnlocked(state, 'utopia')) return null;
   const values = Object.values(state.metrics);

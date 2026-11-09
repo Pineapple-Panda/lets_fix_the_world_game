@@ -2015,13 +2015,14 @@ test('duels: a tug-of-war bar; win costs MegaCorp 5% power, losing costs 5 credi
   assert.equal(paused.attackLog.length, 0, 'no MegaCorp moves while a duel is open');
 });
 
-test('level 3 is won with every bar at 100% and lost once one drops to 0%', () => {
+test('level 3 is won with every bar at 100% and lost once all of them drop to 0%', () => {
   const nearlyWon = { ...opened(), perks: ['utopia-blueprint'], metrics: { employment: 100, housing: 100, food: 100 } };
   assert.equal(utopia.levelOutcome(nearlyWon), 'won');
   assert.equal(utopia.levelOutcome({ ...nearlyWon, perks: [] }), null, 'only once Utopia is open');
   assert.equal(utopia.levelOutcome({ ...nearlyWon, metrics: { employment: 100, housing: 99.9, food: 100 } }), null, 'all three are needed');
-  const lost = utopia.tickUtopia({ ...opened(), metrics: { employment: 0.005, housing: 50, food: 50 } }, () => 0.99);
-  assert.equal(lost.outcome, 'lost', 'employment dropped to 0%');
+  assert.equal(utopia.tickUtopia({ ...opened(), metrics: { employment: 0.005, housing: 50, food: 50 } }, () => 0.99).outcome, null, 'one bar at 0% is not enough');
+  const lost = utopia.tickUtopia({ ...opened(), metrics: { employment: 0.005, housing: 0.005, food: 0.005 } }, () => 0.99);
+  assert.equal(lost.outcome, 'lost', 'all three dropped to 0%');
   assert.deepEqual(utopia.tickUtopia(lost, () => 0.99), lost, 'the game stops once decided');
   assert.equal(utopia.playPlayerCard(lost, 'antitrust'), null, 'no more moves');
   const decided = { ...nearlyWon, outcome: 'won' };
