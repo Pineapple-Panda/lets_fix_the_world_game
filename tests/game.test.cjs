@@ -1919,7 +1919,7 @@ test('initiatives cost budget', () => {
 });
 
 test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'prefab-factory', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
   assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
@@ -2070,6 +2070,16 @@ test('Shut It Down (Rapid Response Team perk, 10M) stops a running MegaCorp move
   assert.equal(utopia.cardBlocker(stopped, 'shut-it-down'), 'Ready in 120s');
   assert.equal(utopia.cancelMegacorpEffect(stopped, 1), null, 'cooling down');
   assert.equal(utopia.canCancelEffect({ ...attacked, perks: ['utopia-blueprint', 'opposition-research'] }, 0), false, 'needs the perk');
+});
+
+test('Pop-Up Homes (Prefab Factory perk): Housing +3% per second for 5 seconds', () => {
+  const perk = utopia.activateUtopiaPerk(opened(), 'prefab-factory');
+  assert.equal(perk.budget, opened().budget - 5000000);
+  let state = utopia.playPlayerCard({ ...perk, metrics: { employment: 50, housing: 50, food: 50 } }, 'pop-up-homes');
+  for (let second = 0; second < 5; second++) state = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
+  assert.ok(Math.abs(state.metrics.housing - (50 + 5 * (3 - 0.012))) < 1e-9, '+15% over 5 seconds, minus drift');
+  assert.deepEqual(state.effects, []);
+  assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'pop-up-homes')), 'Housing +3%/s for 5s');
 });
 
 test('level 3 saves and loads', () => {

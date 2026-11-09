@@ -35,6 +35,8 @@ export const utopiaPerks: UtopiaPerk[] = [
   { id: 'hyper-scaling', name: 'Hyper-Scaling', description: 'Every server, every process, every intern at full throttle. TCA and budget per second ×10.', icon: 'HS',
     actionsRequired: 310000000, cost: 5000000, effect: { kind: 'rateBoost', value: 10 } },
   // One perk per locked action card.
+  { id: 'prefab-factory', name: 'Prefab Factory', description: 'Unlocks the move "Pop-Up Homes": Housing +3%/s for 5s.', icon: 'PF',
+    actionsRequired: 0, cost: 5000000, effect: { kind: 'unlockAction', action: 'pop-up-homes' } },
   { id: 'rapid-response', name: 'Rapid Response Team', description: 'Unlocks the move "Shut It Down": stops a running MegaCorp move of your choice, every 120s.', icon: 'RR',
     actionsRequired: 0, cost: 10000000, effect: { kind: 'unlockAction', action: 'shut-it-down' } },
   { id: 'rally-network', name: 'Rally Network', description: 'Unlocks the move "Battle Cry": in a battle, each push moves the bar by 2% for 15s.', icon: 'RN',
@@ -117,6 +119,8 @@ export const playerCards: ActionCard[] = [
     description: 'Your supporters rally behind you. Usable in a battle.', effects: [{ kind: 'duelBoost', clickGain: 2 }] },
   { id: 'shut-it-down', actor: 'player', category: 'damage', name: 'Shut It Down', cooldown: 120, locked: true,
     description: 'Lawyers and fact-checkers stop a running MegaCorp move. Pick it in the effects above.', effects: [{ kind: 'cancelMove' }] },
+  { id: 'pop-up-homes', actor: 'player', category: 'powerup', name: 'Pop-Up Homes', duration: 5, cooldown: 60, locked: true,
+    description: 'Prefab homes go up overnight in every empty lot.', effects: [{ kind: 'metric', metric: 'housing', amount: 3 }] },
   { id: 'community-kitchens', actor: 'player', category: 'powerup', name: 'Community Kitchens', cooldown: 45, locked: true,
     description: 'Opens a kitchen on every corner. Nobody eats alone.', effects: [{ kind: 'metric', metric: 'food', amount: 3 }] }
 ];
