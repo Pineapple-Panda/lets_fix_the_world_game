@@ -2,14 +2,28 @@
     @if (showIntro()) {
         <app-intro (dismissed)="dismissIntro()" />
     }
-    @if (launched(); as live) {
+    @if (utopia(); as world) {
+        <main class="level-two level-three">
+            @if (saveWarning()) {
+                <div class="console-line error" role="status">{{ saveWarning() }}</div>
+            }
+            <app-level-three [state]="world" (initiativeRun)="runInitiative($event)" (fightStarted)="startBattle($event)"
+                             (moveChosen)="battleRound($event)" (battleClosed)="closeBattle()" />
+            <footer><span>LEVEL 3 / BUILDING UTOPIA</span>
+                <span class="footer-actions">
+                    <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
+                </span>
+            </footer>
+        </main>
+    } @else if (launched(); as live) {
         <main class="level-two">
             @if (pendingEvent(); as pending) {
                 <app-event-dialog [event]="pending.event" [canAccept]="pending.canAccept" (answered)="answerEvent($event)" />
             }
             @if (victory(); as summary) {
                 <app-victory [summary]="summary" (dismissed)="dismissVictory()"
-                             (restartLevelOne)="restartLevelOne()" (restartLevelTwo)="restartLevelTwo()" />
+                             (restartLevelOne)="restartLevelOne()" (restartLevelTwo)="restartLevelTwo()"
+                             (startLevelThree)="startLevelThree()" />
             }
             <section class="console news-ticker" aria-label="World news">
                 <div class="console-body" role="status" aria-live="polite" tabindex="0">
@@ -33,6 +47,8 @@
                     <button id="dev-mode-live" class="dev-toggle" type="button" [class.on]="devMode()" [attr.aria-pressed]="devMode()"
                             title="Dev mode: epics take 5 seconds; switching on adds 1,000,000 actions and 1,000,000 budget"
                             (click)="toggleDevMode()">DEV {{ devMode() ? 'ON' : 'OFF' }}</button>
+                    <button id="skip-level-three" class="dev-toggle" type="button" title="Dev: jump straight to level 3"
+                            (click)="skipToLevelThree()">SKIP TO LEVEL 3</button>
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
                 </span>
             </footer>

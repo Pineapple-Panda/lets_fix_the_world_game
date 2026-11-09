@@ -1587,3 +1587,179 @@ footer {
     font-size: 11px;
     opacity: .8;
 }
+
+/* ---------- Level 3: utopia vs. MegaCorp ---------- */
+
+.utopia {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(260px, 1fr) auto;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.arena {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.arena-intro {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 70ch;
+}
+
+.arena-sides {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+}
+
+.fighter {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fighter-icon {
+    font-size: 34px;
+    line-height: 1;
+}
+
+.arena-versus {
+    font: 700 18px var(--mono);
+    color: var(--faint);
+}
+
+.hp-fill {
+    background: var(--green);
+}
+
+.hp-fill.corp {
+    background: var(--purple);
+}
+
+.hp-fill.low {
+    background: var(--red);
+}
+
+.battle-moves {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.battle-move {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 12px;
+}
+
+.battle-move small {
+    font-weight: 400;
+    opacity: .85;
+}
+
+.battle-result {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: var(--red);
+    font-size: 16px;
+}
+
+.battle-result.won {
+    color: var(--green);
+}
+
+.battle-log {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font: 12px/1.6 var(--mono);
+}
+
+.battle-log li:first-child {
+    color: var(--ink);
+}
+
+.utopia-employment { background: var(--blue); }
+.utopia-housing { background: #e5a050; }
+.utopia-food { background: var(--yellow); }
+
+.initiative span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.initiative small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.corp-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.corp-row.defeated {
+    opacity: .5;
+}
+
+.corp-icon {
+    font-size: 26px;
+}
+
+.corp-details {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.corp-details small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.corp-power {
+    background: var(--purple);
+}
+
+.fight-button {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--red);
+    border-radius: var(--radius);
+    background: var(--red-soft);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.fight-button:hover:not(:disabled) {
+    background: rgba(247, 84, 100, .3);
+}
+
+.fight-button:disabled {
+    border-color: var(--line);
+    background: var(--surface-2);
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+@media (max-width: 760px) {
+    .utopia {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

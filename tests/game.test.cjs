@@ -1794,6 +1794,87 @@ test('application versions', () => {
   assert.deepEqual(version.nextVersion({ major: 1, minor: 9, patch: 0 }), { major: 2, minor: 0, patch: 0 });
 });
 
+// ---------- level 3 ----------
+
+const utopia = require('../src/app/game/utopia.ts');
+const utopiaContent = require('../src/app/game/utopia-content.ts');
+
+test('level 3 starts with 65% employment and three corporations at full power', () => {
+  const state = utopia.newUtopia();
+  assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 });
+  assert.deepEqual(utopiaContent.corporations.map(corp => corp.id), ['bananas', 'mississippi', 'edison'], 'Bananas, Mississippi, EdisonX');
+  assert.deepEqual(state.corpPower, { bananas: 100, mississippi: 100, edison: 100 });
+  assert.equal(state.battle, null);
+});
+
+test('bars erode every second, initiatives raise them and cool down', () => {
+  const next = utopia.tickUtopia(utopia.newUtopia(), () => 0.99);
+  assert.ok(next.metrics.employment < 65 && next.metrics.housing < 70 && next.metrics.food < 75);
+  const helped = utopia.runInitiative(utopia.newUtopia(), 'career-match');
+  assert.equal(helped.metrics.employment, 68);
+  assert.equal(utopia.runInitiative(helped, 'career-match'), null, 'cooling down');
+  let later = helped;
+  for (let second = 0; second < 10; second++) later = utopia.tickUtopia(later, () => 0.99);
+  assert.ok(utopia.runInitiative(later, 'career-match'), 'ready again after 10 seconds');
+});
+
+test('MegaCorp attacks every 45 seconds, weaker corporations hit softer', () => {
+  let state = utopia.newUtopia();
+  for (let second = 0; second < 44; second++) state = utopia.tickUtopia(state, () => 0);
+  assert.equal(state.attackLog.length, 0);
+  state = utopia.tickUtopia(state, () => 0);
+  assert.equal(state.attackLog.length, 1, 'the first attack');
+  assert.equal(state.attackLog[0], utopiaContent.corporations[0].attacks[0].name);
+  const full = utopia.attack(utopia.newUtopia(), () => 0);
+  const weak = utopia.attack({ ...utopia.newUtopia(), corpPower: { bananas: 50, mississippi: 0, edison: 0 } }, () => 0);
+  assert.equal(75 - full.metrics.food, 4);
+  assert.equal(75 - weak.metrics.food, 2, 'half power, half the damage');
+  assert.deepEqual(utopia.attack({ ...utopia.newUtopia(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }, () => 0).attackLog, [], 'no attacks once all are defeated');
+});
+
+test('a won battle costs the corporation 25% power', () => {
+  let state = utopia.startBattle(utopia.newUtopia(), 'bananas');
+  assert.equal(state.battle.corpId, 'bananas');
+  assert.equal(utopia.canFight(state, 'edison'), false, 'one battle at a time');
+  // With 0.99 your fact-check hits for 24 and the corporation picks its unreliable move and misses.
+  let rounds = 0;
+  while (!state.battle.result && rounds < 20) { state = utopia.battleRound(state, 'fact-check', () => 0.99); rounds++; }
+  assert.equal(state.battle.result, 'won');
+  assert.equal(state.corpPower.bananas, 75);
+  assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 }, 'no penalty');
+  state = utopia.closeBattle(state);
+  assert.equal(state.battle, null);
+});
+
+test('a lost battle costs the utopia 25 points on every bar', () => {
+  let state = utopia.startBattle(utopia.newUtopia(), 'edison');
+  let rounds = 0;
+  // Each round: your Open Data Leak misses (0.9), EdisonX picks its tweetstorm (0.1), hits (0.1) for 11 (0.1).
+  const rolls = [0.9, 0.1, 0.1, 0.1];
+  let roll = 0;
+  const random = () => rolls[roll++ % rolls.length];
+  while (!state.battle.result && rounds < 50) { state = utopia.battleRound(state, 'open-data', random); rounds++; }
+  assert.equal(state.battle.result, 'lost');
+  assert.deepEqual(state.metrics, { employment: 40, housing: 45, food: 50 });
+  assert.equal(state.corpPower.edison, 100);
+});
+
+test('defeated corporations cannot be fought, and the rules are easy to change', () => {
+  const beaten = { ...utopia.newUtopia(), corpPower: { bananas: 0, mississippi: 100, edison: 100 } };
+  assert.equal(utopia.canFight(beaten, 'bananas'), false);
+  assert.equal(utopia.startBattle(beaten, 'bananas'), null);
+  assert.equal(utopiaContent.battleRules.winPowerLoss, 25);
+  assert.deepEqual(utopiaContent.battleRules.lossPenalty, { employment: 25, housing: 25, food: 25 });
+});
+
+test('level 3 saves and loads', () => {
+  const store = memoryStorage();
+  const state = utopia.startBattle(utopia.newUtopia(), 'mississippi');
+  storage.saveUtopia(store, state);
+  assert.deepEqual(storage.loadUtopia(store), state);
+  assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');
+});
+
 // ---------- report ----------
 
 for (const { name, error } of failures) {

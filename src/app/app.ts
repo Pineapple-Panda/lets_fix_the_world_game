@@ -9,6 +9,9 @@ import { PerksComponent } from './components/perks/perks';
 import { StatsComponent } from './components/stats/stats';
 import { VictoryComponent } from './components/victory/victory';
 import { EventDialogComponent } from './components/event-dialog/event-dialog';
+import { LevelThreeComponent } from './components/level-three/level-three';
+import { battleRound, closeBattle, newUtopia, runInitiative, startBattle, tickUtopia } from './game/utopia';
+import type { UtopiaGame } from './models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
   assistantOutput, autoCoverageRate, clicksPerPress, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
@@ -21,7 +24,7 @@ import {
   activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
 import { newsFeed } from './game/news';
-import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
+import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './game/storage';
 import type { AppView } from './models/app-view.model';
 import type { Game } from './models/game.model';
 import type { Item } from './models/item.model';
@@ -34,7 +37,7 @@ const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -51,6 +54,8 @@ export class AppComponent {
   readonly devMode = signal(false);
   /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
   readonly launched = signal<LaunchedGame | null>(null);
+  /** Level 3 state; null while the player is in level 1 or 2. Also restored by `game`. */
+  readonly utopia = signal<UtopiaGame | null>(null);
   /** Level 2 news ticker. */
   readonly news = computed(() => {
     const live = this.launched();
@@ -160,6 +165,13 @@ export class AppComponent {
     this.destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
 
     const timer = setInterval(() => {
+      const utopia = this.utopia();
+      if (utopia) {
+        const next = tickUtopia(utopia);
+        this.utopia.set(next);
+        this.persistUtopia(next);
+        return;
+      }
       const launched = this.launched();
       if (launched) {
         const next = tickLaunched(launched, Math.random, this.devMode());
@@ -267,6 +279,7 @@ export class AppComponent {
         this.saveWarning.set('Unable to access browser storage. Progress is not being saved.');
       }
       this.launched.set(null);
+      this.utopia.set(null);
       this.update(() => newGame());
     }
   }
@@ -313,6 +326,36 @@ export class AppComponent {
     const state = replayLevelTwo();
     this.launched.set(state);
     this.persistLaunched(state);
+  }
+
+  /** Leaves level 2 for good: level 3 starts fresh. */
+  startLevelThree(): void {
+    const state = newUtopia();
+    this.launched.set(null);
+    this.utopia.set(state);
+    this.persistUtopia(state);
+  }
+
+  /** Dev shortcut from level 2: jump straight to level 3. */
+  skipToLevelThree(): void {
+    if (!window.confirm('Skip to level 3? Your level 2 progress will be lost.')) return;
+    this.startLevelThree();
+  }
+
+  runInitiative(id: string): void {
+    this.updateUtopia(state => runInitiative(state, id));
+  }
+
+  startBattle(corpId: string): void {
+    this.updateUtopia(state => startBattle(state, corpId));
+  }
+
+  battleRound(moveId: string): void {
+    this.updateUtopia(state => battleRound(state, moveId));
+  }
+
+  closeBattle(): void {
+    this.updateUtopia(state => closeBattle(state));
   }
 
   dismissVictory(): void {
@@ -395,6 +438,11 @@ export class AppComponent {
     }
     // An incompatible or corrupt save is ignored: the player starts over and the next save replaces it.
     this.savedSnapshot = snapshot;
+    const utopia = loadUtopia(storage);
+    if (utopia) {
+      this.utopia.set(utopia);
+      return newGame();
+    }
     const launched = loadLaunched(storage);
     if (launched) {
       this.launched.set(launched);
@@ -407,6 +455,19 @@ export class AppComponent {
 
   private persistGame(game: Game): void {
     this.persist(storage => saveGame(storage, game));
+  }
+
+  private persistUtopia(state: UtopiaGame): void {
+    this.persist(storage => saveUtopia(storage, state));
+  }
+
+  private updateUtopia(change: (state: UtopiaGame) => UtopiaGame | null): void {
+    const current = this.utopia();
+    if (!current) return;
+    const next = change(current);
+    if (!next) return;
+    this.utopia.set(next);
+    this.persistUtopia(next);
   }
 
   private persistLaunched(state: LaunchedGame): void {

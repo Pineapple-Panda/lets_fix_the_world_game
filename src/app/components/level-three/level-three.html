@@ -1,0 +1,115 @@
+@let v = view();
+<div class="utopia">
+    <!-- Top half: the arena. A battle when one is running, otherwise MegaCorp's latest moves. -->
+    <section class="ops-card arena" aria-labelledby="arena-title">
+        @if (v.battle; as battle) {
+            <h2 class="tool-heading" id="arena-title">Battle · Round {{ battle.round }}</h2>
+            <div class="arena-sides">
+                <div class="fighter">
+                    <span class="fighter-icon" aria-hidden="true">🤖</span>
+                    <strong>Your AI System</strong>
+                    <div class="world-track" role="meter" aria-label="Your credibility" aria-valuemin="0" [attr.aria-valuemax]="100"
+                         [attr.aria-valuenow]="battle.playerHp">
+                        <div class="world-fill hp-fill" [class.low]="battle.playerPercent < 30" [style.width.%]="battle.playerPercent"></div>
+                    </div>
+                    <small>Credibility {{ battle.playerHp }}</small>
+                </div>
+                <span class="arena-versus" aria-hidden="true">VS</span>
+                <div class="fighter">
+                    <span class="fighter-icon" aria-hidden="true">{{ battle.corp.icon }}</span>
+                    <strong>{{ battle.corp.name }}</strong>
+                    <div class="world-track" role="meter" [attr.aria-label]="battle.corp.name + ' influence'" aria-valuemin="0" [attr.aria-valuemax]="100"
+                         [attr.aria-valuenow]="battle.corpHp">
+                        <div class="world-fill hp-fill corp" [class.low]="battle.corpPercent < 30" [style.width.%]="battle.corpPercent"></div>
+                    </div>
+                    <small>Influence {{ battle.corpHp }}</small>
+                </div>
+            </div>
+            @if (battle.result) {
+                <div class="battle-result" [class.won]="battle.result === 'won'" role="status">
+                    <strong>{{ battle.result === 'won' ? 'Victory!' : 'Defeat.' }}</strong>
+                    <button class="intro-button" type="button" (click)="battleClosed.emit()">Back to work</button>
+                </div>
+            } @else {
+                <div class="battle-moves">
+                    @for (move of moves; track move.id) {
+                        <button class="tool-button battle-move" type="button" (click)="moveChosen.emit(move.id)">
+                            {{ move.name }}
+                            <small>
+                                @if (move.damage) { {{ move.damage[0] }}–{{ move.damage[1] }} damage }
+                                @if (move.heal) { +{{ move.heal }} HP }
+                                @if (move.accuracy) { · {{ move.accuracy * 100 }}% hit }
+                            </small>
+                        </button>
+                    }
+                </div>
+            }
+            <ol class="battle-log" aria-label="Battle log">
+                @for (line of battle.log; track $index) {
+                    <li>{{ line }}</li>
+                }
+            </ol>
+        } @else {
+            <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} is watching</h2>
+            <p class="arena-intro">EdisonX, Mississippi Corp and Bananas Inc. have joined forces. Your utopia threatens their business,
+                so they fight back with lawsuits and defamation. Pick a fight to take away their power.</p>
+            <small class="upgrade-hint">Next attack in {{ v.nextAttack }}s</small>
+            @if (v.attackLog.length) {
+                <ol class="battle-log" aria-label="Latest attacks">
+                    @for (line of v.attackLog; track $index) {
+                        <li>{{ line }}</li>
+                    }
+                </ol>
+            }
+        }
+    </section>
+
+    <!-- Bottom left: the utopia. -->
+    <section class="ops-card" aria-labelledby="utopia-title">
+        <h2 class="tool-heading" id="utopia-title">Utopia</h2>
+        @for (metric of v.metrics; track metric.id) {
+            <div class="world-row">
+                <span>{{ metric.name }}</span>
+                <div class="world-track" role="progressbar" [attr.aria-label]="metric.name" aria-valuemin="0" aria-valuemax="100"
+                     [attr.aria-valuenow]="metric.value | number: '1.0-0'">
+                    <div class="world-fill" [class]="'utopia-' + metric.id" [style.width.%]="metric.value"></div>
+                </div>
+                <b>{{ metric.value | number: '1.1-1' }}%</b>
+            </div>
+            <small class="upgrade-hint">{{ metric.hint }}</small>
+        }
+        <h3 class="tool-heading ops-subheading">AI initiatives</h3>
+        @for (entry of v.initiatives; track entry.initiative.id) {
+            <div class="upgrade-row initiative">
+                <span><strong>{{ entry.initiative.name }}</strong><small>{{ entry.initiative.description }}</small></span>
+                <button class="tool-button" type="button" [disabled]="entry.cooldown > 0"
+                        [attr.aria-label]="entry.initiative.name + ': ' + entry.metricName + ' +' + entry.initiative.gain"
+                        (click)="initiativeRun.emit(entry.initiative.id)">
+                    {{ entry.cooldown > 0 ? entry.cooldown + 's' : entry.metricName + ' +' + entry.initiative.gain }}
+                </button>
+            </div>
+        }
+    </section>
+
+    <!-- Bottom right: MegaCorp. -->
+    <section class="ops-card" aria-labelledby="megacorp-title">
+        <h2 class="tool-heading" id="megacorp-title">{{ megaCorpName }}</h2>
+        @for (entry of v.corps; track entry.corp.id) {
+            <div class="corp-row" [class.defeated]="entry.power <= 0">
+                <span class="corp-icon" aria-hidden="true">{{ entry.corp.icon }}</span>
+                <div class="corp-details">
+                    <strong>{{ entry.corp.name }}</strong>
+                    <small>{{ entry.corp.description }}</small>
+                    <div class="world-track" role="meter" [attr.aria-label]="entry.corp.name + ' power'" aria-valuemin="0" aria-valuemax="100"
+                         [attr.aria-valuenow]="entry.power">
+                        <div class="world-fill corp-power" [style.width.%]="entry.power"></div>
+                    </div>
+                    <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
+                </div>
+                <button class="fight-button" type="button" [disabled]="!entry.canFight"
+                        [attr.aria-label]="'Fight ' + entry.corp.name" [title]="'Fight ' + entry.corp.name"
+                        (click)="fightStarted.emit(entry.corp.id)">⚔️</button>
+            </div>
+        }
+    </section>
+</div>

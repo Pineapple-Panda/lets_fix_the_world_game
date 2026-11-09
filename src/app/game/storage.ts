@@ -1,6 +1,7 @@
 import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
 import type { LaunchedGame } from '../models/launched.model.ts';
+import type { UtopiaGame } from '../models/utopia.model.ts';
 import { perks } from '../models/perk.model.ts';
 
 /**
@@ -17,7 +18,7 @@ const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
 /** Reads the stored snapshot for the given level, or null when it is missing, corrupt or for another level. */
-function readSnapshot(storage: Pick<Storage, 'getItem'>, level: 1 | 2): Snapshot | null {
+function readSnapshot(storage: Pick<Storage, 'getItem'>, level: 1 | 2 | 3): Snapshot | null {
   const saved = storage.getItem(saveKey);
   if (saved === null) return null;
   try {
@@ -68,6 +69,30 @@ export function saveGame(storage: Pick<Storage, 'setItem'>, game: Game): string 
 export function loadGame(storage: Pick<Storage, 'getItem'>): Game | null {
   const game = readSnapshot(storage, 1);
   return game && isGame(game) ? game as unknown as Game : null;
+}
+
+export function saveUtopia(storage: Pick<Storage, 'setItem'>, state: UtopiaGame): string {
+  const value = JSON.stringify({ level: 3, game: state });
+  storage.setItem(saveKey, value);
+  return value;
+}
+
+const isPercent = (value: unknown): value is number => typeof value === 'number' && value >= 0 && value <= 100;
+const isPercentRecord = (value: unknown): boolean => isObject(value) && Object.values(value).every(isPercent);
+
+/** The level 3 state, or null when there is no compatible level 3 save. */
+export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null {
+  const game = readSnapshot(storage, 3);
+  if (
+    !game || !isCount(game.seconds) || !isCount(game.nextAttack) ||
+    !isPercentRecord(game.metrics) || !isPercentRecord(game.corpPower) ||
+    !isObject(game.cooldowns) || !Object.values(game.cooldowns).every(isCount) ||
+    !Array.isArray(game.attackLog) || !game.attackLog.every(line => typeof line === 'string') ||
+    !(game.battle === null || (isObject(game.battle) && typeof game.battle.corpId === 'string' &&
+      isCount(game.battle.playerHp) && isCount(game.battle.corpHp) && isCount(game.battle.round) &&
+      Array.isArray(game.battle.log) && [null, 'won', 'lost'].includes(game.battle.result as string | null)))
+  ) return null;
+  return game as unknown as UtopiaGame;
 }
 
 export function saveLaunched(storage: Pick<Storage, 'setItem'>, state: LaunchedGame): string {

@@ -21,9 +21,12 @@ export interface VictorySummary {
         }
       </dl>
       <p class="victory-verdict">{{ summary().verdict }}</p>
-      <p class="victory-teaser">Level 3 is on its way. Something big is brewing.</p>
+      <p class="victory-teaser">But a fixed world is bad for business. Somebody is about to fight back.</p>
       <div class="victory-actions">
-        <button class="intro-button" type="button" autofocus (click)="close()">Enjoy the view</button>
+        <button class="intro-button" type="button" autofocus (click)="startLevelThree.emit()">
+          Continue to Level 3<small>Build a utopia. MegaCorp will not like it.</small>
+        </button>
+        <button class="intro-button event-decline" type="button" (click)="close()">Enjoy the view</button>
         <button class="intro-button event-decline" type="button" (click)="restartLevelOne.emit()">
           Restart at Level 1<small>Start with 10,000 TCA</small>
         </button>
@@ -41,6 +44,7 @@ export class VictoryComponent {
   /** A new run: the dialog disappears with the old game, so it is not closed (closing would mark the new run as seen). */
   readonly restartLevelOne = output<void>();
   readonly restartLevelTwo = output<void>();
+  readonly startLevelThree = output<void>();
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal());
