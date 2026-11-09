@@ -1,10 +1,10 @@
 // Gameplay checks. Run with `npm test`. Every check runs even if an earlier one fails.
 const assert = require('node:assert/strict');
-const game = require('../src/app/game/game.ts');
-const content = require('../src/app/game/content.ts');
-const storage = require('../src/app/game/storage.ts');
-const launched = require('../src/app/game/launched.ts');
-const version = require('../src/app/models/version.model.ts');
+const game = require('../src/app/levels/level-one/game/game.ts');
+const content = require('../src/app/levels/level-one/game/content.ts');
+const storage = require('../src/app/shared/game/storage.ts');
+const launched = require('../src/app/levels/level-two/game/launched.ts');
+const version = require('../src/app/levels/level-one/models/version.model.ts');
 
 const {
   newGame, perks, perkUnlocked, openPerks, activePerks, activatePerk, isAvailable, boardItems, boardColumns,
@@ -595,7 +595,7 @@ test('incompatible or corrupt saves are ignored', () => {
 
 const liveState = overrides => ({
   actions: 40000, budget: 0, seconds: 0, budgetActions: 40000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0, rentals: [],
-  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, ...overrides
+  worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, history: [], ...overrides
 });
 
 test('level 2 saves are small and separate from level 1', () => {
@@ -625,14 +625,14 @@ test('the application can launch at 100% coverage and keeps only actions and bud
   state.budget = 1234;
   assert.deepEqual(launched.launch(state), {
     actions: 17000, budget: 1234, seconds: 0, budgetActions: 17000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, history: [launched.level1Summary(state)]
   }, 'level 1 perks do not carry over');
 });
 
 test('skipping level 1 starts level 2 with 34,000 actions and 3,000 budget', () => {
   assert.deepEqual(launched.skippedLevelTwo(), {
     actions: 34000, budget: 3000, seconds: 0, budgetActions: 34000, perks: [], serverSlots: 1, epics: [], products: [], focus: 0,
-    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0
+    rentals: [], worldProgress: { climate: 0, war: 0, hunger: 0, poverty: 0, corruption: 0 }, integrity: 50, programs: [], completedPrograms: [], lawsuit: null, lawsuitsFiled: 0, verdict: null, stats: launched.noStats(), victorySeen: false, eventsSeen: [], pendingEvent: null, nsaSeconds: 0, aidSlots: 0, aidSeconds: 0, history: []
   });
   assert.notEqual(launched.skippedLevelTwo(), launched.skippedLevelTwo(), 'a fresh object every time');
 });
@@ -798,10 +798,9 @@ test('"Migrate to Data Centers": 80,000 actions, 350,000 budget, epics take half
   assert.equal(free.budget, 0, 'perks without a price stay free');
 
   const epic = launched.epicDefinition('climate-collect-measurements');
-  assert.equal(launched.epicDuration(epic, false, true), 60, '2 minutes become 1');
-  assert.equal(launched.epicDuration(launched.epicDefinition('war-verify-footage'), false, true), 45);
-  assert.equal(launched.epicDuration(launched.epicDefinition('war-early-warning'), false, true), 15);
-  assert.equal(launched.epicDuration(epic, true, true), 5, 'dev mode still caps at 5 seconds');
+  assert.equal(launched.epicDuration(epic, true), 60, '2 minutes become 1');
+  assert.equal(launched.epicDuration(launched.epicDefinition('war-verify-footage'), true), 45);
+  assert.equal(launched.epicDuration(launched.epicDefinition('war-early-warning'), true), 15);
   let fast = liveState({ perks: ['data-centers'], epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
   for (let second = 0; second < 60; second++) fast = launched.tickLaunched(fast, () => 0);
   assert.equal(fast.epics[0].done, true, 'done after 60 instead of 120 seconds');
@@ -903,7 +902,7 @@ function shipGoal(live, goal) {
 }
 
 test('every world goal has a chain of epics ending in a big API epic', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual(content.worldGoals.map(goal => goal.id), ['climate', 'war', 'corruption', 'hunger-poverty']);
   assert.deepEqual(content.worldGoals.map(goal => launched.goalEpics(goal.id).length), [6, 6, 6, 7]);
   for (const goal of content.worldGoals) {
@@ -1062,7 +1061,7 @@ test('finished epics fill the solution progress bars', () => {
 });
 
 test('rental clients and world problems are defined', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual(content.worldProblems.map(problem => problem.id), ['climate', 'war', 'hunger', 'poverty', 'corruption']);
   assert.deepEqual(content.rentalClients.map(client => client.id), ['green-left-union', 'blue-helmets', 'ministry-digital', 'nsa', 'edisonx', 'mississippi-corp']);
   const green = content.rentalClients[0];
@@ -1074,26 +1073,6 @@ test('rental clients and world problems are defined', () => {
   for (const client of content.rentalClients) {
     assert.ok(Object.values(client.progress).every(delta => Math.abs(delta) <= 0.05), client.id + ' progress is small');
   }
-});
-
-test('level 2 dev mode: 5-second epics and a boost of 1,000,000 actions and budget', () => {
-  const boosted = launched.devBoost(liveState({ actions: 40000, budget: 10, budgetActions: 40000 }));
-  assert.equal(boosted.actions, 1040000);
-  assert.equal(boosted.budget, 1000010);
-  let paid = boosted;
-  for (let second = 0; second < 5; second++) paid = launched.tickLaunched(paid, () => 0);
-  assert.equal(paid.budget, 1000010 + 5 * 50, 'the boosted actions are not paid out as budget again');
-
-  const epic = launched.epicDefinition('climate-collect-measurements');
-  assert.equal(launched.epicDuration(epic), 120);
-  assert.equal(launched.epicDuration(epic, true), 5);
-  assert.equal(launched.epicDuration(launched.epicDefinition('climate-algorithm'), true), 5);
-  let live = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
-  for (let second = 0; second < 5; second++) live = launched.tickLaunched(live, () => 0, true);
-  assert.equal(live.epics[0].done, true, 'done after 5 seconds in dev mode');
-  let normal = liveState({ epics: [{ id: 'climate-collect-measurements', progress: 0, done: false }] });
-  for (let second = 0; second < 5; second++) normal = launched.tickLaunched(normal, () => 0);
-  assert.equal(normal.epics[0].done, false);
 });
 
 const greenWorldActive = overrides => liveState({
@@ -1172,7 +1151,7 @@ test('the connector epic needs real data centres and adds 20% climate solution o
   live = launched.startEpic(withDc, 'data-center-green-connector');
   assert.equal(live.budget, 5000000 - 1500000);
   const climateBefore = live.worldProgress.climate;
-  const seconds = launched.epicDuration(launched.epicDefinition('data-center-green-connector'), false, true);
+  const seconds = launched.epicDuration(launched.epicDefinition('data-center-green-connector'), true);
   assert.equal(seconds, 90, '3 minutes, halved by the data centres');
   for (let second = 0; second < seconds; second++) live = launched.tickLaunched({ ...live, programs: [] }, () => 0.99);
   assert.equal(launched.epicDone(live, 'data-center-green-connector'), true);
@@ -1307,7 +1286,7 @@ test('EdisonX robots resolve protests automatically', () => {
 });
 
 test('flimsy lawsuits: only at 30% climate solution and more than 80% integrity', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual([...new Set(content.lawsuits.map(entry => entry.plaintiff))], ['Mississippi Corp', 'Bananas Inc.', 'EdisonX']);
   const climate = value => ({ ...liveState().worldProgress, climate: value });
   assert.equal(launched.lawsuitRisk(greenWorldActive({ integrity: 90, worldProgress: climate(29.9) })), false, 'below 30% climate');
@@ -1460,7 +1439,7 @@ test('Peace & Integrity: diplomacy chatbot, tax the rich and high-tech weapons',
 });
 
 test('Tax the Rich triples the lawsuit chance and brings billionaire lawsuits', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.equal(launched.currentLawsuitChance(peaceActive()), 0.003);
   const taxing = launched.startProgram(peaceActive(), 'tax-the-rich');
   assert.ok(Math.abs(launched.currentLawsuitChance(taxing) - 0.009) < 1e-12, '×3 while Tax the Rich runs');
@@ -1563,7 +1542,7 @@ test('shady deals are counted every second', () => {
 
 test('protests take at most 50 clicks, mediators calm them faster and peacefully', () => {
   const protest = overrides => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }], ...overrides });
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
   assert.equal(perk.actionsRequired, 45000000);
   assert.deepEqual(perk.requiresProducts, ['green-world']);
@@ -1579,7 +1558,7 @@ test('protests take at most 50 clicks, mediators calm them faster and peacefully
 });
 
 test('the news ticker reacts to the world and breaks lawsuits and protests first', () => {
-  const news = require('../src/app/game/news.ts');
+  const news = require('../src/app/levels/level-two/game/news.ts');
   const feed = news.newsFeed(greenWorldActive({ seconds: 600 }));
   assert.equal(feed.length, 3);
   assert.ok(feed.every(line => !line.breaking && line.text.length > 10));
@@ -1597,7 +1576,7 @@ test('the news ticker reacts to the world and breaks lawsuits and protests first
 });
 
 test('Peace & Integrity has three corruption programs', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.deepEqual(content.programs.filter(program => program.problem === 'corruption').map(program => program.id),
     ['tax-the-rich', 'open-budget-ledger', 'whistleblower-harbor']);
   assert.equal(launched.programBlocker(peaceActive(), 'whistleblower-harbor'), 'Needs v1.1');
@@ -1606,7 +1585,7 @@ test('Peace & Integrity has three corruption programs', () => {
 });
 
 test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens assembly', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   const perk = id => content.launchedPerks.find(entry => entry.id === id);
   assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
     [25000000, 100000000, 150000000, 200000000, 300000000]);
@@ -1648,7 +1627,7 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
 });
 
 test('Premium Hosting Contracts make clients pay ten times the rent', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.equal(content.launchedPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
   const online = { perks: ['workflow-abstraction', 'network-financing'], rentals: ['blue-helmets'] };
   assert.equal(launched.rentalIncome(liveState(online)), 500);
@@ -1670,7 +1649,7 @@ test('every server slot multiplies the actions per second', () => {
 });
 
 test('every program needs a server slot, times the major version of its product', () => {
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   const reforest = content.programs.find(program => program.id === 'reforestation-network');
   assert.equal(launched.programSlotsNeeded(greenWorldActive(), reforest), 1);
   const v2 = greenWorldActive({ serverSlots: 3, products: [{ id: 'green-world', major: 2, minor: 0, active: true }] });
@@ -1727,9 +1706,22 @@ test('special event: the UN asks for servers at 80% integrity', () => {
   assert.equal(launched.answerEvent(asked, false).worldProgress.hunger, 0, 'not now: nothing happens');
 });
 
+test('after the world is fixed, a new run starts with a head start', () => {
+  const one = game.headStartGame();
+  assert.equal(one.actions, 10000);
+  assert.equal(one.lastDeploymentActions, 10000, 'the head start is not paid out at the first deployment');
+  assert.equal(one.budget, 0);
+  const two = launched.replayLevelTwo();
+  assert.equal(two.actions, 10000000);
+  assert.equal(two.budget, 20000000);
+  assert.deepEqual(two.perks, []);
+  assert.equal(two.victorySeen, false);
+  assert.equal(launched.worldFixed(two), false);
+});
+
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
-  const content = require('../src/app/game/launched-content.ts');
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
   assert.equal(content.launchedPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
   const start = liveState({ budget: 1000, perks: ['pitch-deck'] });
   assert.equal(launched.pitchValue(start), 100, 'at least 100: 175 actions per second only make 35');
@@ -1779,6 +1771,345 @@ test('application versions', () => {
   assert.equal(version.formatVersion(version.versionForDeployments(10)), '1.9.0');
   assert.equal(version.formatVersion(version.versionForDeployments(11)), '2.0.0');
   assert.deepEqual(version.nextVersion({ major: 1, minor: 9, patch: 0 }), { major: 2, minor: 0, patch: 0 });
+});
+
+// ---------- level 3 ----------
+
+const utopia = require('../src/app/levels/level-three/game/utopia.ts');
+const utopiaContent = require('../src/app/levels/level-three/game/utopia-content.ts');
+/** Level 3 with the Utopia and MegaCorp cards already open. */
+const opened = () => ({ ...utopia.newUtopia(), perks: ['utopia-blueprint', 'opposition-research'] });
+
+
+test('level 3 starts with 65% employment and three corporations at 75% power', () => {
+  const state = opened();
+  assert.deepEqual(state.metrics, { employment: 65, housing: 70, food: 75 });
+  assert.deepEqual(utopiaContent.corporations.map(corp => corp.id), ['bananas', 'mississippi', 'edison'], 'Bananas, Mississippi, EdisonX');
+  assert.deepEqual(state.corpPower, { bananas: 75, mississippi: 75, edison: 75 });
+});
+
+test('initiatives are initialized, built for 30 seconds, then started; credibility multiplies their effect', () => {
+  const next = utopia.tickUtopia(opened(), () => 0.99);
+  assert.deepEqual(next.metrics, opened().metrics, 'the bars do not move on their own');
+  const base = { ...opened(), perks: ['utopia-blueprint'], budgetRate: 0 };
+  assert.equal(utopia.startInitiative(base, 'career-match'), null, 'not built yet');
+  assert.equal(utopia.initiativeBlocker(base, 'career-match'), 'Needs to be initialized first');
+  let state = utopia.initializeInitiative(base, 'career-match');
+  assert.equal(state.budget, base.budget - 1000000, '1,000,000 to initialize');
+  assert.equal(utopia.initiativeStage(state, 'career-match'), 'building');
+  assert.equal(utopia.initializeInitiative(state, 'career-match'), null, 'only once');
+  for (let second = 0; second < 29; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(utopia.initiativeStage(state, 'career-match'), 'building');
+  state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(utopia.initiativeStage(state, 'career-match'), 'built', 'built after 30 seconds');
+  const started = utopia.startInitiative(state, 'career-match');
+  assert.equal(started.budget, state.budget, 'starting is free once built');
+  assert.equal(utopia.initiativeRate(started, 'career-match'), 0.15, '0.3 × 50% credibility');
+  assert.equal(utopia.initiativeRate({ ...started, integrity: 100 }, 'career-match'), 0.3);
+  let later = started;
+  for (let second = 0; second < 100; second++) later = utopia.tickUtopia(later, () => 0.99);
+  assert.ok(Math.abs(later.metrics.employment - (Math.min(100, started.metrics.employment + 100 * 0.15))) < 1e-9, '+0.15% per second at 50% credibility');
+  assert.equal(later.budget, started.budget - 100 * 1000, '1,000 budget per second');
+  const stopped = utopia.stopInitiative(started, 'career-match');
+  assert.equal(utopia.initiativeStage(stopped, 'career-match'), 'built', 'stays built after stopping');
+});
+
+test('MegaCorp plays a card every 10 seconds, sooner when your bars are higher', () => {
+  assert.equal(utopia.attackInterval(opened()), 10, 'bars average 70%');
+  assert.equal(utopia.attackInterval({ ...opened(), metrics: { employment: 90, housing: 90, food: 90 } }), 6);
+  assert.equal(utopia.attackInterval({ ...opened(), metrics: { employment: 100, housing: 100, food: 100 } }), 4);
+  assert.equal(utopia.attackInterval({ ...opened(), metrics: { employment: 0, housing: 0, food: 0 } }), 20, 'at most 20 seconds');
+  let state = opened();
+  for (let second = 0; second < 9; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(state.attackLog.length, 0);
+  state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(state.attackLog.length, 1, 'the first move after 10 seconds');
+  assert.ok(state.nextAttack >= 3, 'the next one is scheduled');
+  assert.deepEqual(utopia.megacorpMove({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }, () => 0).attackLog, [], 'no moves once all are defeated');
+});
+
+test('cards: one-time hits, timed effects, own decks per corporation', () => {
+  const content = utopiaContent;
+  assert.ok(content.megacorpCards.every(card => card.actor === 'megacorp') && content.playerCards.every(card => card.actor === 'player'));
+  // Bananas Inc. (first by weight with random 0) plays the first card of its deck: Propaganda Flood, −2 credibility.
+  const smeared = utopia.megacorpMove(opened(), () => 0);
+  assert.deepEqual(smeared.attackLog[0], { cardId: 'propaganda', corpId: 'bananas' });
+  assert.equal(smeared.integrity, 48);
+  // Own cards only for their corporation.
+  const decks = { bananas: [], mississippi: [], edison: [] };
+  for (const card of content.megacorpCards) for (const id of Object.keys(decks)) if (!card.corpId || card.corpId === id) decks[id].push(card.id);
+  assert.ok(decks.mississippi.includes('robot-night-shift') && !decks.bananas.includes('robot-night-shift'));
+  assert.ok(decks.edison.includes('job-thief-post') && decks.bananas.includes('banana-free-dictatorship'));
+  // A timed card: −1% housing per second for 30 seconds.
+  let state = { ...opened(), effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 30 }] };
+  const housing = state.metrics.housing;
+  state = utopia.tickUtopia(state, () => 0.99);
+  assert.ok(Math.abs(state.metrics.housing - (housing - 1)) < 1e-9, 'the warehouse grab');
+  assert.equal(state.effects[0].remaining, 29);
+  assert.ok(Math.abs(utopia.metricRate(state, 'housing') - -1) < 1e-9, 'shown in the rate');
+  for (let second = 0; second < 29; second++) state = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
+  assert.deepEqual(state.effects, [], 'over after 30 seconds');
+});
+
+test('your cards: two from the start, the others through perks; bribes protect MegaCorp', () => {
+  assert.equal(utopia.cardBlocker({ ...opened(), perks: ['utopia-blueprint'] }, 'antitrust'), 'MegaCorp is unknown');
+  assert.deepEqual(utopia.ownedCards(opened()).map(card => card.id), ['firewall', 'antitrust'], 'available from the start');
+  assert.equal(utopia.cardBlocker(opened(), 'rent-tax-cut'), 'Needs its perk');
+  const withPerk = utopia.activateUtopiaPerk({ ...opened(), actions: 285000000 }, 'housing-policy');
+  assert.equal(withPerk.budget, opened().budget - 2000000);
+  assert.ok(utopia.cardOwned(withPerk, 'rent-tax-cut'));
+  let state = utopia.playPlayerCard(withPerk, 'rent-tax-cut');
+  assert.equal(state.effects[0].cardId, 'rent-tax-cut');
+  assert.equal(utopia.cardBlocker(state, 'rent-tax-cut'), 'Ready in 30s');
+  assert.equal(utopia.playPlayerCard(state, 'rent-tax-cut'), null, 'cooling down');
+  const next = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
+  assert.ok(Math.abs(next.integrity - 50.5) < 1e-9, '+0.5 credibility per second');
+  // Firewalls halve MegaCorp's card effects.
+  const walled = utopia.playPlayerCard(opened(), 'firewall');
+  assert.equal(utopia.firewallFactor(walled), 0.5);
+  assert.equal(utopia.megacorpMove(walled, () => 0).integrity, 49, 'propaganda only costs 1');
+  // Antitrust takes 10 from the strongest corporation, unless MegaCorp bribed the government.
+  const strong = { ...opened(), corpPower: { bananas: 75, mississippi: 90, edison: 75 } };
+  assert.equal(utopia.playPlayerCard(strong, 'antitrust').corpPower.mississippi, 80);
+  const bribed = { ...strong, effects: [{ cardId: 'bribery', corpId: 'edison', remaining: 60 }] };
+  assert.equal(utopia.powerShielded(bribed), true);
+  assert.equal(utopia.playPlayerCard(bribed, 'antitrust').corpPower.mississippi, 90, 'no power loss while bribed');
+  assert.equal(utopia.cardSummary(utopiaContent.megacorpCards.find(card => card.id === 'warehouse-grab')), 'Housing −1%/s for 30s');
+});
+
+test('level 3 keeps TCA, budget and integrity from level 2 and keeps growing them', () => {
+  const carried = utopia.newUtopia({ actions: 123456789, budget: 4000000, integrity: 81, actionRate: 12000, budgetRate: 3500 });
+  assert.equal(carried.actions, 123456789);
+  assert.equal(carried.budget, 4000000);
+  assert.equal(carried.integrity, 81);
+  assert.deepEqual(carried.perks, []);
+  assert.deepEqual([opened().actions, opened().budget, opened().integrity], [280000000, 20000000, 50]);
+  const next = utopia.tickUtopia(carried, () => 0);
+  assert.equal(next.actions, 123456789 + 12000, 'the actions per second from level 2');
+  assert.equal(next.budget, 4000000 + 3500, 'the budget per second from level 2');
+  assert.equal(utopia.newUtopia({ actions: 0, budget: 0, integrity: 50, actionRate: 100, budgetRate: -300 }).budgetRate, 0, 'never negative');
+  assert.equal(opened().actionRate, 13000);
+});
+
+test('initiatives cost budget', () => {
+  const poor = { ...opened(), budget: 999999 };
+  assert.equal(utopia.initializeInitiative(poor, 'career-match'), null, 'needs 1,000,000');
+  assert.equal(utopia.initializeBlocker(poor, 'career-match'), 'Not enough budget');
+});
+
+test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
+  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'prefab-factory', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
+  // Try every effect kind with temporary perks, as a new perk in the config would.
+  const extra = [
+    { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'initiativeGain', value: 2 } },
+    { id: 't-shield', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'attackShield', value: 0.5 } },
+    { id: 't-drift', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'driftShield', value: 0.5 } },
+    { id: 't-upkeep', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'upkeep', value: 0.5 } }
+  ];
+  utopiaContent.utopiaPerks.push(...extra);
+  try {
+    let state = opened();
+    assert.ok(utopia.openUtopiaPerks(state).length <= 5, 'at most five shown');
+    for (const perk of extra) state = utopia.activateUtopiaPerk(state, perk.id);
+    assert.equal(state.budget, opened().budget - 1000, 'pays the price');
+    assert.equal(utopia.initiativeRate(state, 'career-match'), 0.3, '0.3 × 50% credibility × 2');
+    assert.equal(utopia.initiativeUpkeep(state, 'career-match'), 500);
+    assert.equal(utopia.perkValue(state, 'driftShield'), 0.5);
+    const counter = utopiaContent.counterInitiatives[0];
+    assert.ok(Math.abs(utopia.counterRate({ ...state, megacorpSeconds: 999 }, counter) - 0.075) < 1e-12, 'counter initiatives hit half as hard');
+  } finally {
+    utopiaContent.utopiaPerks.splice(-extra.length);
+  }
+});
+
+test('Utopia and MegaCorp start hidden and open for free at 250M and 260M total TCA', () => {
+  const start = utopia.newUtopia({ actions: 249950000, budget: 0, integrity: 70, actionRate: 1000, budgetRate: 0 });
+  assert.equal(utopia.cardUnlocked(start, 'utopia'), false);
+  assert.equal(utopia.cardUnlocked(start, 'megacorp'), false);
+  assert.equal(utopia.activateUtopiaPerk(start, 'utopia-blueprint'), null, 'needs 250M total TCA');
+  let later = start;
+  for (let second = 0; second < 50; second++) later = utopia.tickUtopia(later, () => 0);
+  assert.deepEqual(later.metrics, start.metrics, 'the bars wait for the Utopia card');
+  assert.equal(later.nextAttack, start.nextAttack, 'MegaCorp waits too');
+  assert.equal(utopia.initializeBlocker({ ...later, budget: 1000000 }, 'career-match'), 'Utopia is locked', 'no initiatives yet');
+  later = utopia.activateUtopiaPerk(later, 'utopia-blueprint');
+  assert.equal(later.budget, 0, 'free');
+  assert.equal(utopia.cardUnlocked(later, 'utopia'), true);
+  assert.equal(utopia.tickUtopia(later, () => 0).metrics.employment, 65, 'no drift: the bars wait for your initiatives');
+  assert.equal(utopia.activateUtopiaPerk(later, 'opposition-research'), null, 'needs 260M');
+  assert.equal(utopia.cardUnlocked(utopia.activateUtopiaPerk({ ...later, actions: 260000000 }, 'opposition-research'), 'megacorp'), true);
+});
+
+test('MegaCorp launches counter initiatives one after another, scaled by power', () => {
+  let state = { ...opened(), metrics: { employment: 50, housing: 50, food: 50 } };
+  assert.deepEqual(utopia.launchedCounters(state), [], 'nothing at first');
+  for (let second = 0; second < 30; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.deepEqual(utopia.launchedCounters(state).map(counter => counter.id), ['monoculture'], 'Bananas Inc. after 30 seconds');
+  const counter = utopiaContent.counterInitiatives[0];
+  assert.ok(Math.abs(utopia.counterRate(state, counter) - 0.15) < 1e-12, '0.2 × 75% power');
+  assert.ok(Math.abs(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 50 } }, counter) - 0.1) < 1e-12, '0.2 × 50%');
+  assert.equal(utopia.counterRate({ ...state, corpPower: { ...state.corpPower, bananas: 0 } }, counter), 0, 'stopped once defeated');
+  const next = utopia.tickUtopia(state, () => 0.99);
+  assert.ok(Math.abs(next.metrics.food - (state.metrics.food - 0.15)) < 1e-9, 'the counter initiative');
+  assert.deepEqual(utopia.launchedCounters({ ...state, megacorpSeconds: 150 }).length, 3, 'all three after 150 seconds');
+  assert.deepEqual(utopia.launchedCounters({ ...state, perks: ['utopia-blueprint'], megacorpSeconds: 500 }), [], 'only once MegaCorp is visible');
+});
+
+test('each utopia bar shows its current change per second', () => {
+  let state = { ...opened(), running: ['career-match'], megacorpSeconds: 90 };
+  assert.ok(Math.abs(utopia.metricRate(state, 'employment') - (0.15 - 0.15)) < 1e-12, 'initiative − counter initiative');
+  assert.ok(Math.abs(utopia.metricRate(state, 'food') - -0.15) < 1e-12);
+  assert.equal(utopia.metricRate({ ...state, perks: [] }, 'food'), 0, 'nothing moves while Utopia is locked');
+  const before = state.metrics.housing;
+  assert.ok(Math.abs(utopia.tickUtopia(state, () => 0.99).metrics.housing - (before + utopia.metricRate(state, 'housing'))) < 1e-9, 'matches the tick');
+});
+
+test('duels: a tug-of-war bar; win costs MegaCorp 5% power, losing costs 5 credibility', () => {
+  assert.equal(utopia.startDuel({ ...opened(), perks: ['utopia-blueprint'] }), null, 'only once MegaCorp is known');
+  let state = utopia.startDuel(opened());
+  assert.deepEqual(state.duel, { startedBy: 'player', result: null });
+  assert.equal(utopia.startDuel(state), null, 'one duel at a time');
+  // The bar: +1.2 per click, −5 per second.
+  assert.deepEqual(utopia.duelStep(50, 1, 0), { bar: 51.2, result: null });
+  assert.deepEqual(utopia.duelStep(50, 0, 1), { bar: 45, result: null });
+  assert.deepEqual(utopia.duelStep(99.5, 1, 0), { bar: 100, result: 'won' });
+  assert.deepEqual(utopia.duelStep(0.3, 0, 0.1), { bar: 0, result: 'lost' });
+  const won = utopia.finishDuel(state, true);
+  assert.deepEqual(won.corpPower, { bananas: 70, mississippi: 70, edison: 70 });
+  assert.equal(won.duel.result, 'won');
+  assert.equal(utopia.finishDuel(won, true), null, 'decided only once');
+  const lost = utopia.finishDuel(state, false);
+  assert.equal(lost.integrity, 45);
+  const closed = utopia.closeDuel(won);
+  assert.equal(closed.duel, null);
+  assert.equal(utopia.canDuel(closed), false, '30 seconds cooldown');
+  let later = closed;
+  for (let second = 0; second < 30; second++) later = utopia.tickUtopia({ ...later, nextAttack: 99 }, () => 0.99);
+  assert.equal(utopia.canDuel(later), true);
+  // MegaCorp challenges you instead of playing a card with a 15% chance.
+  const challenged = utopia.tickUtopia({ ...opened(), nextAttack: 1 }, () => 0.1);
+  assert.deepEqual(challenged.duel, { startedBy: 'megacorp', result: null });
+  const paused = utopia.tickUtopia({ ...challenged, nextAttack: 1 }, () => 0.99);
+  assert.equal(paused.attackLog.length, 0, 'no MegaCorp moves while a duel is open');
+});
+
+test('level 3 is won with every bar at 100% and lost once all of them drop to 0%', () => {
+  const nearlyWon = { ...opened(), perks: ['utopia-blueprint'], metrics: { employment: 100, housing: 100, food: 100 } };
+  assert.equal(utopia.levelOutcome(nearlyWon), 'won');
+  assert.equal(utopia.levelOutcome({ ...nearlyWon, perks: [] }), null, 'only once Utopia is open');
+  assert.equal(utopia.levelOutcome({ ...nearlyWon, metrics: { employment: 100, housing: 99.9, food: 100 } }), null, 'all three are needed');
+  assert.equal(utopia.tickUtopia({ ...opened(), metrics: { employment: 0.005, housing: 50, food: 50 } }, () => 0.99).outcome, null, 'one bar at 0% is not enough');
+  const lost = utopia.tickUtopia({ ...opened(), metrics: { employment: 0, housing: 0, food: 0 } }, () => 0.99);
+  assert.equal(lost.outcome, 'lost', 'all three dropped to 0%');
+  assert.deepEqual(utopia.tickUtopia(lost, () => 0.99), lost, 'the game stops once decided');
+  assert.equal(utopia.playPlayerCard(lost, 'antitrust'), null, 'no more moves');
+  const decided = { ...nearlyWon, outcome: 'won' };
+  assert.equal(utopia.dismissOutcome(decided).outcomeSeen, true);
+  assert.equal(utopia.dismissOutcome(lost), null, 'game over has no dialog to close');
+});
+
+test('Hyper-Scaling multiplies TCA and budget per second by ten for 5,000,000', () => {
+  assert.equal(utopia.activateUtopiaPerk({ ...opened(), actions: 309999999 }, 'hyper-scaling'), null, 'needs 310M TCA');
+  const base = { ...opened(), actions: 310000000, actionRate: 13000, budgetRate: 13000 };
+  const boosted = utopia.activateUtopiaPerk(base, 'hyper-scaling');
+  assert.equal(boosted.budget, base.budget - 5000000);
+  assert.equal(utopia.actionsPerSecond(boosted), 130000);
+  assert.equal(utopia.budgetPerSecond(boosted), 130000);
+  const next = utopia.tickUtopia({ ...boosted, nextAttack: 99 }, () => 0.99);
+  assert.equal(next.actions, boosted.actions + 130000);
+  assert.equal(utopia.activateUtopiaPerk({ ...base, budget: 4999999 }, 'hyper-scaling'), null, 'costs 5,000,000');
+});
+
+test('Battle Cry (Rally Network perk, 10M) pushes the duel bar by 2% per click for 15 seconds', () => {
+  assert.equal(utopia.cardBlocker(opened(), 'battle-cry'), 'Needs its perk');
+  const perk = utopia.activateUtopiaPerk(opened(), 'rally-network');
+  assert.equal(perk.budget, opened().budget - 10000000);
+  assert.deepEqual(utopia.duelBoostCards(perk).map(card => card.id), ['battle-cry']);
+  assert.equal(utopia.duelClickGain(perk), 1.2, 'normal push');
+  let state = utopia.playPlayerCard(utopia.startDuel(perk), 'battle-cry');
+  assert.equal(utopia.duelClickGain(state), 2, 'boosted push');
+  assert.deepEqual(utopia.duelStep(50, 1, 0, utopia.duelClickGain(state)), { bar: 52, result: null });
+  for (let second = 0; second < 15; second++) state = utopia.tickUtopia(state, () => 0.99);
+  assert.equal(utopia.duelClickGain(state), 1.2, 'over after 15 seconds');
+  assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'battle-cry')), 'Battle push +2% per click for 15s');
+});
+
+test('Shut It Down (Rapid Response Team perk, 10M) stops a running MegaCorp move you pick, every 120 seconds', () => {
+  const perk = utopia.activateUtopiaPerk(opened(), 'rapid-response');
+  assert.equal(perk.budget, opened().budget - 10000000);
+  assert.equal(utopia.cardBlocker(perk, 'shut-it-down'), 'No running MegaCorp move');
+  const attacked = { ...perk, effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 20 }, { cardId: 'rent-tax-cut', remaining: 10 }, { cardId: 'bribery', corpId: 'edison', remaining: 50 }] };
+  assert.equal(utopia.cardBlocker(attacked, 'shut-it-down'), 'Pick a running MegaCorp move above');
+  assert.equal(utopia.playPlayerCard(attacked, 'shut-it-down'), null, 'not played like a normal card');
+  assert.equal(utopia.canCancelEffect(attacked, 1), false, 'your own effects cannot be stopped');
+  assert.equal(utopia.canCancelEffect(attacked, 0), true);
+  const stopped = utopia.cancelMegacorpEffect(attacked, 0);
+  assert.deepEqual(stopped.effects.map(active => active.cardId), ['rent-tax-cut', 'bribery'], 'the picked warehouse grab is gone');
+  assert.equal(utopia.cardBlocker(stopped, 'shut-it-down'), 'Ready in 120s');
+  assert.equal(utopia.cancelMegacorpEffect(stopped, 1), null, 'cooling down');
+  assert.equal(utopia.canCancelEffect({ ...attacked, perks: ['utopia-blueprint', 'opposition-research'] }, 0), false, 'needs the perk');
+});
+
+test('Pop-Up Homes (Prefab Factory perk): Housing +3% per second for 5 seconds', () => {
+  const perk = utopia.activateUtopiaPerk(opened(), 'prefab-factory');
+  assert.equal(perk.budget, opened().budget - 5000000);
+  let state = utopia.playPlayerCard({ ...perk, metrics: { employment: 50, housing: 50, food: 50 } }, 'pop-up-homes');
+  for (let second = 0; second < 5; second++) state = utopia.tickUtopia({ ...state, nextAttack: 99 }, () => 0.99);
+  assert.ok(Math.abs(state.metrics.housing - (50 + 5 * 3)) < 1e-9, '+15% over 5 seconds');
+  assert.deepEqual(state.effects, []);
+  assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'pop-up-homes')), 'Housing +3%/s for 5s');
+});
+
+test('a fully defeated MegaCorp stops battles, moves and counter initiatives', () => {
+  const beaten = { ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 }, megacorpSeconds: 500, nextAttack: 1,
+    effects: [{ cardId: 'warehouse-grab', corpId: 'mississippi', remaining: 20 }, { cardId: 'rent-tax-cut', remaining: 10 }] };
+  assert.equal(utopia.megacorpDefeated(beaten), true);
+  assert.equal(utopia.megacorpDefeated(opened()), false);
+  assert.equal(utopia.canDuel(beaten), false, 'no battles');
+  assert.deepEqual(utopia.launchedCounters(beaten), [], 'no counter initiatives');
+  const next = utopia.tickUtopia(beaten, () => 0.1);
+  assert.equal(next.duel, null, 'MegaCorp cannot challenge you');
+  assert.deepEqual(next.attackLog, [], 'no more moves');
+  assert.deepEqual(next.effects.map(active => active.cardId), ['rent-tax-cut'], 'its running moves end, yours stay');
+});
+
+test('winning level 3 shows a summary of all three levels', () => {
+  const game = require('../src/app/levels/level-one/game/game.ts');
+  const level1 = launched.level1Summary({ ...game.newGame(), seconds: 1800, deployments: 12, bugCount: 7, actions: 40000 });
+  assert.equal(level1.level, 1);
+  assert.deepEqual(level1.facts.slice(0, 1), [{ label: 'Time', value: '30 min' }]);
+  assert.ok(level1.facts.some(fact => fact.label === 'Deployments' && fact.value === '12'));
+  const level2 = launched.level2Summary(liveState({ seconds: 7200, actions: 300000000 }));
+  assert.equal(level2.level, 2);
+  assert.ok(level2.facts.some(fact => fact.label === 'Coding actions' && fact.value === '300,000,000'));
+  // Played through: both summaries travel into level 3.
+  let state = utopia.newUtopia(undefined, [level1, level2]);
+  state = utopia.playPlayerCard({ ...state, perks: ['utopia-blueprint', 'opposition-research'] }, 'antitrust');
+  state = utopia.finishDuel(utopia.startDuel(state), true);
+  const summary = utopia.gameSummary(state);
+  assert.deepEqual(summary.map(entry => entry.level), [1, 2, 3]);
+  assert.equal(summary[0], level1);
+  const facts = Object.fromEntries(summary[2].facts.map(fact => [fact.label, fact.value]));
+  assert.equal(facts['Battles'], '1 (1 won, 0 lost)');
+  assert.equal(facts['Your moves'], '1');
+  // Skipped levels (dev buttons) are marked.
+  assert.equal(utopia.gameSummary(utopia.newUtopia())[0].facts[0].label, 'Skipped');
+});
+
+test('the MegaCorp avatar shows the average power of the corporations still standing', () => {
+  assert.equal(utopia.megacorpPower(opened()), 75);
+  assert.equal(utopia.megacorpPower({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 6 } }), 6, 'defeated ones do not pull it down');
+  assert.equal(utopia.megacorpPower({ ...opened(), corpPower: { bananas: 40, mississippi: 0, edison: 20 } }), 30);
+  assert.equal(utopia.megacorpPower({ ...opened(), corpPower: { bananas: 0, mississippi: 0, edison: 0 } }), 0);
+});
+
+test('level 3 saves and loads', () => {
+  const store = memoryStorage();
+  const state = { ...opened(), running: ['career-match'], built: ['career-match'], attackLog: [{ cardId: 'propaganda', corpId: 'bananas' }] };
+  storage.saveUtopia(store, state);
+  assert.deepEqual(storage.loadUtopia(store), state);
+  assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');
 });
 
 // ---------- report ----------

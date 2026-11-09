@@ -2,13 +2,38 @@
     @if (showIntro()) {
         <app-intro (dismissed)="dismissIntro()" />
     }
-    @if (launched(); as live) {
+    @if (utopia(); as world) {
+        <main class="level-two level-three">
+            @if (saveWarning()) {
+                <div class="console-line error" role="status">{{ saveWarning() }}</div>
+            }
+            @if (world.outcome === 'lost') {
+                <app-game-over (retry)="retryLevelThree()" />
+            }
+            @if (finalSummary(); as summary) {
+                <app-utopia-won [summary]="summary" (dismissed)="dismissUtopiaWon()" />
+            }
+            @if (world.duel; as duel) {
+                <app-duel-dialog [duel]="duel" [clickGain]="duelGain()" [boosts]="duelBoosts()" (boosted)="playCard($event)"
+                                 (finished)="finishDuel($event)" (closed)="closeDuel()" />
+            }
+            <app-level-three [state]="world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (effectCancelled)="cancelEffect($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
+                             (perkActivated)="activateUtopiaPerk($event)" />
+            <footer><span>LET’S FIX THE WORLD GAME / LEVEL 3</span>
+                <span class="footer-actions">
+                    <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
+                </span>
+            </footer>
+        </main>
+    } @else if (launched(); as live) {
         <main class="level-two">
             @if (pendingEvent(); as pending) {
                 <app-event-dialog [event]="pending.event" [canAccept]="pending.canAccept" (answered)="answerEvent($event)" />
             }
             @if (victory(); as summary) {
-                <app-victory [summary]="summary" (dismissed)="dismissVictory()" />
+                <app-victory [summary]="summary" [levels]="config" (dismissed)="dismissVictory()"
+                             (restartLevelOne)="restartLevelOne()" (restartLevelTwo)="restartLevelTwo()"
+                             (startLevelThree)="startLevelThree()" />
             }
             <section class="console news-ticker" aria-label="World news">
                 <div class="console-body" role="status" aria-live="polite" tabindex="0">
@@ -20,25 +45,22 @@
                     }
                 </div>
             </section>
-            <app-level-two [state]="live" [fastEpics]="devMode()" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
+            <app-level-two [state]="live" (perkActivated)="activateLaunchedPerk($event)" (epicStarted)="startEpic($event)"
                            (productActivated)="activateProduct($event)" (focusChanged)="setFocus($event)"
                            (slotRented)="rentSlot($event)" (rentalEnded)="endRental($event)"
                            (tegridyBought)="buyTegridy()" (programStarted)="startProgram($event)"
                            (programStopped)="stopProgram($event)" (protestResolved)="resolveProtest($event)"
                            (productUpgraded)="upgradeProduct($event)" (lawsuitSettled)="settleLawsuit()"
                            (lawsuitFought)="fightLawsuit()" (pitched)="pitch()" />
-            <footer><span>LIVE / THE PLATFORM IS IN PRODUCTION</span>
+            <footer><span>LET’S FIX THE WORLD GAME / LEVEL 2</span>
                 <span class="footer-actions">
-                    <button id="dev-mode-live" class="dev-toggle" type="button" [class.on]="devMode()" [attr.aria-pressed]="devMode()"
-                            title="Dev mode: epics take 5 seconds; switching on adds 1,000,000 actions and 1,000,000 budget"
-                            (click)="toggleDevMode()">DEV {{ devMode() ? 'ON' : 'OFF' }}</button>
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
                 </span>
             </footer>
         </main>
     } @else {
     @if (view().canLaunch) {
-        <app-launch (launched)="launchApplication()" />
+        <app-launch [nextLevelEnabled]="config.levelTwoEnabled" (launched)="launchApplication()" />
     }
     <main>
         @let state = view();
@@ -90,15 +112,9 @@
                        [multiAgent]="state.multiAgent" [agentTargets]="game().agentTargets"
                        (itemSelected)="select($event)" (agentAssigned)="assignAgent($event)" />
         </div>
-        <footer><span>SPRINT / A LITTLE GAME ABOUT MAKING THINGS</span>
+        <footer><span>LET’S FIX THE WORLD GAME / LEVEL 1</span>
             <span class="footer-actions">
-                <button id="dev-mode" class="dev-toggle" type="button" [class.on]="devMode()" [attr.aria-pressed]="devMode()"
-                        title="Dev mode: every Write code / Fix bug click counts as 30 actions"
-                        (click)="toggleDevMode()">DEV {{ devMode() ? 'ON' : 'OFF' }}</button>
-                <button id="skip-level" class="dev-toggle" type="button"
-                        title="Dev: jump straight to level 2 with 34,000 actions and 3,000 budget"
-                        (click)="skipLevel()">SKIP LEVEL</button>
-                <button id="reset" class="reset" type="button" (click)="reset()">Reset sprint</button>
+                <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
             </span>
         </footer>
     </main>

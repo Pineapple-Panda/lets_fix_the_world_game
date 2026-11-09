@@ -1,40 +1,47 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
-import { ActionBaseComponent } from './components/action-base/action-base';
-import { BoardComponent } from './components/board/board';
-import { EarlComponent } from './components/earl/earl';
-import { IntroComponent } from './components/intro/intro';
-import { LaunchComponent } from './components/launch/launch';
-import { LevelTwoComponent } from './components/level-two/level-two';
-import { PerksComponent } from './components/perks/perks';
-import { StatsComponent } from './components/stats/stats';
-import { VictoryComponent } from './components/victory/victory';
-import { EventDialogComponent } from './components/event-dialog/event-dialog';
+import { ActionBaseComponent } from './levels/level-one/components/action-base/action-base';
+import { BoardComponent } from './levels/level-one/components/board/board';
+import { EarlComponent } from './levels/level-one/components/earl/earl';
+import { IntroComponent } from './levels/level-one/components/intro/intro';
+import { LaunchComponent } from './levels/level-one/components/launch/launch';
+import { LevelTwoComponent } from './levels/level-two/components/level-two/level-two';
+import { PerksComponent } from './levels/level-one/components/perks/perks';
+import { StatsComponent } from './levels/level-one/components/stats/stats';
+import { VictoryComponent } from './levels/level-two/components/victory/victory';
+import { EventDialogComponent } from './levels/level-two/components/event-dialog/event-dialog';
+import { LevelThreeComponent } from './levels/level-three/components/level-three/level-three';
+import { DuelDialogComponent } from './levels/level-three/components/duel-dialog/duel-dialog';
+import { GameOverComponent } from './levels/level-three/components/game-over/game-over';
+import { UtopiaWonComponent } from './levels/level-three/components/utopia-won/utopia-won';
+import {
+  activateUtopiaPerk, cancelMegacorpEffect, gameSummary, cardBlocker, cardSummary, closeDuel, dismissOutcome, duelBoostCards, duelClickGain, finishDuel, initializeInitiative, newUtopia, playPlayerCard, startDuel, startInitiative, stopInitiative, tickUtopia
+} from './levels/level-three/game/utopia';
+import type { UtopiaGame } from './levels/level-three/models/utopia.model';
 import {
   activatePerk, activePerks, addAssistant, addBug, assignAgent, assistantCount, assistantLimit,
   assistantOutput, autoCoverageRate, clicksPerPress, autoCoverageUpgradeCost, autoDeploy, automate, automationRegressions, boardColumns, bugChance, canDeploy,
   canGenerateBugs, coverageCost, coveragePercent, coverageStep, coverageUpgradeStep, currentAutomationRate, deploy,
   deploymentBudgetReward, improveCoverage, manualCoverageUpgradeCost, newGame, nextAssistantCount, nextAssistantUpgrade, openBugs,
   openPerks, perkUnlocked, releaseTasksDone, releaseTasksOf, selectedWorkItem, selectItem, upgradeAssistants,
-  upgradeAutoCoverage, upgradeManualCoverage, work
-} from './game/game';
+  upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame
+} from './levels/level-one/game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, devBoost, dismissVictory, victorySummary, worldFixed, pitch, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
-  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './game/launched';
-import { newsFeed } from './game/news';
-import { loadGame, loadLaunched, saveGame, saveKey, saveLaunched } from './game/storage';
-import type { AppView } from './models/app-view.model';
-import type { Game } from './models/game.model';
-import type { Item } from './models/item.model';
-import type { LaunchedGame } from './models/launched.model';
-import type { PerkId } from './models/perk.model';
-import { formatVersion, nextVersion } from './models/version.model';
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched } from './levels/level-two/game/launched';
+import { newsFeed } from './levels/level-two/game/news';
+import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './shared/game/storage';
+import type { AppView } from './levels/level-one/models/app-view.model';
+import type { Game } from './levels/level-one/models/game.model';
+import type { Item } from './levels/level-one/models/item.model';
+import type { LaunchedGame } from './levels/level-two/models/launched.model';
+import type { PerkId } from './levels/level-one/models/perk.model';
+import { formatVersion, nextVersion } from './levels/level-one/models/version.model';
+import { gameConfig } from './game.config';
 
-/** Actions per click while dev mode is on. */
-const devModeActions = 30;
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent, DuelDialogComponent, GameOverComponent, UtopiaWonComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
@@ -47,14 +54,30 @@ export class AppComponent {
 
   readonly saveWarning = signal('');
   readonly showIntro = signal(false);
-  /** Dev mode: every Write code / Fix bug click counts as `devModeActions` actions. Not saved. */
-  readonly devMode = signal(false);
+  /** Which levels can be played. */
+  protected readonly config = gameConfig;
   /** Level 2 state; null while the player is still in level 1. Must be declared before `game`, which restores it. */
   readonly launched = signal<LaunchedGame | null>(null);
+  /** Level 3 state; null while the player is in level 1 or 2. Also restored by `game`. */
+  readonly utopia = signal<UtopiaGame | null>(null);
   /** Level 2 news ticker. */
   readonly news = computed(() => {
     const live = this.launched();
     return live ? newsFeed(live) : [];
+  });
+  /** Level 3 duel: points per push right now, and the boost moves you can use in the dialog. */
+  /** The summary of all three levels, while the "utopia achieved" dialog is due. */
+  readonly finalSummary = computed(() => {
+    const world = this.utopia();
+    return world && world.outcome === 'won' && !world.outcomeSeen ? gameSummary(world) : null;
+  });
+  readonly duelGain = computed(() => {
+    const world = this.utopia();
+    return world ? duelClickGain(world) : 0;
+  });
+  readonly duelBoosts = computed(() => {
+    const world = this.utopia();
+    return world ? duelBoostCards(world).map(card => ({ id: card.id, name: card.name, summary: cardSummary(card), blocker: cardBlocker(world, card.id) })) : [];
   });
   /** The special event waiting for an answer (not while the victory dialog is open). */
   readonly pendingEvent = computed(() => {
@@ -160,9 +183,16 @@ export class AppComponent {
     this.destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
 
     const timer = setInterval(() => {
+      const utopia = this.utopia();
+      if (utopia) {
+        const next = tickUtopia(utopia);
+        this.utopia.set(next);
+        this.persistUtopia(next);
+        return;
+      }
       const launched = this.launched();
       if (launched) {
-        const next = tickLaunched(launched, Math.random, this.devMode());
+        const next = tickLaunched(launched, Math.random);
         this.launched.set(next);
         this.persistLaunched(next);
         return;
@@ -200,12 +230,10 @@ export class AppComponent {
 
   code(): void {
     if (!this.view().selected) return;
-    const devMode = this.devMode();
     this.update(game => {
-      // Each performance upgrade adds one extra click; in dev mode every click is worth 30 actions.
+      // Each performance upgrade adds one extra click.
       // Only the work the item still needs is counted: surplus clicks are lost, not credited as actions.
-      const amount = clicksPerPress(game) * (devMode ? devModeActions : 1);
-      work(game, game.selected, amount);
+      work(game, game.selected, clicksPerPress(game));
     });
   }
 
@@ -258,7 +286,7 @@ export class AppComponent {
   }
 
   reset(): void {
-    if (window.confirm('Reset all sprint progress, including saved data?')) {
+    if (window.confirm('Reset the whole game, including saved data?')) {
       try {
         this.savedSnapshot = window.localStorage.getItem(saveKey);
         this.storageBlocked = false;
@@ -266,24 +294,25 @@ export class AppComponent {
         this.storageBlocked = true;
         this.saveWarning.set('Unable to access browser storage. Progress is not being saved.');
       }
-      this.launched.set(null);
-      this.update(() => newGame());
+      this.startFirstLevel();
     }
   }
 
-  /** Dev shortcut: jump to level 2 with 34,000 actions and 3,000 budget. Level 1 progress is dropped. */
-  skipLevel(): void {
-    if (!window.confirm('Skip to level 2? Your level 1 progress will be lost.')) return;
-    const state = skippedLevelTwo();
-    this.showIntro.set(false);
-    this.launched.set(state);
-    this.persistLaunched(state);
-  }
-
-  toggleDevMode(): void {
-    this.devMode.update(on => !on);
-    // In level 2, switching dev mode on also grants +1,000,000 actions and +1,000,000 budget.
-    if (this.devMode()) this.updateLaunched(state => devBoost(state));
+  /** A new game in the first level the game config enables. */
+  private startFirstLevel(): void {
+    this.launched.set(null);
+    this.utopia.set(null);
+    this.update(() => newGame());
+    if (gameConfig.levelOneEnabled) return;
+    if (gameConfig.levelTwoEnabled) {
+      const state = skippedLevelTwo();
+      this.launched.set(state);
+      this.persistLaunched(state);
+    } else if (gameConfig.levelThreeEnabled) {
+      const state = newUtopia();
+      this.utopia.set(state);
+      this.persistUtopia(state);
+    }
   }
 
   activateLaunchedPerk(id: string): void {
@@ -300,6 +329,84 @@ export class AppComponent {
 
   pitch(): void {
     this.updateLaunched(state => pitch(state));
+  }
+
+  /** After completing level 2: a new run of level 1 with 10,000 TCA. */
+  restartLevelOne(): void {
+    if (!gameConfig.levelOneEnabled) return;
+    this.launched.set(null);
+    this.update(() => headStartGame());
+  }
+
+  /** After completing level 2: a new run of level 2 with 10,000,000 TCA and 20,000,000 budget. */
+  restartLevelTwo(): void {
+    if (!gameConfig.levelTwoEnabled) return;
+    const state = replayLevelTwo();
+    this.launched.set(state);
+    this.persistLaunched(state);
+  }
+
+  /** From the victory dialog: leaves level 2 for good; TCA, budget, credibility and the rates per second carry over. */
+  startLevelThree(): void {
+    const live = this.launched();
+    if (!live || !gameConfig.levelThreeEnabled) return;
+    const state = newUtopia({
+      actions: live.actions, budget: live.budget, integrity: live.integrity,
+      actionRate: averageActionsPerSecond(live), budgetRate: averageBudgetPerSecond(live)
+    }, [...live.history, level2Summary(live)]);
+    this.launched.set(null);
+    this.utopia.set(state);
+    this.persistUtopia(state);
+  }
+
+  activateUtopiaPerk(id: string): void {
+    this.updateUtopia(state => activateUtopiaPerk(state, id));
+  }
+
+  /** Level 3 lost: start it again with the TCA, budget and rates you have now. */
+  retryLevelThree(): void {
+    const current = this.utopia();
+    if (!current) return;
+    const state = newUtopia({ actions: current.actions, budget: current.budget, integrity: 50, actionRate: current.actionRate, budgetRate: current.budgetRate },
+      current.history);
+    this.utopia.set(state);
+    this.persistUtopia(state);
+  }
+
+  dismissUtopiaWon(): void {
+    this.updateUtopia(state => dismissOutcome(state));
+  }
+
+  cancelEffect(index: number): void {
+    this.updateUtopia(state => cancelMegacorpEffect(state, index));
+  }
+
+  startDuel(): void {
+    this.updateUtopia(state => startDuel(state));
+  }
+
+  finishDuel(won: boolean): void {
+    this.updateUtopia(state => finishDuel(state, won));
+  }
+
+  closeDuel(): void {
+    this.updateUtopia(state => closeDuel(state));
+  }
+
+  playCard(id: string): void {
+    this.updateUtopia(state => playPlayerCard(state, id));
+  }
+
+  initializeInitiative(id: string): void {
+    this.updateUtopia(state => initializeInitiative(state, id));
+  }
+
+  startInitiative(id: string): void {
+    this.updateUtopia(state => startInitiative(state, id));
+  }
+
+  stopInitiative(id: string): void {
+    this.updateUtopia(state => stopInitiative(state, id));
   }
 
   dismissVictory(): void {
@@ -362,6 +469,7 @@ export class AppComponent {
 
   /** Leaves level 1 for good: the save is reduced to actions and budget. */
   launchApplication(): void {
+    if (!gameConfig.levelTwoEnabled) return;
     const state = launch(this.game());
     if (!state) return;
     this.launched.set(state);
@@ -382,18 +490,44 @@ export class AppComponent {
     }
     // An incompatible or corrupt save is ignored: the player starts over and the next save replaces it.
     this.savedSnapshot = snapshot;
-    const launched = loadLaunched(storage);
+    // A save in a level the game config disables is not resumed.
+    const utopia = gameConfig.levelThreeEnabled ? loadUtopia(storage) : null;
+    if (utopia) {
+      this.utopia.set(utopia);
+      return newGame();
+    }
+    const launched = gameConfig.levelTwoEnabled ? loadLaunched(storage) : null;
     if (launched) {
       this.launched.set(launched);
       return newGame();
     }
-    const savedGame = loadGame(storage);
-    this.showIntro.set(savedGame === null);
-    return savedGame ?? newGame();
+    const savedGame = gameConfig.levelOneEnabled ? loadGame(storage) : null;
+    if (savedGame) return savedGame;
+    if (gameConfig.levelOneEnabled) {
+      this.showIntro.set(true);
+    } else if (gameConfig.levelTwoEnabled) {
+      this.launched.set(skippedLevelTwo());
+    } else if (gameConfig.levelThreeEnabled) {
+      this.utopia.set(newUtopia());
+    }
+    return newGame();
   }
 
   private persistGame(game: Game): void {
     this.persist(storage => saveGame(storage, game));
+  }
+
+  private persistUtopia(state: UtopiaGame): void {
+    this.persist(storage => saveUtopia(storage, state));
+  }
+
+  private updateUtopia(change: (state: UtopiaGame) => UtopiaGame | null): void {
+    const current = this.utopia();
+    if (!current) return;
+    const next = change(current);
+    if (!next) return;
+    this.utopia.set(next);
+    this.persistUtopia(next);
   }
 
   private persistLaunched(state: LaunchedGame): void {
