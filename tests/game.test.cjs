@@ -1641,6 +1641,10 @@ test('every server slot multiplies the actions per second', () => {
   assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 4 }), () => 0).actions, 200, '4 slots: ×4');
   assert.equal(launched.tickLaunched(liveState({ actions: 0, serverSlots: 2, focus: -100 }), () => 0).actions, 178, 'with the slider: 50 × 1.775 × 2');
   assert.equal(launched.averageActionsPerSecond(liveState({ serverSlots: 4 })), 700, '175 on average × 4 slots');
+  assert.equal(launched.averageBudgetPerSecond(liveState({ serverSlots: 4 })), 700, '1 budget per action');
+  const busy = greenWorldActive({ serverSlots: 1, rentals: ['blue-helmets'], programs: [{ id: 'methane-leak-watch', resistance: 0, milestone: 0 }, { id: 'greenwashing-campaign', resistance: 0, milestone: 0 }] });
+  assert.equal(launched.averageBudgetPerSecond(busy), 175 + 500 - 200 + 500, 'payout + rent − upkeep + program income');
+  assert.equal(launched.averageBudgetPerSecond({ ...busy, programs: [{ id: 'methane-leak-watch', resistance: 20, milestone: 0 }] }), 175 + 500, 'a protested program costs nothing');
 });
 
 test('pitching to investors adds budget per click and grows with the income', () => {

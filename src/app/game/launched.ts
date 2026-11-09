@@ -197,6 +197,19 @@ export function averageActionsPerSecond(state: LaunchedGame): number {
   return Math.round((minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots);
 }
 
+/**
+ * Average net budget per second right now, without pitches: the payout for new actions (with the focus slider),
+ * client rent, and the income or upkeep of every program that is working this second.
+ */
+export function averageBudgetPerSecond(state: LaunchedGame): number {
+  const payout = (minActionsPerSecond + maxActionsPerSecond) / 2 * actionBoost(state) * state.serverSlots * budgetPerAction * budgetBoost(state);
+  const programs = state.programs.reduce((total, entry) => {
+    const program = programDefinition(entry.id);
+    return program && programWorking(state, entry) ? total - programUpkeep(state, program) : total;
+  }, 0);
+  return Math.round(payout + rentalIncome(state) + programs);
+}
+
 /** Dev mode: epics take at most this many seconds. */
 export const devEpicDuration = 5;
 export const devBoostActions = 1000000;

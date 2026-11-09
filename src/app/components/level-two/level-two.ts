@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, averageActionsPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -50,6 +50,7 @@ export class LevelTwoComponent {
       nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
       actionsPerSecond: averageActionsPerSecond(state),
+      budgetPerSecond: averageBudgetPerSecond(state),
       pitchValue: pitchValue(state),
       canPitch: canPitch(state),
       // At most five perks: the ones that can be taken right now first, then the next by unlock threshold.
@@ -235,6 +236,11 @@ export class LevelTwoComponent {
   /** 50 → "+50", -50 → "−50", 0 → "±0". */
   protected signed(value: number): string {
     return value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '±0';
+  }
+
+  /** 2544 → "+2,544", -300 → "−300". */
+  protected signedAmount(value: number): string {
+    return (value < 0 ? '−' : '+') + this.format(Math.abs(value));
   }
 
   protected format(value: number): string {
