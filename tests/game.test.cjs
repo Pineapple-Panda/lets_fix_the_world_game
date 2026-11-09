@@ -2112,6 +2112,31 @@ test('level 3 saves and loads', () => {
   assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');
 });
 
+test('a solved application can no longer be sued', () => {
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
+  const solvedWorld = { ...liveState().worldProgress, climate: 100 };
+  const solved = greenWorldActive({ integrity: 90, worldProgress: solvedWorld });
+  assert.equal(launched.productSolved(solved, 'green-world'), true);
+  assert.equal(launched.lawsuitRisk(solved, 'green-world'), false, 'no random lawsuits');
+  assert.equal(launched.lawsuitRisk(greenWorldActive({ integrity: 90, worldProgress: { ...solvedWorld, climate: 99.9 } }), 'green-world'), true);
+  assert.equal(launched.productSolved(liveState({ worldProgress: { ...liveState().worldProgress, hunger: 100, poverty: 99 } }), 'fair-share'), false,
+    'Fair Share needs hunger and poverty');
+
+  // A case that is already open collapses once the application is solved.
+  const caseId = content.lawsuits.findIndex(entry => !entry.special && !entry.program && entry.product === 'green-world');
+  assert.ok(caseId >= 0);
+  const pending = launched.tickLaunched({ ...solved, lawsuit: { caseId, courtSeconds: 40 } }, () => 0.99);
+  assert.equal(pending.lawsuit, null);
+  assert.equal(pending.verdict.won, true);
+  assert.equal(pending.verdict.damages, 0);
+
+  // Turning down the EdisonX donation only sues while one of the three applications is unsolved.
+  const allSolved = liveState({ products: allApps, pendingEvent: 'edisonx-donation', worldProgress: { climate: 100, war: 100, hunger: 100, poverty: 100, corruption: 100 } });
+  assert.equal(launched.answerEvent(allSolved, false).lawsuit, null);
+  const oneOpen = { ...allSolved, worldProgress: { ...allSolved.worldProgress, corruption: 50 } };
+  assert.notEqual(launched.answerEvent(oneOpen, false).lawsuit, null);
+});
+
 // ---------- smoothing ----------
 
 const smoothing = require('../src/app/shared/game/smoothing.ts');
