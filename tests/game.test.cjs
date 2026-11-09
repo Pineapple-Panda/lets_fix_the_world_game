@@ -1339,11 +1339,20 @@ test('a lawsuit freezes the programs until it is settled or won in court', () =>
   const lost = launched.tickLaunched(beforeVerdict, () => 0.99);
   assert.equal(lost.lawsuit, null);
   assert.deepEqual(lost.verdict, { product: 'green-world', plaintiff: 'Bananas Inc.', won: false, damages: 1000000 }, 'a loss costs twice the settlement');
-  assert.equal(lost.budget, beforeVerdict.budget - 1000000);
+  assert.equal(lost.budget, beforeVerdict.budget - 1000000 - 100, 'damages, then the program runs again and pays its upkeep');
   const broke = launched.tickLaunched({ ...beforeVerdict, budget: 300000 }, () => 0.99);
   assert.equal(broke.budget, 0, 'the budget does not drop below 0');
   const next = launched.tickLaunched({ ...lost, integrity: 90 }, () => 0);
   assert.equal(next.verdict, null, 'a new lawsuit clears the old verdict');
+});
+
+test('a new lawsuit freezes the programs in the very second it is filed', () => {
+  const climate = { ...liveState().worldProgress, climate: 30 };
+  const ready = greenWorldActive({ integrity: 90, worldProgress: climate, programs: [{ id: 'reforestation-network', resistance: 0, milestone: 0 }] });
+  const sued = launched.tickLaunched(ready, () => 0);
+  assert.ok(sued.lawsuit, 'filed');
+  assert.equal(sued.worldProgress.climate, 30, 'no progress in the filing second');
+  assert.equal(launched.tickLaunched(sued, () => 0.99).worldProgress.climate, 30, 'nor afterwards');
 });
 
 test('every lawsuit costs and takes 20% more than the one before', () => {

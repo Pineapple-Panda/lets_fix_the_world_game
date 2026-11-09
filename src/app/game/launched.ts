@@ -289,8 +289,9 @@ export function tickLaunched(
     for (const problem of goal.problems) progress[problem] = percent(progress[problem] + epicProgress);
   }
   next.worldProgress = progress;
-  runPrograms(next, random);
+  // Lawsuits first: a case filed this second freezes the sued product's programs right away.
   runLawsuit(next, random);
+  runPrograms(next, random);
   // A citizens assembly keeps integrity at 40% or more.
   if (citizensAssembly(next)) next.integrity = Math.max(assemblyIntegrity, next.integrity);
   // Clients walk out once integrity leaves their range (Green-Left below 70%, EdisonX above 20%).

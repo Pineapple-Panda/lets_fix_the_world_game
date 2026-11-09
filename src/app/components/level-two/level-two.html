@@ -84,9 +84,11 @@
                                     <button class="tool-button protest-button" type="button" [attr.aria-label]="'Talk to the protesters against ' + entry.program.name + ', ' + entry.clicksLeft + ' clicks left'"
                                             (click)="protestResolved.emit(entry.program.id)">Talk to the protesters ({{ entry.clicksLeft }})</button>
                                 } @else if (entry.running) {
-                                    @let paused = entry.unfunded || entry.waitingFor.length > 0;
+                                    @let injunction = !!panel.lawsuit;
+                                    @let paused = entry.unfunded || entry.waitingFor.length > 0 || injunction;
                                     <small [class.panel-warning]="paused" [class.epic-done]="!paused && !panel.frozen">
                                         {{ panel.frozen ? 'Frozen'
+                                            : injunction ? 'Frozen by court injunction'
                                             : entry.waitingFor.length ? 'Paused: needs ' + entry.waitingFor.join(' and ') + ' running'
                                             : entry.unfunded ? 'Paused: not enough budget for the upkeep' : 'Running' }}
                                     </small>
