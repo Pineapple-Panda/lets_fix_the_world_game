@@ -490,8 +490,16 @@ export function programDefinition(id: string): ProgramDefinition | undefined {
   return programs.find(program => program.id === id);
 }
 
+/** Server slots a program takes: 1 (or its own base), times the major version of its product (v2.x needs 2 each). */
+export function programSlotsNeeded(state: LaunchedGame, program: ProgramDefinition): number {
+  return (program.slots ?? 1) * (product(state, program.product)?.major ?? 1);
+}
+
 export function programSlots(state: LaunchedGame): number {
-  return state.programs.reduce((total, entry) => total + (programDefinition(entry.id)?.slots ?? 0), 0);
+  return state.programs.reduce((total, entry) => {
+    const program = programDefinition(entry.id);
+    return total + (program ? programSlotsNeeded(state, program) : 0);
+  }, 0);
 }
 
 /** A product's card works only once the product is active. */
@@ -618,8 +626,9 @@ export function programBlocker(state: LaunchedGame, id: string): string | null {
   }
   const missing = missingPrograms(state, id);
   if (missing.length) return `Needs ${missing.join(' and ')} running`;
-  if ((program.slots ?? 0) > 0 && usedSlots(state) + (program.slots ?? 0) > state.serverSlots) {
-    return `Needs ${program.slots} free server ${program.slots === 1 ? 'slot' : 'slots'}`;
+  const slots = programSlotsNeeded(state, program);
+  if (usedSlots(state) + slots > state.serverSlots) {
+    return `Needs ${slots} free server ${slots === 1 ? 'slot' : 'slots'}`;
   }
   if (state.budget < program.cost) return 'Not enough budget';
   return null;

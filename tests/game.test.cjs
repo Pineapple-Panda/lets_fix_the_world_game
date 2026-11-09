@@ -1381,7 +1381,7 @@ test('Fair Share runs the Mealora delivery service and the fair pricing system f
 test('the free meal service needs v2.0, 30% hunger and both other Fair Share programs running', () => {
   const v2 = { id: 'fair-share', major: 2, minor: 0, active: true };
   const both = [{ id: 'mealora-delivery', resistance: 0, milestone: 0 }, { id: 'hunger-relief-pricing', resistance: 0, milestone: 0 }];
-  const ready = overrides => fairShareActive({ serverSlots: 4, products: [{ id: 'green-world', major: 1, minor: 0, active: true }, v2],
+  const ready = overrides => fairShareActive({ serverSlots: 6, products: [{ id: 'green-world', major: 1, minor: 0, active: true }, v2],
     worldProgress: { ...liveState().worldProgress, hunger: 30 }, programs: both, ...overrides });
   assert.equal(launched.programBlocker(ready(), 'free-meal-service'), null);
   assert.equal(launched.programBlocker(fairShareActive({ programs: both, worldProgress: { ...liveState().worldProgress, hunger: 30 } }), 'free-meal-service'), 'Needs v2.0');
@@ -1645,6 +1645,18 @@ test('every server slot multiplies the actions per second', () => {
   const busy = greenWorldActive({ serverSlots: 1, rentals: ['blue-helmets'], programs: [{ id: 'methane-leak-watch', resistance: 0, milestone: 0 }, { id: 'greenwashing-campaign', resistance: 0, milestone: 0 }] });
   assert.equal(launched.averageBudgetPerSecond(busy), 175 + 500 - 200 + 500, 'payout + rent − upkeep + program income');
   assert.equal(launched.averageBudgetPerSecond({ ...busy, programs: [{ id: 'methane-leak-watch', resistance: 20, milestone: 0 }] }), 175 + 500, 'a protested program costs nothing');
+});
+
+test('every program needs a server slot, times the major version of its product', () => {
+  const content = require('../src/app/game/launched-content.ts');
+  const reforest = content.programs.find(program => program.id === 'reforestation-network');
+  assert.equal(launched.programSlotsNeeded(greenWorldActive(), reforest), 1);
+  const v2 = greenWorldActive({ serverSlots: 3, products: [{ id: 'green-world', major: 2, minor: 0, active: true }] });
+  assert.equal(launched.programSlotsNeeded(v2, reforest), 2, 'v2.x: two slots');
+  const running = launched.startProgram(v2, 'reforestation-network');
+  assert.equal(launched.usedSlots(running), 2);
+  assert.equal(launched.programBlocker(running, 'methane-leak-watch'), 'Needs 2 free server slots');
+  assert.equal(launched.programBlocker(greenWorldActive({ serverSlots: 0 }), 'greenwashing-campaign'), 'Needs 1 free server slot', 'even income programs need a slot');
 });
 
 test('pitching to investors adds budget per click and grows with the income', () => {

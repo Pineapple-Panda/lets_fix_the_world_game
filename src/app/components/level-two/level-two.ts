@@ -6,7 +6,7 @@ import {
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
-  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
+  resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
 import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
@@ -72,6 +72,8 @@ export class LevelTwoComponent {
       load: Math.round(serverLoad(state) * 100),
       running: runningEpics(state),
       rented: rentedSlots(state),
+      programSlots: programSlots(state),
+      usedSlots: usedSlots(state),
       rentalIncome: rentalIncome(state),
       worldProgress: worldProblems.map(problem => ({
         ...problem,
@@ -199,7 +201,7 @@ export class LevelTwoComponent {
           program,
           problemName: problemName(program.problem),
           rate: small(program.rate * boost),
-          terms: this.programTerms(program, small(program.rate * boost), programUpkeep(state, program)),
+          terms: this.programTerms(program, small(program.rate * boost), programUpkeep(state, program), programSlotsNeeded(state, program)),
           running: !!running,
           protest: !!running && inProtest(running),
           clicksLeft: running ? Math.ceil(running.resistance) : 0,
@@ -215,14 +217,14 @@ export class LevelTwoComponent {
   }
 
   /** The cost line of a program: start price, upkeep or income, effect, integrity, slots. */
-  private programTerms(program: ProgramDefinition, rate: number, upkeep: number): { text: string; tone: string }[] {
+  private programTerms(program: ProgramDefinition, rate: number, upkeep: number, slots: number): { text: string; tone: string }[] {
     return [
       program.cost ? { text: `${this.format(program.cost)} to start`, tone: '' } : null,
       upkeep > 0 ? { text: `−${this.format(upkeep)} budget/sec`, tone: '' } : null,
       upkeep < 0 ? { text: `+${this.format(-upkeep)} budget/sec`, tone: 'good' } : null,
       rate ? { text: `${problemName(program.problem)} ${this.rate(rate)}%/sec`, tone: rate > 0 ? 'good' : 'bad' } : null,
       program.integrity ? { text: `Integrity ${this.rate(program.integrity)}/sec`, tone: program.integrity > 0 ? 'good' : 'bad' } : null,
-      program.slots ? { text: `${program.slots} server ${program.slots === 1 ? 'slot' : 'slots'}`, tone: '' } : null,
+      { text: `${slots} server ${slots === 1 ? 'slot' : 'slots'}`, tone: '' },
       program.lawsuitMultiplier ? { text: `Lawsuits ×${program.lawsuitMultiplier}`, tone: 'bad' } : null
     ].filter(term => term !== null);
   }

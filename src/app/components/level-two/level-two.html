@@ -287,17 +287,13 @@
             <h2 class="tool-heading" id="server-title">Server</h2>
             <div class="upgrade-row">
                 <span>Server load</span>
-                <strong id="server-load">{{ v.load }}% · {{ v.running + v.rented }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}@if (v.rented) { ({{ v.rented }} rented) }</strong>
+                <strong id="server-load">{{ v.load }}% · {{ v.usedSlots }}/{{ v.slots }} {{ v.slots === 1 ? 'slot' : 'slots' }}</strong>
             </div>
             <div class="load-track" role="meter" aria-label="Server load" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.load">
                 <div class="load-fill" [class.full]="v.load >= 100" [style.width.%]="v.load"></div>
             </div>
             <small class="upgrade-hint" id="rented-slots">
-                @if (v.rented) {
-                    {{ v.rented }} {{ v.rented === 1 ? 'slot' : 'slots' }} rented
-                } @else {
-                    No slots rented
-                }
+                {{ v.running }} for epics · {{ v.programSlots }} for programs · {{ v.rented }} rented
             </small>
 
             @if (v.infrastructure.length) {

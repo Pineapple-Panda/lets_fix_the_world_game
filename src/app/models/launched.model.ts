@@ -108,7 +108,7 @@ export interface ProgramDefinition {
   rate: number;
   /** Integrity change per second while running. */
   integrity?: number;
-  /** Server slots the program occupies. */
+  /** Server slots the program occupies at v1.x (default 1); multiplied by the product's major version. */
   slots?: number;
   /** Only startable at this integrity or more. */
   minIntegrity?: number;

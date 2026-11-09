@@ -432,7 +432,6 @@ export const programs: ProgramDefinition[] = [
     cost: 400000,
     upkeep: 200,
     rate: 0.004,
-    slots: 1
   },
   {
     id: 'smart-grid-scheduler',
@@ -492,7 +491,6 @@ export const programs: ProgramDefinition[] = [
     cost: 1000000,
     upkeep: 500,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'hunger-relief-pricing',
@@ -527,7 +525,6 @@ export const programs: ProgramDefinition[] = [
     cost: 1200000,
     upkeep: 600,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'essentials-tax-relief',
@@ -562,7 +559,6 @@ export const programs: ProgramDefinition[] = [
     cost: 800000,
     upkeep: 400,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'tax-the-rich',
@@ -585,7 +581,6 @@ export const programs: ProgramDefinition[] = [
     cost: 900000,
     upkeep: 300,
     rate: 0.006,
-    slots: 1
   },
   {
     id: 'whistleblower-harbor',
