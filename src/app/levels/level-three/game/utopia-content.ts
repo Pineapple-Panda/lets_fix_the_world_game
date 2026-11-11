@@ -52,7 +52,9 @@ export const megacorpCards: BattleCard[] = [
     effects: [{ kind: 'heal', amount: 10 }], cooldown: 3 },
   // Counter cards are never played; they answer an instant battle card while they are not resting.
   { id: 'like-a-cow', name: 'How appropriate. You fight like a cow.', description: 'The comeback. Your insult bounces right back.',
-    effects: [{ kind: 'counter', of: 'dairy-farmer' }], cooldown: 3 }
+    effects: [{ kind: 'counter', of: 'dairy-farmer' }], cooldown: 3 },
+  { id: 'i-hate-snakes', name: 'I hate snakes', description: 'Nobody sells a jacket to someone who hates snakes.',
+    effects: [{ kind: 'counter', of: 'leather-jackets' }], cooldown: 3 }
 ];
 
 /** The corporations with their own cards. */
@@ -122,5 +124,7 @@ export const playerCards: PlayerCard[] = [
   { id: 'pop-up-homes', name: 'Pop-Up Homes', description: 'Prefab homes in every empty lot. Hard to argue with.',
     effects: [{ kind: 'heal', amount: 10 }, { kind: 'block', percent: 20 }], cooldown: 2, price: 3 },
   { id: 'dairy-farmer', name: 'You fight like a dairy farmer', description: 'An insult so sharp it cuts. Unless they know the comeback.',
-    effects: [{ kind: 'instant', amount: 10, counter: 'like-a-cow' }], cooldown: 1, price: 2 }
+    effects: [{ kind: 'instant', amount: 10, counter: 'like-a-cow' }], cooldown: 1, price: 2 },
+  { id: 'leather-jackets', name: 'I sell those fine leather jackets', description: 'A sales pitch so smooth it hurts. Unless they hate snakes.',
+    effects: [{ kind: 'instant', amount: 10, counter: 'i-hate-snakes' }], cooldown: 1, price: 2 }
 ];

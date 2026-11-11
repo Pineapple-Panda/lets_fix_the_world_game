@@ -1899,7 +1899,7 @@ test('level 3: credibility carries over; at 0 the battle is lost and you try aga
 test('level 3: one credit per win buys cards in the card shop', () => {
   assert.equal(utopia.ownedCards(fresh()).length, 5, 'the starter cards');
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
-    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['investigative-desk', 4]]);
+    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['investigative-desk', 4]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -1931,6 +1931,12 @@ test('level 3: instant battle hits unless the opponent has the counter; then hal
   const cow = utopiaContent.megacorpCards.find(card => card.id === 'like-a-cow');
   assert.equal(utopia.cardCategory(cow), 'counter');
   assert.equal(utopia.cardSummary(cow), 'counters “You fight like a dairy farmer”');
+  const snakes = utopiaContent.megacorpCards.find(card => card.id === 'i-hate-snakes');
+  assert.equal(utopia.cardSummary(snakes), 'counters “I sell those fine leather jackets”');
+  // Each counter only answers its own instant card.
+  const jackets = { ...fresh(), owned: ['leather-jackets'], hand: ['leather-jackets'], enemy: { ...fresh().enemy, cooldowns: { 'i-hate-snakes': 2 } } };
+  assert.equal(utopia.attack(picked(jackets, 'leather-jackets'), () => 0).enemy.power, 90, 'the cow does not answer the jackets');
+  assert.equal(utopia.attack(picked({ ...jackets, enemy: fresh().enemy }, 'leather-jackets'), () => 0).log[0].counteredBy, 'i-hate-snakes');
   const armed = { ...fresh(), owned: ['dairy-farmer'], hand: ['dairy-farmer', 'antitrust'], credibility: 80 };
   // The corporation has the comeback ready: half of the insult strikes back, the comeback goes to rest.
   const countered = utopia.attack(picked(armed, 'dairy-farmer'), () => 0);

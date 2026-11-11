@@ -90,6 +90,20 @@ import type { CardCategory } from '../../models/utopia.model';
           <circle cx="40" cy="31" r="2.5" stroke-width="2" />
           <path d="M28 37 Q32 40 36 37" stroke-width="2" />
         }
+        @case ('leather-jackets') {
+          <!-- a leather jacket with a price tag -->
+          <path class="art-fill" d="M22 8 L32 14 L42 8 L54 16 L50 30 L46 28 V56 H18 V28 L14 30 L10 16 Z" />
+          <path d="M32 14 V56 M26 22 L32 30 L38 22" stroke-width="2.5" />
+          <path d="M48 40 L58 36 L60 42 L50 46 Z" stroke-width="2" />
+          <circle cx="51" cy="42" r="1" stroke-width="2" />
+        }
+        @case ('i-hate-snakes') {
+          <!-- a snake, crossed out -->
+          <path class="art-fill" d="M14 50 C14 40 30 42 30 34 C30 26 16 28 16 20 C16 12 28 10 34 14 L40 10 L42 18 C36 18 26 16 26 21 C26 26 42 24 42 34 C42 46 24 44 24 50 Z" stroke-width="2.5" />
+          <circle cx="36" cy="14" r="1" stroke-width="2" />
+          <circle cx="32" cy="32" r="26" stroke-width="3" />
+          <line x1="14" y1="14" x2="50" y2="50" stroke-width="3" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />
