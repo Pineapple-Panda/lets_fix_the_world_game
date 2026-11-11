@@ -1854,16 +1854,62 @@ footer {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
     --step: 380ms;
+}
+
+/* One side of the battle card: the corporation's latest attack, or yours. */
+.stage-side {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.stage-label {
+    color: var(--muted);
+    font: 600 12px var(--sans);
+    text-align: right;
+}
+
+.stage-side:not(.from-enemy) .stage-label {
+    color: var(--green);
+}
+
+.from-enemy .stage-label {
+    color: var(--red);
+}
+
+.stage-vs {
+    color: var(--faint);
+    font: 700 11px var(--mono);
+    letter-spacing: 2px;
 }
 
 .stage-row {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
+}
+
+/* Smaller cards in the middle, same 2:3 shape. */
+.stage-card {
+    flex-basis: 78px;
+    width: 78px;
+    padding: 5px 6px;
+}
+
+.stage-card .card-art {
+    height: 22px;
+}
+
+/* The attack before the newest one stands still. */
+.settled .stage-card,
+.settled .result-chip {
+    animation: none;
 }
 
 .stage-card {
@@ -1879,7 +1925,7 @@ footer {
 .stage-results {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
 }
 
@@ -1897,9 +1943,20 @@ footer {
 .result-chip[data-kind="block"], .result-chip[data-kind="blocked"] { background: color-mix(in srgb, var(--blue) 30%, var(--surface-2)); color: #8cc4ff; }
 .result-chip[data-kind="recoil"] { background: color-mix(in srgb, #d77bff 30%, var(--surface-2)); color: #e3a8ff; }
 
-.stage-empty {
+.stage-empty p {
     margin: 0;
     color: var(--faint);
+}
+
+@media (max-width: 760px) {
+    .stage-side {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+
+    .stage-label {
+        text-align: center;
+    }
 }
 
 @keyframes stage-in-up {
@@ -2271,6 +2328,37 @@ footer {
 
 .shop-close {
     width: 100%;
+}
+
+/* Filter buttons above the shop cards, tinted in their category colour. */
+.shop-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.shop-filter {
+    padding: 4px 10px;
+    border: 1px solid color-mix(in srgb, var(--cat, var(--muted)) 50%, var(--line));
+    border-radius: 999px;
+    background: transparent;
+    color: var(--cat, var(--ink));
+    font: 600 12px var(--sans);
+    cursor: pointer;
+}
+
+.shop-filter:hover {
+    background: color-mix(in srgb, var(--cat, var(--muted)) 15%, transparent);
+}
+
+.shop-filter.active {
+    background: color-mix(in srgb, var(--cat, var(--muted)) 30%, transparent);
+    border-color: var(--cat, var(--ink));
+}
+
+.shop-none {
+    color: var(--faint);
 }
 
 .shop-subheading {

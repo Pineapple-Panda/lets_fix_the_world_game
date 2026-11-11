@@ -447,8 +447,8 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
 // ---------- The end ----------
 
 /**
- * Game over: level 3 starts again from scratch. The campaign, wins, credits, bought and learned cards are gone; only
- * the time played, the losses and the counters of the final summary carry on.
+ * Game over: level 3 starts again from scratch. The campaign, wins, losses, credits, bought and learned cards are gone;
+ * only the time played and the counters of the final summary (attempts, cards played, damage) carry on.
  */
 export function retry(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
   if (state.outcome !== 'lost') return null;
@@ -456,7 +456,6 @@ export function retry(state: UtopiaGame, random: () => number = Math.random): Ut
   return {
     ...fresh,
     seconds: state.seconds,
-    losses: state.losses,
     stats: { ...state.stats, attempts: state.stats.attempts + 1 }
   };
 }

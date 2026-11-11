@@ -96,16 +96,18 @@ export class LevelThreeComponent {
       // Something in the shop you can afford: the shop button shows a dot.
       affordable: shopCards().some(card => !buyBlocker(state, card.id)),
       log: state.log.map(entry => this.describe(entry)),
-      stage: this.stage(state)
+      // The battle card: the corporation's latest attack in this battle on top, yours below.
+      stageEnemy: this.stage(state, state.log.find(entry => entry.by === 'enemy' && entry.corpId === state.enemy.corpId)),
+      stagePlayer: this.stage(state, state.log.find(entry => entry.by === 'player')),
+      newest: state.log[0]?.id ?? 0
     };
   });
 
   /** Order in which played cards are applied on the battle card. */
   private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4 };
 
-  /** The latest attack for the battle card: its cards in the order they are applied, and what it did. */
-  private stage(state: UtopiaGame) {
-    const latest = state.log[0];
+  /** An attack for the battle card: its cards in the order they are applied, and what it did. */
+  private stage(state: UtopiaGame, latest: Attack | undefined) {
     if (!latest) return null;
     const factor = latest.by === 'enemy' ? (currentStage(state) ? enemyStrength(currentStage(state)!, state.battle) : 1) : 1;
     const cards = latest.cards

@@ -42,7 +42,7 @@ times.
   corporation's power, blockers soften its next attack, healing restores credibility. Played cards rest for a few turns.
 - **Their turn:** a moment later the corporation answers with up to three random cards of its own deck.
 - **Credibility** is your life and carries over from battle to battle; a win heals a little. At 0 it is game over
-  and level 3 starts from scratch: campaign, wins, credits and cards are gone.
+  and level 3 starts from scratch: campaign, wins, losses, credits and cards are gone.
 - **Credits** come from wins, from winning with high credibility, from countering the corporations' instant cards and
   from beating a corporation completely; spend them in the card shop.
 - **Instant battle** cards hit unless the opponent played the matching counter card last turn; then half strikes back.

@@ -1900,7 +1900,8 @@ test('level 3: credibility carries over; at 0 the battle is lost and level 3 sta
   assert.deepEqual([again.stage, again.battle, again.enemy.corpId, again.credibility, again.outcome, again.wins], [0, 0, 'bananas', 100, null, 0],
     'the campaign starts again with full credibility and no wins');
   assert.deepEqual([again.credits, again.owned], [0, []], 'credits, bought and learned cards are gone');
-  assert.deepEqual([again.losses, again.stats.attempts, again.seconds], [1, 2, lost.seconds], 'losses, attempts and time count on for the summary');
+  assert.equal(again.losses, 0, 'the losses start again too');
+  assert.deepEqual([again.stats.attempts, again.seconds], [2, lost.seconds], 'attempts and time count on for the summary');
 });
 
 test('level 3: one credit per win buys cards in the card shop', () => {

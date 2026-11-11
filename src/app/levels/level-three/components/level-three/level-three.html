@@ -54,25 +54,54 @@
             </div>
             <div class="stage">
                 <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">{{ v.yourTurn ? 'Your move' : v.enemy.corp?.name + ' strikes back…' }}</p>
-                @if (v.stage; as current) {
-                @for (stage of [current]; track stage.id) {
-                    <div class="stage-row" [class.from-enemy]="!stage.mine" [attr.aria-label]="(stage.mine ? 'You played ' : stage.by + ' played ') + stage.names">
-                        @for (entry of stage.cards; track entry.card.id; let i = $index) {
-                            <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i">
-                                <app-card-art [id]="entry.card.id" [category]="entry.category" />
-                                <strong>{{ entry.card.name }}</strong>
-                                <small>{{ entry.summary }}</small>
+                @if (v.stageEnemy; as current) {
+                    @for (stage of [current]; track stage.id) {
+                        <div class="stage-side" [class.from-enemy]="!stage.mine" [class.settled]="stage.id !== v.newest"
+                             [attr.aria-label]="(stage.mine ? 'You played ' : stage.by + ' played ') + stage.names">
+                            <span class="stage-label">{{ v.enemy.corp?.name }}</span>
+                            <div class="stage-row">
+                                @for (entry of stage.cards; track entry.card.id; let i = $index) {
+                                    <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i">
+                                        <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                                        <strong>{{ entry.card.name }}</strong>
+                                        <small>{{ entry.summary }}</small>
+                                    </div>
+                                }
                             </div>
-                        }
-                    </div>
-                    <div class="stage-results" [style.--n]="stage.cards.length">
-                        @for (chip of stage.results; track chip.kind) {
-                            <span class="result-chip" [attr.data-kind]="chip.kind">{{ chip.text }}</span>
-                        }
-                    </div>
-                }
+                            <div class="stage-results" [style.--n]="stage.cards.length">
+                                @for (chip of stage.results; track chip.kind) {
+                                    <span class="result-chip" [attr.data-kind]="chip.kind">{{ chip.text }}</span>
+                                }
+                            </div>
+                        </div>
+                    }
                 } @else {
-                    <p class="stage-empty">The battle begins. {{ megaCorpName }} is watching.</p>
+                    <div class="stage-side stage-empty"><span class="stage-label">{{ v.enemy.corp?.name }}</span><p>No move yet.</p></div>
+                }
+                <span class="stage-vs" aria-hidden="true">VS</span>
+                @if (v.stagePlayer; as current) {
+                    @for (stage of [current]; track stage.id) {
+                        <div class="stage-side" [class.from-enemy]="!stage.mine" [class.settled]="stage.id !== v.newest"
+                             [attr.aria-label]="(stage.mine ? 'You played ' : stage.by + ' played ') + stage.names">
+                            <span class="stage-label">You</span>
+                            <div class="stage-row">
+                                @for (entry of stage.cards; track entry.card.id; let i = $index) {
+                                    <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i">
+                                        <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                                        <strong>{{ entry.card.name }}</strong>
+                                        <small>{{ entry.summary }}</small>
+                                    </div>
+                                }
+                            </div>
+                            <div class="stage-results" [style.--n]="stage.cards.length">
+                                @for (chip of stage.results; track chip.kind) {
+                                    <span class="result-chip" [attr.data-kind]="chip.kind">{{ chip.text }}</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                } @else {
+                    <div class="stage-side stage-empty"><span class="stage-label">You</span><p>Pick up to {{ rules.maxCards }} cards and attack.</p></div>
                 }
             </div>
         </div>
