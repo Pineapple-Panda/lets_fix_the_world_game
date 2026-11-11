@@ -8,5 +8,5 @@ export interface GameConfig {
 export const gameConfig: GameConfig = {
   levelOneEnabled: true,
   levelTwoEnabled: true,
-  levelThreeEnabled: true
+  levelThreeEnabled: false
 };
