@@ -2,7 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  buyBlocker, cardCategory, cardSummary, passiveCard, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, megaCorpName } from '../../game/utopia-content';
 import type { Attack, UtopiaGame } from '../../models/utopia.model';
@@ -44,6 +44,8 @@ export class LevelThreeComponent {
         maxPower: state.enemy.maxPower,
         percent: state.enemy.power / state.enemy.maxPower * 100,
         block: state.enemy.block,
+        // Counter cards it played last turn, waiting for your next attack.
+        counters: state.enemy.counters.map(id => enemyCard(state.enemy.corpId, id)?.name ?? id),
         // Its cards, with the turns they still rest.
         deck: enemyDeck(state.enemy.corpId).map(card => ({
           card, category: cardCategory(card), summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0
@@ -52,9 +54,10 @@ export class LevelThreeComponent {
       credibility: Math.round(state.credibility),
       credibilityPercent: state.credibility / battleRules.maxCredibility * 100,
       block: state.block,
+      counters: state.counters.map(id => playerCard(id)?.name ?? id),
       yourTurn: playerTurn(state),
       hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
-        card, category: cardCategory(card), summary: cardSummary(card), selected: state.selected.includes(card.id), passive: passiveCard(card)
+        card, category: cardCategory(card), summary: cardSummary(card), selected: state.selected.includes(card.id)
       })),
       selectedCount: state.selected.length,
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)

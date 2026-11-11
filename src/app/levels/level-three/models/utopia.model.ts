@@ -23,6 +23,8 @@ export interface UtopiaGame {
   cooldowns: Record<string, number>;
   /** Percent of the next enemy attack your blockers absorb. */
   block: number;
+  /** Counter cards you played last turn: they answer the corporation's next attack. */
+  counters: string[];
   /** Whose move it is. The corporation moves one second after you. */
   turn: 'player' | 'enemy';
   /** The latest attacks, newest first. */
@@ -51,6 +53,8 @@ export interface Opponent {
   maxPower: number;
   /** Percent of your next attack its blockers absorb. */
   block: number;
+  /** Counter cards it played last turn: they answer your next attack. */
+  counters: string[];
   /** Its turns until each of its cards can be played again. */
   cooldowns: Record<string, number>;
 }
@@ -85,8 +89,9 @@ export interface UtopiaStats {
 
 /**
  * What a card does. Damage hits the opponent (minus its block); block and heal help the one who plays it.
- * Instant battle: `amount` hits the opponent (no block helps) unless it has the `counter` card available; then half
- * of it strikes back at you. A counter card is passive: it is never played, it answers the instant card `of`.
+ * Instant battle: `amount` hits the opponent (no block helps) unless the opponent played the `counter` card in its last
+ * turn; then half of it strikes back at you. A counter card, once played, waits for the opponent's next attack (like a
+ * block) and answers the instant card `of`.
  */
 export type CardEffect =
   | { kind: 'damage'; amount: number }

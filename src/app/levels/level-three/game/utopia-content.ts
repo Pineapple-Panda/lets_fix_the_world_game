@@ -50,11 +50,11 @@ export const megacorpCards: BattleCard[] = [
     effects: [{ kind: 'block', percent: 40 }], cooldown: 2 },
   { id: 'insider-trading', name: 'Insider Trading', description: 'A little trading between friends refills the war chest.',
     effects: [{ kind: 'heal', amount: 10 }], cooldown: 3 },
-  // Counter cards are never played; they answer an instant battle card while they are not resting.
+  // Counter cards: played like any card, they wait for your next attack and answer one instant battle card.
   { id: 'like-a-cow', name: 'How appropriate. You fight like a cow.', description: 'The comeback. Your insult bounces right back.',
-    effects: [{ kind: 'counter', of: 'dairy-farmer' }], cooldown: 3 },
+    effects: [{ kind: 'counter', of: 'dairy-farmer' }], cooldown: 2 },
   { id: 'i-hate-snakes', name: 'I hate snakes', description: 'Nobody sells a jacket to someone who hates snakes.',
-    effects: [{ kind: 'counter', of: 'leather-jackets' }], cooldown: 3 }
+    effects: [{ kind: 'counter', of: 'leather-jackets' }], cooldown: 2 }
 ];
 
 /** The corporations with their own cards. */

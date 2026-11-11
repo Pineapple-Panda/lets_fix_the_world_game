@@ -85,24 +85,24 @@ function enemyCardById(id: string): BattleCard | undefined {
   return [...corporations.flatMap(corp => corp.cards), ...megacorpCards].find(card => card.id === id);
 }
 
-/** Counter cards are passive: never played, they only answer an instant battle card. */
-export function passiveCard(card: BattleCard): boolean {
-  return card.effects.every(effect => effect.kind === 'counter');
+/** The counter cards among the played ones: they wait for the opponent's next attack. */
+function countersOf(played: BattleCard[]): string[] {
+  return played.filter(card => card.effects.some(effect => effect.kind === 'counter')).map(card => card.id);
 }
 
 interface InstantResult { dealt: number; recoil: number; counteredBy: string | null; usedCounters: BattleCard[] }
 
 /**
- * Instant battle: every instant card hits for its amount (no block helps) unless the defender has its counter card
- * available; then `recoilShare` of it strikes back at the attacker and the counter goes to rest.
+ * Instant battle: every instant card hits for its amount (no block helps) unless the defender played its counter card
+ * last turn (`armed`); then `recoilShare` of it strikes back at the attacker.
  */
-function instantBattle(played: BattleCard[], factor: number, available: BattleCard[]): InstantResult {
+function instantBattle(played: BattleCard[], factor: number, armed: BattleCard[]): InstantResult {
   const result: InstantResult = { dealt: 0, recoil: 0, counteredBy: null, usedCounters: [] };
   for (const card of played) {
     for (const effect of card.effects) {
       if (effect.kind !== 'instant') continue;
       const amount = Math.round(effect.amount * factor);
-      const counter = available.find(entry => !result.usedCounters.includes(entry) &&
+      const counter = armed.find(entry => !result.usedCounters.includes(entry) &&
         entry.effects.some(other => other.kind === 'counter' && other.of === card.id));
       if (counter) {
         result.recoil += Math.round(amount * battleRules.recoilShare);
@@ -116,19 +116,12 @@ function instantBattle(played: BattleCard[], factor: number, available: BattleCa
   return result;
 }
 
-/** Puts used counter cards to rest. */
-function restCounters(cooldowns: Record<string, number>, used: BattleCard[]): Record<string, number> {
-  const next = { ...cooldowns };
-  for (const card of used) if (card.cooldown > 0) next[card.id] = card.cooldown;
-  return next;
-}
-
 // ---------- Setup ----------
 
 function newOpponent(stageIndex: number, battle: number): Opponent {
   const stage = campaign[stageIndex]!;
   const maxPower = stage.power + stage.powerStep * battle;
-  return { corpId: stage.corpId, power: maxPower, maxPower, block: 0, cooldowns: {} };
+  return { corpId: stage.corpId, power: maxPower, maxPower, block: 0, counters: [], cooldowns: {} };
 }
 
 /** Fills the hand with random cards you own that are neither in the hand nor resting. */
@@ -144,7 +137,7 @@ function drawHand(state: UtopiaGame, random: () => number): string[] {
 /** A battle against the corporation of the given station: fresh opponent, fresh hand, no blocks or cooldowns. */
 function startBattle(state: UtopiaGame, stage: number, battle: number, random: () => number): UtopiaGame {
   const next: UtopiaGame = {
-    ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, turn: 'player'
+    ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, counters: [], turn: 'player'
   };
   return { ...next, hand: drawHand(next, random) };
 }
@@ -161,6 +154,7 @@ export function newUtopia(history: LevelSummary[] = [], random: () => number = M
     selected: [],
     cooldowns: {},
     block: 0,
+    counters: [],
     turn: 'player',
     log: [],
     wins: 0,
@@ -184,8 +178,7 @@ export function playerTurn(state: UtopiaGame): boolean {
 
 /** Picks a card of your hand for the next attack, or puts it back. At most `maxCards` at once. */
 export function toggleCard(state: UtopiaGame, id: string): UtopiaGame | null {
-  const card = playerCard(id);
-  if (!playerTurn(state) || !state.hand.includes(id) || !card || passiveCard(card)) return null;
+  if (!playerTurn(state) || !state.hand.includes(id)) return null;
   if (state.selected.includes(id)) return { ...state, selected: state.selected.filter(entry => entry !== id) };
   if (state.selected.length >= battleRules.maxCards) return null;
   return { ...state, selected: [...state.selected, id] };
@@ -221,8 +214,8 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
   if (!playerTurn(state) || !state.selected.length) return null;
   const played = state.selected.map(playerCard).filter((card): card is PlayerCard => !!card);
   const result = resolve(played.flatMap(card => card.effects), 1, state.enemy.block);
-  const available = enemyDeck(state.enemy.corpId).filter(card => !((state.enemy.cooldowns[card.id] ?? 0) > 0));
-  const instant = instantBattle(played, 1, available);
+  const armed = state.enemy.counters.map(id => enemyCard(state.enemy.corpId, id)).filter((card): card is BattleCard => !!card);
+  const instant = instantBattle(played, 1, armed);
   const damage = result.damage + instant.dealt;
   const power = Math.max(0, state.enemy.power - damage);
   const credibility = Math.max(0, Math.min(battleRules.maxCredibility, state.credibility + result.healed) - instant.recoil);
@@ -230,12 +223,14 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     ...state,
     credibility,
     // A blocker is used up by the next attack that does damage.
+    // Its counters answered this attack (or not): they are gone. Yours now wait for its next attack.
     enemy: {
       ...state.enemy, power,
       block: result.damage + result.blocked > 0 ? 0 : state.enemy.block,
-      cooldowns: restCounters(state.enemy.cooldowns, instant.usedCounters)
+      counters: []
     },
     block: Math.min(battleRules.maxBlock, state.block + result.shield),
+    counters: countersOf(played),
     cooldowns: restCards(state.cooldowns, played),
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],
@@ -275,31 +270,30 @@ function winBattle(state: UtopiaGame, random: () => number): UtopiaGame {
 
 // ---------- The corporation's turn ----------
 
-/** The corporation plays 1 to `maxCards` random cards that are not resting (never its passive counter cards). */
+/** The corporation plays 1 to `maxCards` random cards that are not resting. */
 export function enemyAttack(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
   const stage = currentStage(state);
   if (state.outcome !== null || state.turn !== 'enemy' || !stage) return state;
-  const pool = enemyDeck(state.enemy.corpId).filter(card => !passiveCard(card) && !((state.enemy.cooldowns[card.id] ?? 0) > 0));
+  const pool = enemyDeck(state.enemy.corpId).filter(card => !((state.enemy.cooldowns[card.id] ?? 0) > 0));
   const count = Math.min(pool.length, 1 + Math.floor(random() * battleRules.maxCards));
   const played: BattleCard[] = [];
   while (played.length < count) played.push(pool.splice(Math.min(pool.length - 1, Math.floor(random() * pool.length)), 1)[0]!);
   const factor = enemyStrength(stage, state.battle);
   const result = resolve(played.flatMap(card => card.effects), factor, state.block);
-  // Your counter cards answer from your hand.
-  const instant = instantBattle(played, factor, state.hand.map(playerCard).filter((card): card is PlayerCard => !!card));
+  // The counter cards you played last turn answer.
+  const instant = instantBattle(played, factor, state.counters.map(playerCard).filter((card): card is PlayerCard => !!card));
   const damage = result.damage + instant.dealt;
   const credibility = Math.max(0, state.credibility - damage);
   const power = Math.max(0, Math.min(state.enemy.maxPower, state.enemy.power + result.healed) - instant.recoil);
-  const usedIds = instant.usedCounters.map(card => card.id);
   const next: UtopiaGame = {
     ...state,
     credibility,
     block: result.damage + result.blocked > 0 ? 0 : state.block,
-    hand: state.hand.filter(id => !usedIds.includes(id)),
-    cooldowns: restCounters(state.cooldowns, instant.usedCounters),
+    counters: [],
     enemy: {
       ...state.enemy,
       power,
+      counters: countersOf(played),
       block: Math.min(battleRules.maxBlock, state.enemy.block + result.shield),
       cooldowns: restCards(state.enemy.cooldowns, played)
     },
@@ -311,7 +305,6 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
     stats: { ...state.stats, damageTaken: state.stats.damageTaken + damage, damageDealt: state.stats.damageDealt + instant.recoil }
   };
   if (credibility <= 0) return lose(next);
-  if (usedIds.length) next.hand = drawHand(next, random);
   return power <= 0 ? winBattle(next, random) : next;
 }
 

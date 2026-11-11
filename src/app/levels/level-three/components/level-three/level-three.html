@@ -20,7 +20,7 @@
                 <div class="world-track" role="meter" [attr.aria-label]="v.enemy.corp?.name + ' power'" aria-valuemin="0" [attr.aria-valuemax]="v.enemy.maxPower" [attr.aria-valuenow]="v.enemy.power">
                     <div class="world-fill corp-power" [style.width.%]="v.enemy.percent"></div>
                 </div>
-                <small>Power {{ v.enemy.power }} / {{ v.enemy.maxPower }}@if (v.enemy.block) { · <span class="shield">🛡 {{ v.enemy.block }}% block</span>}</small>
+                <small>Power {{ v.enemy.power }} / {{ v.enemy.maxPower }}@if (v.enemy.block) { · <span class="shield">🛡 {{ v.enemy.block }}% block</span>}@for (name of v.enemy.counters; track name) { · <span class="counter-ready">🗨 {{ name }} ready</span>}</small>
             </div>
             <ul class="enemy-deck" aria-label="Their cards">
                 @for (entry of v.enemy.deck; track entry.card.id) {
@@ -70,7 +70,7 @@
                 <div class="world-track" role="meter" aria-label="Credibility" aria-valuemin="0" [attr.aria-valuemax]="rules.maxCredibility" [attr.aria-valuenow]="v.credibility">
                     <div class="world-fill integrity-fill" [class.low]="v.credibilityPercent < 30" [class.high]="v.credibilityPercent > 70" [style.width.%]="v.credibilityPercent"></div>
                 </div>
-                <small>Credibility {{ v.credibility }} / {{ rules.maxCredibility }}@if (v.block) { · <span class="shield">🛡 {{ v.block }}% block</span>}</small>
+                <small>Credibility {{ v.credibility }} / {{ rules.maxCredibility }}@if (v.block) { · <span class="shield">🛡 {{ v.block }}% block</span>}@for (name of v.counters; track name) { · <span class="counter-ready">🗨 {{ name }} ready</span>}</small>
             </div>
         </div>
         <div class="hand-actions">
@@ -85,7 +85,7 @@
         <div class="hand">
             @for (entry of v.hand; track entry.card.id) {
                 <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
-                        [disabled]="!v.yourTurn || entry.passive || (!entry.selected && v.selectedCount >= rules.maxCards)"
+                        [disabled]="!v.yourTurn || (!entry.selected && v.selectedCount >= rules.maxCards)"
                         (click)="cardToggled.emit(entry.card.id)">
                     <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
                     <app-card-art [id]="entry.card.id" [category]="entry.category" />

@@ -97,13 +97,16 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   // Log entries from before they named their corporation belong to the current one.
   if (isObject(enemy) && Array.isArray(game.log)) for (const entry of game.log) if (isObject(entry) && entry.corpId === undefined) entry.corpId = enemy.corpId;
   const isIdList = (value: unknown) => Array.isArray(value) && value.every(id => typeof id === 'string');
+  // Saves from before counter cards were played: none waiting.
+  if (game.counters === undefined) game.counters = [];
+  if (isObject(game.enemy) && game.enemy.counters === undefined) game.enemy.counters = [];
   // Saves from before the card shop: one credit per win so far, no cards bought.
   if (game.credits === undefined) Object.assign(game, { credits: game.wins, owned: [] });
   const isCountRecord = (value: unknown) => isObject(value) && Object.values(value).every(isCount);
   if (
     !isCount(game.seconds) || !isCount(game.credibility) || !isCount(game.stage) || !isCount(game.battle) ||
     !isObject(enemy) || typeof enemy.corpId !== 'string' || !isCount(enemy.power) || !isCount(enemy.maxPower) ||
-    !isPercent(enemy.block) || !isCountRecord(enemy.cooldowns) ||
+    !isPercent(enemy.block) || !isCountRecord(enemy.cooldowns) || !isIdList(enemy.counters) || !isIdList(game.counters) ||
     !isIdList(game.hand) || !isIdList(game.selected) || !isCountRecord(game.cooldowns) || !isPercent(game.block) ||
     (game.turn !== 'player' && game.turn !== 'enemy') || !Array.isArray(game.log) ||
     !game.log.every(entry => isObject(entry) && isCount(entry.id) && (entry.by === 'player' || entry.by === 'enemy') && typeof entry.corpId === 'string' && isIdList(entry.cards)) ||

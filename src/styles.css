@@ -1722,6 +1722,10 @@ footer {
     color: var(--blue);
 }
 
+.counter-ready {
+    color: #ff9f43;
+}
+
 .corp-power {
     background: var(--red);
 }

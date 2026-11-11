@@ -1874,7 +1874,7 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   assert.deepEqual(won.cooldowns, {});
   const next = utopia.attack(picked({ ...won, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
   assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [1, 0, 'mississippi', 100]);
-  const last = { ...fresh(), stage: 2, battle: 5, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, cooldowns: {} } };
+  const last = { ...fresh(), stage: 2, battle: 5, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, counters: [], cooldowns: {} } };
   const victory = utopia.attack(picked(last, last.hand[0]), () => 0);
   assert.equal(victory.outcome, 'won');
   assert.equal(utopia.tickUtopia(victory), victory, 'the game stands still');
@@ -1925,40 +1925,41 @@ test('level 3: one credit per win buys cards in the card shop', () => {
     'one colour scheme per kind of effect, combo for cards with more than one');
 });
 
-test('level 3: instant battle hits unless the opponent has the counter; then half of it strikes back', () => {
+test('level 3: instant battle hits unless the opponent played the counter last turn; then half of it strikes back', () => {
   assert.equal(utopia.cardCategory(utopia.playerCard('dairy-farmer')), 'instant');
   assert.equal(utopia.cardSummary(utopia.playerCard('dairy-farmer')), '10 instant damage');
+  assert.equal(utopia.playerCard('dairy-farmer').cooldown, 1, 'instant cards rest like any card');
   const cow = utopiaContent.megacorpCards.find(card => card.id === 'like-a-cow');
   assert.equal(utopia.cardCategory(cow), 'counter');
   assert.equal(utopia.cardSummary(cow), 'counters “You fight like a dairy farmer”');
-  const snakes = utopiaContent.megacorpCards.find(card => card.id === 'i-hate-snakes');
-  assert.equal(utopia.cardSummary(snakes), 'counters “I sell those fine leather jackets”');
-  // Each counter only answers its own instant card.
-  const jackets = { ...fresh(), owned: ['leather-jackets'], hand: ['leather-jackets'], enemy: { ...fresh().enemy, cooldowns: { 'i-hate-snakes': 2 } } };
-  assert.equal(utopia.attack(picked(jackets, 'leather-jackets'), () => 0).enemy.power, 90, 'the cow does not answer the jackets');
-  assert.equal(utopia.attack(picked({ ...jackets, enemy: fresh().enemy }, 'leather-jackets'), () => 0).log[0].counteredBy, 'i-hate-snakes');
-  const armed = { ...fresh(), owned: ['dairy-farmer'], hand: ['dairy-farmer', 'antitrust'], credibility: 80 };
-  // The corporation has the comeback ready: half of the insult strikes back, the comeback goes to rest.
-  const countered = utopia.attack(picked(armed, 'dairy-farmer'), () => 0);
+  assert.equal(utopia.cardSummary(utopiaContent.megacorpCards.find(card => card.id === 'i-hate-snakes')), 'counters “I sell those fine leather jackets”');
+  const armed = { ...fresh(), owned: ['dairy-farmer', 'leather-jackets'], hand: ['dairy-farmer', 'leather-jackets', 'antitrust'], credibility: 80 };
+  // The comeback only counts when the corporation played it last turn.
+  const unprepared = utopia.attack(picked({ ...armed, enemy: { ...armed.enemy, block: 50 } }, 'dairy-farmer'), () => 0);
+  assert.equal(unprepared.enemy.power, 90, '10 damage, no block helps');
+  assert.equal(unprepared.enemy.block, 50, 'and the block is not used up');
+  const ready = { ...armed, enemy: { ...armed.enemy, counters: ['like-a-cow'] } };
+  const countered = utopia.attack(picked(ready, 'dairy-farmer'), () => 0);
   assert.equal(countered.enemy.power, 100, 'no damage');
   assert.equal(countered.credibility, 80 - 5, 'half of 10 strikes back');
-  assert.equal(countered.enemy.cooldowns['like-a-cow'], 3);
   assert.deepEqual([countered.log[0].recoil, countered.log[0].counteredBy], [5, 'like-a-cow']);
-  // While the comeback rests, the insult hits in full, and no block helps.
-  const resting = { ...armed, enemy: { ...armed.enemy, block: 50, cooldowns: { 'like-a-cow': 2 } } };
-  const hit = utopia.attack(picked(resting, 'dairy-farmer'), () => 0);
-  assert.equal(hit.enemy.power, 90, '10 damage, the block does not help');
-  assert.equal(hit.enemy.block, 50, 'and it is not used up');
-  assert.equal(hit.credibility, 80);
+  assert.deepEqual(countered.enemy.counters, [], 'a played counter answers one attack, then it is gone');
+  // Each counter only answers its own instant card.
+  assert.equal(utopia.attack(picked(ready, 'leather-jackets'), () => 0).enemy.power, 90, 'the cow does not answer the jackets');
   // Recoil can lose the battle.
-  assert.equal(utopia.attack(picked({ ...armed, credibility: 4 }, 'dairy-farmer'), () => 0).outcome, 'lost');
-  // Counter cards are passive: never played by the corporation, not playable from your hand.
-  for (let i = 0; i < 20; i++) {
-    const answer = utopia.enemyAttack({ ...fresh(), turn: 'enemy' }, () => i / 20);
-    assert.ok(!answer.log[0].cards.includes('like-a-cow'));
+  assert.equal(utopia.attack(picked({ ...ready, credibility: 4 }, 'dairy-farmer'), () => 0).outcome, 'lost');
+  // The corporation plays counter cards like any card; they wait for your next attack.
+  let cowPlayed = null;
+  for (let i = 0; i < 40 && !cowPlayed; i++) {
+    const answer = utopia.enemyAttack({ ...fresh(), turn: 'enemy' }, () => i / 40);
+    if (answer.log[0].cards.includes('like-a-cow')) cowPlayed = answer;
   }
-  assert.ok(utopia.passiveCard(cow));
-  assert.ok(!utopia.passiveCard(utopia.playerCard('dairy-farmer')));
+  assert.ok(cowPlayed, 'it picks counter cards too');
+  assert.ok(cowPlayed.enemy.counters.includes('like-a-cow'));
+  assert.equal(cowPlayed.enemy.cooldowns['like-a-cow'], 2, 'and they rest');
+  // Your counter cards work the same way: picked, played, waiting for its next attack.
+  const mine = { ...fresh(), hand: ['antitrust', 'like-a-cow'] };
+  assert.deepEqual(utopia.toggleCard(mine, 'like-a-cow').selected, ['like-a-cow']);
 });
 
 test('winning level 3 shows a summary of all three levels', () => {
