@@ -1677,7 +1677,7 @@ footer {
 /* The table: the corporation on top, the battle in the middle, you at the bottom. */
 .table {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 12px;
     min-height: 0;
     background: radial-gradient(ellipse at center, color-mix(in srgb, var(--surface) 85%, var(--green)) 0%, var(--surface) 70%);
@@ -1688,27 +1688,6 @@ footer {
     flex-wrap: wrap;
     align-items: center;
     gap: 14px;
-}
-
-.fighter-avatar {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--surface-2) 80%, var(--red));
-    font-size: 40px;
-}
-
-.fighter-enemy.boss .fighter-avatar {
-    box-shadow: 0 0 0 3px var(--red);
-}
-
-.fighter-robot {
-    flex: none;
-    width: 72px;
-    height: 72px;
 }
 
 .fighter-details {
@@ -1746,16 +1725,6 @@ footer {
 .corp-power {
     background: var(--red);
 }
-
-.avatar-backdrop { fill: color-mix(in srgb, var(--surface-2) 85%, var(--green)); }
-.robot-head { fill: #cfd6de; }
-.robot-visor { fill: #1e2a33; }
-.robot-eye { fill: var(--green); }
-.robot-line { stroke: #1e2a33; stroke-width: 3; stroke-linecap: round; }
-.robot-head + .robot-visor ~ .robot-line { stroke: var(--green); }
-.robot-leaf { fill: var(--green); }
-.robot-body { fill: var(--blue); }
-.robot-heart { fill: #f78fa0; }
 
 /* The corporation's cards, small: resting ones are faded. */
 .enemy-deck {
