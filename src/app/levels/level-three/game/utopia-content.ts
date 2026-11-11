@@ -191,6 +191,8 @@ export const playerCards: PlayerCard[] = [
   // Special
   { id: 'respect-my-authority', name: 'Respect my authoritah!', description: 'Nobody argues. Next turn you get to do a lot more.',
     effects: [{ kind: 'extraCards', count: 2 }], cooldown: 3, price: 3 },
+  { id: 'all-hands-on-deck', name: 'All Hands on Deck', description: 'Everyone shows up. Next turn you pick from all your cards.',
+    effects: [{ kind: 'openDeck' }], cooldown: 4, price: 3 },
   // Learned: the answers to the corporations' instant cards.
   { id: 'not-monoculture', name: 'At least it’s not a monoculture', description: 'Learned the hard way from Bananas Inc.',
     effects: [{ kind: 'counter', of: 'plan-is-bananas' }], cooldown: 2, price: 0, learned: true },

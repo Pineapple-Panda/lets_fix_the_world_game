@@ -271,6 +271,14 @@ import type { CardCategory } from '../../models/utopia.model';
           <path class="art-fill" d="M8 12 H56 V42 H26 L14 54 V42 H8 Z" />
           <path d="M18 34 V20 L28 34 V20 M36 27 A6 7 0 1 0 48 27 A6 7 0 1 0 36 27" stroke-width="2.5" />
         }
+        @case ('all-hands-on-deck') {
+          <!-- a fan of cards -->
+          <rect class="art-fill" x="10" y="16" width="20" height="30" rx="3" transform="rotate(-18 20 46)" />
+          <rect class="art-fill" x="22" y="12" width="20" height="30" rx="3" />
+          <rect class="art-fill" x="34" y="16" width="20" height="30" rx="3" transform="rotate(18 44 46)" />
+          <path d="M28 20 L36 20 M28 26 L36 26" stroke-width="2" />
+          <path d="M16 56 H48" stroke-width="2.5" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />

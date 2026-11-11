@@ -112,6 +112,7 @@ export class LevelThreeComponent {
       selectedCount: state.selected.length,
       // Cards you may play this turn (more after a special card).
       maxCards: cardLimit(state),
+      openDeck: !!state.openDeck,
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
         .map(card => ({ card, turns: state.cooldowns[card.id]! })),
       deckSize: ownedCards(state).length,

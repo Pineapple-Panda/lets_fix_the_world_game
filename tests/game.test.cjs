@@ -1935,7 +1935,7 @@ test('level 3: one credit per win buys cards in the card shop', () => {
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
     [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['whistleblower', 2], ['open-source', 2],
       ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['viral-petition', 3], ['general-strike', 3],
-      ['union-contract', 3], ['respect-my-authority', 3], ['investigative-desk', 4]]);
+      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['investigative-desk', 4]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -2112,6 +2112,22 @@ test('level 3: instant cards pass on to the next corporations', () => {
   const hit = utopia.enemyAttack(only, () => 0);
   assert.deepEqual(hit.log[0].cards, ['plan-is-bananas']);
   assert.ok(hit.owned.includes('not-monoculture'));
+});
+
+test('level 3: a special card shows your whole deck in your next turn', () => {
+  const card = utopia.playerCard('all-hands-on-deck');
+  assert.deepEqual([utopia.cardCategory(card), utopia.cardSummary(card), card.price], ['special', 'next turn: your whole deck', 3]);
+  const owned = ['all-hands-on-deck', 'leak', 'open-source', 'whistleblower', 'tax-audit'];
+  let state = { ...fresh(), owned, hand: ['all-hands-on-deck', 'antitrust', 'fact-check', 'firewall', 'press-conference'] };
+  state = utopia.attack(picked(state, 'all-hands-on-deck'), () => 0);
+  assert.equal(state.openDeck, true);
+  assert.equal(state.hand.length, 9, 'every card you own except the one that now rests');
+  assert.ok(!state.hand.includes('all-hands-on-deck'));
+  state = answer(state, () => 0);
+  assert.equal(utopia.cardLimit(state), 3, 'still three cards per attack');
+  state = utopia.attack(picked(state, 'leak', 'open-source'), () => 0);
+  assert.equal(state.openDeck, false);
+  assert.equal(state.hand.length, 5, 'a normal hand again');
 });
 
 test('winning level 3 shows a summary of all three levels', () => {

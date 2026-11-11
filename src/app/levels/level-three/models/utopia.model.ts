@@ -32,6 +32,8 @@ export interface UtopiaGame {
   locked: string[];
   /** Extra cards you may play this turn, on top of `maxCards` (from a special card last turn). */
   extraCards?: number;
+  /** This turn your hand is your whole deck (every card that is not resting), from a special card last turn. */
+  openDeck?: boolean;
   /** Whose move it is. The corporation answers `enemyWait` ticks after your attack (time for the animation). */
   turn: 'player' | 'enemy';
   enemyWait?: number;
@@ -138,6 +140,8 @@ export type CardEffect =
   | { kind: 'shuffle' }
   /** Special: you may play `count` more cards in your next turn (your cards). */
   | { kind: 'extraCards'; count: number }
+  /** Special: in your next turn you pick from your whole deck instead of a hand of five (your cards). */
+  | { kind: 'openDeck' }
   | { kind: 'instant'; amount: number; counter: string }
   | { kind: 'counter'; of: string };
 

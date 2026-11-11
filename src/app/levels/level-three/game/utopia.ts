@@ -84,7 +84,7 @@ export function enemyStrength(stage: Stage, battle: number): number {
 const effectCategory: Record<CardEffect['kind'], CardCategory | null> = {
   damage: 'damage', strip: 'damage', lock: 'damage', shuffle: 'damage',
   block: 'block', delay: 'block', heal: 'heal', regen: 'heal', instant: 'instant', counter: 'counter', selfDamage: null,
-  extraCards: 'special'
+  extraCards: 'special', openDeck: 'special'
 };
 
 /** A card's colour scheme: damage, block, heal, instant battle or counter, or combo when it does more than one of them. */
@@ -109,6 +109,7 @@ export function cardSummary(card: BattleCard, factor = 1, wins = 0): string {
       case 'lock': return `locks ${effect.count} of your ${effect.count === 1 ? 'cards' : 'cards'}`;
       case 'shuffle': return 'shuffles your hand';
       case 'extraCards': return `+${effect.count} cards next turn`;
+      case 'openDeck': return 'next turn: your whole deck';
       case 'heal': return `+${Math.round(effect.amount * factor)} heal`;
       case 'instant': return `${Math.round(effect.amount * factor)} instant damage`;
       case 'counter': return `counters “${playerCard(effect.of)?.name ?? enemyCardById(effect.of)?.name ?? effect.of}”`;
@@ -161,11 +162,11 @@ function newOpponent(stageIndex: number, battle: number): Opponent {
   return { corpId: stage.corpId, power: maxPower, maxPower, block: 0, blockAttacks: 0, counters: [], cooldowns: {} };
 }
 
-/** Fills the hand with random cards you own that are neither in the hand nor resting. */
-function drawHand(state: UtopiaGame, random: () => number): string[] {
+/** Fills the hand (up to `size` cards) with random cards you own that are neither in the hand nor resting. */
+function drawHand(state: UtopiaGame, random: () => number, size = battleRules.handSize): string[] {
   const hand = [...state.hand];
   const pool = ownedCards(state).map(card => card.id).filter(id => !hand.includes(id) && !((state.cooldowns[id] ?? 0) > 0));
-  while (hand.length < battleRules.handSize && pool.length) {
+  while (hand.length < size && pool.length) {
     hand.push(pool.splice(Math.min(pool.length - 1, Math.floor(random() * pool.length)), 1)[0]!);
   }
   return hand;
@@ -174,7 +175,7 @@ function drawHand(state: UtopiaGame, random: () => number): string[] {
 /** A battle against the corporation of the given station: fresh opponent, fresh hand, no blocks or cooldowns. */
 function startBattle(state: UtopiaGame, stage: number, battle: number, random: () => number): UtopiaGame {
   const next: UtopiaGame = {
-    ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, blockAttacks: 0,
+    ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, blockAttacks: 0, openDeck: false,
     counters: [], regen: [], locked: [], turn: 'player'
   };
   return { ...next, hand: drawHand(next, random) };
@@ -335,6 +336,8 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     locked: [],
     // A special card makes room for more cards next turn; this turn's bonus is used up.
     extraCards: effects.reduce((total, effect) => total + (effect.kind === 'extraCards' ? effect.count : 0), 0),
+    // Another one opens your whole deck next turn.
+    openDeck: effects.some(effect => effect.kind === 'openDeck'),
     cooldowns: restCards(state.cooldowns, played),
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],
@@ -351,7 +354,8 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
       damageDealt: state.stats.damageDealt + damage, damageTaken: state.stats.damageTaken + instant.recoil + result.selfDamage
     }
   };
-  next.hand = drawHand(next, random);
+  // After a turn with the whole deck, a normal hand of five is drawn again; the open deck shows every card that is not resting.
+  next.hand = drawHand(state.openDeck ? { ...next, hand: [] } : next, random, next.openDeck ? Infinity : battleRules.handSize);
   if (power <= 0) return resolveBattle(next, 'win');
   return credibility <= 0 ? resolveBattle(next, 'loss') : next;
 }

@@ -2098,6 +2098,17 @@ footer {
     -webkit-box-orient: vertical;
 }
 
+/* The whole deck in one row: it scrolls sideways instead of making the page taller. */
+.hand.open-deck {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.hand.open-deck .play-card {
+    flex: 0 0 140px;
+}
+
 /* Chip, art, name and the bottom lines keep their size; the description gives way when a card runs short of space. */
 .play-card > .card-chip,
 .play-card > app-card-art,
