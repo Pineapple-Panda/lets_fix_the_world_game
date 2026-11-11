@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
@@ -21,6 +21,34 @@ export class LevelThreeComponent {
   /** The card shop dialog is open. */
   protected readonly shopOpen = signal(false);
 
+  /**
+   * Bars wait for the battle card: while the cards of the newest attack fly in and are applied, credibility and power
+   * still show their values from before the attack. `stageStep` matches `--step` in the styles.
+   */
+  private static readonly stageStep = 380;
+  private static readonly stageTail = 850;
+  private readonly now = signal(performance.now());
+  /** When each attack first showed up here. */
+  private readonly seenAt = new Map<number, number>();
+
+  constructor() {
+    const timer = setInterval(() => this.now.set(performance.now()), 100);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+  }
+
+  /** The newest attack while its animation still runs (its values from before count), or null. */
+  private animating(state: UtopiaGame): Attack | null {
+    const newest = state.log[0];
+    if (!newest?.before) return null;
+    let seen = this.seenAt.get(newest.id);
+    if (seen === undefined) {
+      seen = performance.now();
+      this.seenAt.set(newest.id, seen);
+    }
+    const duration = newest.cards.length * LevelThreeComponent.stageStep + LevelThreeComponent.stageTail;
+    return this.now() - seen < duration ? newest : null;
+  }
+
   protected readonly rules = battleRules;
   /** How credits are earned, for the shop. */
   protected readonly earnRules = [
@@ -37,6 +65,10 @@ export class LevelThreeComponent {
   protected readonly view = computed(() => {
     const state = this.state();
     const stage = currentStage(state);
+    // Until the newest attack's cards are applied, the bars keep their old values.
+    const held = this.animating(state)?.before;
+    const shownPower = held && state.log[0]?.corpId === state.enemy.corpId ? held.power : state.enemy.power;
+    const shownCredibility = held ? held.credibility : state.credibility;
     const corp = corporation(state.enemy.corpId);
     const strength = stage ? enemyStrength(stage, state.battle) : 1;
     return {
@@ -48,9 +80,9 @@ export class LevelThreeComponent {
         // One pip per battle against this corporation: beaten ones filled.
         beaten: state.outcome === 'won' ? stage?.battles ?? 0 : state.battle,
         pips: Array.from({ length: stage?.battles ?? 0 }, (_, battle) => state.outcome === 'won' || battle < state.battle),
-        power: Math.round(state.enemy.power),
+        power: Math.round(shownPower),
         maxPower: state.enemy.maxPower,
-        percent: state.enemy.power / state.enemy.maxPower * 100,
+        percent: shownPower / state.enemy.maxPower * 100,
         block: state.enemy.block,
         blockAttacks: state.enemy.blockAttacks,
         // Counter cards it played last turn, waiting for your next attack.
@@ -62,8 +94,8 @@ export class LevelThreeComponent {
           from: inheritedCards(state.enemy.corpId).find(entry => entry.card.id === card.id)?.from.name ?? null
         }))
       },
-      credibility: Math.round(state.credibility),
-      credibilityPercent: state.credibility / battleRules.maxCredibility * 100,
+      credibility: Math.round(shownCredibility),
+      credibilityPercent: shownCredibility / battleRules.maxCredibility * 100,
       block: state.block,
       blockAttacks: state.blockAttacks,
       // Healing over time: per attack, and for how many more of its attacks.

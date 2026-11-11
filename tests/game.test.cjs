@@ -1840,6 +1840,7 @@ test('level 3: pick up to three cards and attack; played cards rest', () => {
   assert.equal(after.stats.cardsPlayed, 3);
   assert.equal(after.log[0].damage, 20);
   assert.equal(after.log[0].corpId, 'bananas', 'the log remembers whom it was against');
+  assert.deepEqual(after.log[0].before, { credibility: 100, power: 100 }, 'and the values before, for the bars while the cards fly in');
 });
 
 test('level 3: cards rest for their number of own turns', () => {

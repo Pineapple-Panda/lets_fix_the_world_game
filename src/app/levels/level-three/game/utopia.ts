@@ -338,7 +338,8 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     log: logAttack(state, {
       by: 'player', corpId: state.enemy.corpId, cards: played.map(card => card.id),
       damage, blocked: result.blocked, healed: result.healed, shield: result.shield,
-      recoil: instant.recoil, counteredBy: instant.counteredBy, notes
+      recoil: instant.recoil, counteredBy: instant.counteredBy, notes,
+      before: { credibility: state.credibility, power: state.enemy.power }
     }),
     stats: {
       ...state.stats, cardsPlayed: state.stats.cardsPlayed + played.length,
@@ -433,7 +434,8 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
     log: logAttack(state, {
       by: 'enemy', corpId: state.enemy.corpId, cards: played.map(card => card.id),
       damage, blocked: result.blocked, healed: result.healed, shield: result.shield,
-      recoil: instant.recoil, counteredBy: instant.counteredBy, learned, notes
+      recoil: instant.recoil, counteredBy: instant.counteredBy, learned, notes,
+      before: { credibility: state.credibility, power: state.enemy.power }
     }),
     stats: { ...state.stats, damageTaken: state.stats.damageTaken + damage, damageDealt: state.stats.damageDealt + instant.recoil }
   };

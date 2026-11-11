@@ -99,6 +99,8 @@ export interface Attack {
   learned?: string[];
   /** Anything else that happened, in a few words (a block removed, a card locked, …). */
   notes?: string[];
+  /** Your credibility and the corporation's power before this attack: shown until its cards are applied. */
+  before?: { credibility: number; power: number };
 }
 
 export interface UtopiaStats {
