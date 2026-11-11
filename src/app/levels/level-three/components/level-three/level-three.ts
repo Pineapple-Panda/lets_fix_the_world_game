@@ -2,9 +2,9 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  buyBlocker, cardCategory, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardSummary, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
-import { battleRules, megaCorpName } from '../../game/utopia-content';
+import { battleRules, corporations, megaCorpName } from '../../game/utopia-content';
 import type { Attack, UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: a card game against the corporations, one after another. */
@@ -22,6 +22,14 @@ export class LevelThreeComponent {
   protected readonly shopOpen = signal(false);
 
   protected readonly rules = battleRules;
+  /** How credits are earned, for the shop. */
+  protected readonly earnRules = [
+    `${battleRules.credits.win} per win`,
+    `+${battleRules.credits.highCredibilityBonus} when you win with more than ${battleRules.credits.highCredibility} credibility`,
+    `+${battleRules.credits.counter} per countered instant card`,
+    `+${battleRules.credits.corporationBeaten} for beating a corporation completely`,
+    ...(battleRules.credits.loss ? [`+${battleRules.credits.loss} per lost battle`] : [])
+  ].join(', ');
   /** Label of each colour scheme. */
   protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo' };
   protected readonly megaCorpName = megaCorpName;
@@ -70,6 +78,15 @@ export class LevelThreeComponent {
       wins: state.wins,
       losses: state.losses,
       credits: state.credits,
+      lastReward: state.lastReward ?? null,
+      learnable: learnableCards(state).map(({ card, known }) => {
+        const counter = card.effects.find(effect => effect.kind === 'counter');
+        const source = counter?.kind === 'counter' ? corporations.map(corp => ({ corp, card: corp.cards.find(entry => entry.id === counter.of) })).find(entry => entry.card) : undefined;
+        return {
+          card, category: cardCategory(card), summary: cardSummary(card), known,
+          hint: source ? `Get hit by “${source.card!.name}” (${source.corp.name}) to learn it.` : 'Learned from a corporation.'
+        };
+      }),
       shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
       // Something in the shop you can afford: the shop button shows a dot.
       affordable: shopCards().some(card => !buyBlocker(state, card.id)),
@@ -84,6 +101,7 @@ export class LevelThreeComponent {
       entry.damage || entry.blocked ? `${entry.damage} damage${entry.blocked ? ` (${entry.blocked} blocked)` : ''}` : '',
       entry.healed ? `+${entry.healed} ${entry.by === 'player' ? 'credibility' : 'power'}` : '',
       entry.shield ? `block ${entry.shield}%` : '',
+      entry.learned?.length ? `you learned ${entry.learned.map(id => `“${playerCard(id)?.name ?? id}”`).join(', ')}` : '',
       entry.recoil ? `countered by “${(entry.by === 'player' ? enemyCard(entry.corpId, entry.counteredBy ?? '') : playerCard(entry.counteredBy ?? ''))?.name ?? 'a counter'}”, ${entry.recoil} back` : ''
     ].filter(part => part);
     return { id: entry.id, mine: entry.by === 'player', by: corporation(entry.corpId)?.name ?? entry.corpId, cards: names.join(' + '), result: parts.join(' · ') || 'no effect' };

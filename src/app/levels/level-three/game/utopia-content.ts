@@ -16,8 +16,9 @@ export const battleRules = {
   maxCards: 3,
   /** Credibility you get back after a won battle. */
   healAfterWin: 25,
-  /** Credits for the card shop per won battle. */
-  creditsPerWin: 1,
+  /** Credits for the card shop: per won battle, a bonus for winning with more than `highCredibility`, per countered
+   * instant card of the corporation, for beating a corporation completely, and per lost battle. */
+  credits: { win: 1, highCredibility: 50, highCredibilityBonus: 1, counter: 1, corporationBeaten: 2, loss: 0 },
   /** Share of an instant battle card that strikes back when the opponent has the counter. */
   recoilShare: 0.5,
   /** Blocks stack up to this many percent. */
@@ -68,7 +69,9 @@ export const corporations: Corporation[] = [
       { id: 'banana-blockade', name: 'Banana Blockade', description: 'Blocks the ports until the world buys only bananas.',
         effects: [{ kind: 'damage', amount: 12 }], cooldown: 2 },
       { id: 'banana-influencers', name: 'Influencer Campaign', description: 'Influencers call your utopia “a banana-free dictatorship”.',
-        effects: [{ kind: 'damage', amount: 6 }], cooldown: 0 }
+        effects: [{ kind: 'damage', amount: 6 }], cooldown: 0 },
+      { id: 'plan-is-bananas', name: 'Your plan is bananas', description: 'And we would know. We own all of them.',
+        effects: [{ kind: 'instant', amount: 8, counter: 'not-monoculture' }], cooldown: 2 }
     ]
   },
   {
@@ -82,7 +85,9 @@ export const corporations: Corporation[] = [
       { id: 'same-day-smear', name: 'Same-Day Smear', description: 'Delivers a hit piece about you to every doorstep before noon.',
         effects: [{ kind: 'damage', amount: 7 }], cooldown: 0 },
       { id: 'warehouse-fortress', name: 'Warehouse Fortress', description: 'Hides behind a billion square feet of concrete.',
-        effects: [{ kind: 'block', percent: 50 }], cooldown: 3 }
+        effects: [{ kind: 'block', percent: 50 }], cooldown: 3 },
+      { id: 'also-bought-robots', name: 'Customers who liked you also bought our robots', description: 'A recommendation you cannot refuse.',
+        effects: [{ kind: 'instant', amount: 10, counter: 'return-robot' }], cooldown: 2 }
     ]
   },
   {
@@ -96,12 +101,17 @@ export const corporations: Corporation[] = [
       { id: 'satellite-blackout', name: 'Satellite Blackout', description: 'Switches off the internet over your servers. Oops.',
         effects: [{ kind: 'damage', amount: 20 }], cooldown: 3 },
       { id: 'rocket-pr', name: 'Rocket Launch PR', description: 'A rocket launch nobody can look away from.',
-        effects: [{ kind: 'heal', amount: 15 }], cooldown: 3 }
+        effects: [{ kind: 'heal', amount: 15 }], cooldown: 3 },
+      { id: 'bigger-rocket', name: 'My rocket is bigger than your utopia', description: 'Posted at 3 a.m., in all caps.',
+        effects: [{ kind: 'instant', amount: 12, counter: 'compensating' }], cooldown: 2 }
     ]
   }
 ];
 
-/** Your cards: the ones with price 0 from the start, the others in the card shop for `price` credits (one per win). */
+/**
+ * Your cards: the ones with price 0 from the start, the others in the card shop for `price` credits. Counter cards
+ * marked `learned` are never sold: you learn one when the corporation's matching instant card hits you.
+ */
 export const playerCards: PlayerCard[] = [
   { id: 'antitrust', name: 'Antitrust Lawsuit', description: 'Sues them for being a monopoly. Which they are.',
     effects: [{ kind: 'damage', amount: 12 }], cooldown: 1, price: 0 },
@@ -126,5 +136,12 @@ export const playerCards: PlayerCard[] = [
   { id: 'dairy-farmer', name: 'You fight like a dairy farmer', description: 'An insult so sharp it cuts. Unless they know the comeback.',
     effects: [{ kind: 'instant', amount: 10, counter: 'like-a-cow' }], cooldown: 1, price: 2 },
   { id: 'leather-jackets', name: 'I sell those fine leather jackets', description: 'A sales pitch so smooth it hurts. Unless they hate snakes.',
-    effects: [{ kind: 'instant', amount: 10, counter: 'i-hate-snakes' }], cooldown: 1, price: 2 }
+    effects: [{ kind: 'instant', amount: 10, counter: 'i-hate-snakes' }], cooldown: 1, price: 2 },
+  // Learned: the answers to the corporations' instant cards.
+  { id: 'not-monoculture', name: 'At least it’s not a monoculture', description: 'Learned the hard way from Bananas Inc.',
+    effects: [{ kind: 'counter', of: 'plan-is-bananas' }], cooldown: 2, price: 0, learned: true },
+  { id: 'return-robot', name: 'I’d like to return that robot', description: 'Learned the hard way from Mississippi Corp.',
+    effects: [{ kind: 'counter', of: 'also-bought-robots' }], cooldown: 2, price: 0, learned: true },
+  { id: 'compensating', name: 'Compensating for something?', description: 'Learned the hard way from EdisonX.',
+    effects: [{ kind: 'counter', of: 'bigger-rocket' }], cooldown: 2, price: 0, learned: true }
 ];

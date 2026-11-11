@@ -104,6 +104,48 @@ import type { CardCategory } from '../../models/utopia.model';
           <circle cx="32" cy="32" r="26" stroke-width="3" />
           <line x1="14" y1="14" x2="50" y2="50" stroke-width="3" />
         }
+        @case ('plan-is-bananas') {
+          <!-- a banana with a question mark -->
+          <path class="art-fill" d="M10 22 C10 46 34 56 50 46 C36 46 22 38 20 20 Z" />
+          <path d="M10 22 L16 17" />
+          <path d="M38 10 C38 4 50 4 50 11 C50 16 44 16 44 22 M44 28 V29" stroke-width="3" />
+        }
+        @case ('not-monoculture') {
+          <!-- many different plants -->
+          <path d="M6 54 H58" />
+          <path class="art-fill" d="M14 54 V40 M14 40 C6 38 6 30 14 30 C22 30 22 38 14 40 Z" />
+          <path class="art-fill" d="M32 54 V34 M32 34 L24 26 L32 18 L40 26 Z" />
+          <path class="art-fill" d="M50 54 V44 M44 44 H56 L50 34 Z" />
+        }
+        @case ('also-bought-robots') {
+          <!-- a shopping cart with a robot in it -->
+          <path class="art-fill" d="M12 26 H54 L48 44 H18 Z" />
+          <path d="M4 16 H10 L18 44 M20 52 A3 3 0 1 0 20 53 M44 52 A3 3 0 1 0 44 53" />
+          <rect x="26" y="10" width="14" height="12" rx="3" stroke-width="2.5" />
+          <path d="M31 16 V16 M35 16 V16" stroke-width="3" />
+        }
+        @case ('return-robot') {
+          <!-- a parcel going back -->
+          <path class="art-fill" d="M16 24 L36 14 L56 24 V46 L36 56 L16 46 Z" />
+          <path d="M16 24 L36 34 L56 24 M36 34 V56" stroke-width="2.5" />
+          <path d="M14 10 H4 V20 M4 10 C10 4 20 4 26 12" stroke-width="3" />
+        }
+        @case ('bigger-rocket') {
+          <!-- a huge rocket next to a tiny house -->
+          <path class="art-fill" d="M40 4 C52 14 52 34 48 46 H32 C28 34 28 14 40 4 Z" />
+          <circle cx="40" cy="22" r="4" />
+          <path d="M32 40 L24 50 L32 48 M48 40 L56 50 L48 48" />
+          <path d="M6 56 L13 49 L20 56 Z M8 56 V60 H18 V56" stroke-width="2" />
+        }
+        @case ('compensating') {
+          <!-- a ruler with a raised eyebrow -->
+          <rect class="art-fill" x="6" y="34" width="52" height="14" rx="2" />
+          <path d="M14 34 V40 M22 34 V44 M30 34 V40 M38 34 V44 M46 34 V40 M54 34 V44" stroke-width="2" />
+          <path d="M20 18 Q28 10 36 16" />
+          <circle cx="28" cy="24" r="2.5" stroke-width="2.5" />
+          <circle cx="44" cy="24" r="2.5" stroke-width="2.5" />
+          <path d="M40 14 L48 16" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />

@@ -32,10 +32,12 @@ export interface UtopiaGame {
   /** Battles won and lost, over all attempts. */
   wins: number;
   losses: number;
-  /** Earned with wins (one each), spent in the card shop. */
+  /** Earned in battle (see `battleRules.credits`), spent in the card shop. */
   credits: number;
-  /** Cards bought in the shop; the starter cards are always yours. */
+  /** Cards bought in the shop or learned from the corporations; the starter cards are always yours. */
   owned: string[];
+  /** What the last won battle paid, for the display. */
+  lastReward?: Reward | null;
   /** How level 3 ended: every station beaten (won), or credibility ran out (lost, until you try again). */
   outcome: 'won' | 'lost' | null;
   /** True once the player closed the "utopia achieved" dialog. */
@@ -59,6 +61,12 @@ export interface Opponent {
   cooldowns: Record<string, number>;
 }
 
+/** Credits a battle paid and why, e.g. 3 for "win", "credibility above 50", "corporation beaten". */
+export interface Reward {
+  credits: number;
+  reasons: string[];
+}
+
 /** One attack: who played which cards, and what it did. */
 export interface Attack {
   /** Running number, for the display. */
@@ -78,6 +86,8 @@ export interface Attack {
   /** Instant battle: damage that struck back at the attacker, and the counter card that did it. */
   recoil?: number;
   counteredBy?: string | null;
+  /** Counter cards you learned because this attack's instant cards hit you. */
+  learned?: string[];
 }
 
 export interface UtopiaStats {
@@ -110,9 +120,13 @@ export interface BattleCard extends Described {
   cooldown: number;
 }
 
-/** One of your cards: a starter card (price 0), or one to buy in the card shop for credits. */
+/**
+ * One of your cards: a starter card (price 0), one to buy in the card shop for credits, or a counter card you learn
+ * (`learned`) when the corporations' instant card hits you; learned cards are never sold.
+ */
 export interface PlayerCard extends BattleCard {
   price: number;
+  learned?: boolean;
 }
 
 export interface Corporation extends Described {

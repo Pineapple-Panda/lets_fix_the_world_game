@@ -1740,12 +1740,16 @@ footer {
     list-style: none;
 }
 
+/* Same 2:3 shape as your cards, smaller. */
 .mini-card {
     display: flex;
+    flex: 0 0 96px;
     flex-direction: column;
     gap: 2px;
-    width: 120px;
-    padding: 6px 8px;
+    width: 96px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    padding: 6px 7px;
     border: 1px solid color-mix(in srgb, var(--line) 50%, var(--red));
     border-radius: 6px;
     background: color-mix(in srgb, var(--surface-2) 90%, var(--red));
@@ -1753,7 +1757,19 @@ footer {
 }
 
 .mini-card strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
     font-size: 11px;
+    line-height: 1.25;
+}
+
+.mini-card small {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .mini-card small {
@@ -1874,13 +1890,15 @@ footer {
     gap: 10px;
 }
 
+/* Every card has the same 2:3 shape; the cards of a hand share one width. */
 .play-card {
     display: flex;
-    flex: 1 1 110px;
-    max-width: 170px;
+    flex: 0 1 160px;
     flex-direction: column;
-    gap: 6px;
-    min-height: 170px;
+    gap: 5px;
+    min-width: 118px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
     padding: 10px;
     border: 2px solid var(--line-strong);
     border-radius: 10px;
@@ -1913,10 +1931,25 @@ footer {
 }
 
 .play-card small {
-    flex: 1;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
     color: var(--muted);
     font-size: 11px;
     line-height: 1.4;
+}
+
+.play-card strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* The effect line sits at the bottom of every card. */
+.play-card .play-card-effect {
+    margin-top: auto;
 }
 
 .play-card-effect {
@@ -1956,7 +1989,8 @@ footer {
     cursor: not-allowed;
 }
 
-/* Card colour schemes: damage red, block blue, heal green, combo (more than one kind of effect) gold with a rainbow frame. */
+/* Card colour schemes: damage red, block blue, heal green, combo (more than one kind of effect) gold, instant battle
+   purple with a rainbow frame, counter orange. */
 [data-category="damage"] { --cat: #ff6b6b; --cat-deep: #b8323a; }
 [data-category="block"] { --cat: #5aa9ff; --cat-deep: #2a62c4; }
 [data-category="heal"] { --cat: #4cd38a; --cat-deep: #1d8f55; }
@@ -1964,7 +1998,7 @@ footer {
 [data-category="instant"] { --cat: #d77bff; --cat-deep: #7b2fbe; }
 [data-category="counter"] { --cat: #ff9f43; --cat-deep: #c0611b; }
 
-@property --combo-angle {
+@property --shine-angle {
     syntax: '<angle>';
     inherits: false;
     initial-value: 0deg;
@@ -1993,6 +2027,7 @@ footer {
 /* The illustration sits in a soft spotlight of its colour. */
 .card-art {
     display: flex;
+    flex: none;
     align-items: center;
     justify-content: center;
     height: 62px;
@@ -2021,43 +2056,43 @@ footer {
     text-transform: uppercase;
 }
 
-/* Combo cards: a turning rainbow frame, a glint that sweeps across, a gold chip. */
-.play-card[data-category="combo"] {
+/* Instant battle cards: a turning rainbow frame, a glint that sweeps across, a rainbow chip. */
+.play-card[data-category="instant"] {
     border: 2px solid transparent;
     background:
         linear-gradient(170deg, color-mix(in srgb, var(--cat) 16%, var(--surface-2)) 0%, color-mix(in srgb, var(--cat-deep) 14%, var(--surface)) 100%) padding-box,
-        conic-gradient(from var(--combo-angle), #f5c451, #ff6b6b, #b36bff, #5aa9ff, #4cd38a, #f5c451) border-box;
-    animation: combo-frame 6s linear infinite;
+        conic-gradient(from var(--shine-angle), #f5c451, #ff6b6b, #b36bff, #5aa9ff, #4cd38a, #f5c451) border-box;
+    animation: shine-frame 6s linear infinite;
 }
 
-.play-card[data-category="combo"]::after {
+.play-card[data-category="instant"]::after {
     content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .16) 48%, transparent 60%);
     background-size: 260% 100%;
-    animation: combo-glint 3.6s ease-in-out infinite;
+    animation: shine-glint 3.6s ease-in-out infinite;
     pointer-events: none;
 }
 
-.play-card[data-category="combo"] .card-chip {
+.play-card[data-category="instant"] .card-chip {
     background: linear-gradient(90deg, #f5c451, #ff9f6b, #b36bff);
     color: #1e1f22;
 }
 
-.play-card[data-category="combo"] .card-art {
-    background: radial-gradient(circle at 50% 55%, rgba(245, 196, 81, .35) 0%, rgba(179, 107, 255, .18) 45%, transparent 72%);
+.play-card[data-category="instant"] .card-art {
+    background: radial-gradient(circle at 50% 55%, rgba(215, 123, 255, .35) 0%, rgba(245, 196, 81, .15) 45%, transparent 72%);
 }
 
-.play-card[data-category="combo"].selected {
-    box-shadow: 0 0 0 2px var(--cat), 0 0 18px rgba(245, 196, 81, .45), 0 12px 26px rgba(0, 0, 0, .45);
+.play-card[data-category="instant"].selected {
+    box-shadow: 0 0 0 2px var(--cat), 0 0 18px rgba(215, 123, 255, .45), 0 12px 26px rgba(0, 0, 0, .45);
 }
 
-@keyframes combo-frame {
-    to { --combo-angle: 360deg; }
+@keyframes shine-frame {
+    to { --shine-angle: 360deg; }
 }
 
-@keyframes combo-glint {
+@keyframes shine-glint {
     0%, 100% { background-position: 100% 0; }
     50% { background-position: 0 0; }
 }
@@ -2068,7 +2103,7 @@ footer {
     background: linear-gradient(170deg, color-mix(in srgb, var(--cat) 16%, var(--surface-2)), var(--surface));
 }
 
-.mini-card[data-category="combo"] {
+.mini-card[data-category="instant"] {
     border-color: var(--cat);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat-deep) 60%, transparent);
 }
@@ -2084,8 +2119,8 @@ footer {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .play-card[data-category="combo"],
-    .play-card[data-category="combo"]::after {
+    .play-card[data-category="instant"],
+    .play-card[data-category="instant"]::after {
         animation: none;
     }
 }
@@ -2124,6 +2159,8 @@ footer {
 
 .shop-dialog {
     width: min(820px, 94vw);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .shop-header {
@@ -2142,13 +2179,15 @@ footer {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
-    max-height: 60vh;
     margin-bottom: 14px;
-    overflow-y: auto;
 }
 
+/* In the shop the cards also carry a buy button: the grid gives them one height per row instead of the 2:3 shape. */
 .shop-card {
     max-width: none;
+    min-width: 0;
+    aspect-ratio: auto;
+    overflow: visible;
     cursor: default;
 }
 
@@ -2180,6 +2219,22 @@ footer {
 
 .shop-close {
     width: 100%;
+}
+
+.shop-subheading {
+    margin: 4px 0 6px;
+    font: 600 15px var(--sans);
+}
+
+/* A counter card you have not learned yet. */
+.shop-unknown {
+    border-style: dashed;
+    color: var(--faint);
+}
+
+.last-reward {
+    color: var(--yellow);
+    line-height: 1.4;
 }
 
 @media (prefers-reduced-motion: reduce) {

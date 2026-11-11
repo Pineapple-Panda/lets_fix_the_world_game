@@ -1,7 +1,7 @@
 @let v = view();
 <div class="cardgame">
     @if (shopOpen()) {
-        <app-card-shop [entries]="v.shop" [credits]="v.credits" [creditsPerWin]="rules.creditsPerWin"
+        <app-card-shop [entries]="v.shop" [credits]="v.credits" [earnRules]="earnRules" [learnable]="v.learnable"
                        (bought)="cardBought.emit($event)" (closed)="shopOpen.set(false)" />
     }
 
@@ -45,6 +45,9 @@
                     🛒 Card shop <span class="shop-button-credits">🪙 {{ v.credits }}</span>
                     @if (v.affordable) { <span class="shop-badge" aria-hidden="true"></span> }
                 </button>
+                @if (v.lastReward; as reward) {
+                    <small class="last-reward">Last win: +{{ reward.credits }} 🪙<br>{{ reward.reasons.join(', ') }}</small>
+                }
             </div>
             <div class="battle-feed">
             <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">

@@ -1,6 +1,6 @@
 import { type Smoothing } from '../../../shared/game/smoothing.ts';
 import type { LevelSummary } from '../../../shared/models/shared.model.ts';
-import type { Attack, BattleCard, CardCategory, CardEffect, Corporation, Opponent, PlayerCard, Stage, UtopiaGame } from '../models/utopia.model.ts';
+import type { Attack, BattleCard, CardCategory, CardEffect, Corporation, Opponent, PlayerCard, Reward, Stage, UtopiaGame } from '../models/utopia.model.ts';
 import { battleRules, campaign, corporations, megacorpCards, playerCards } from './utopia-content.ts';
 
 // ---------- Lookups ----------
@@ -28,12 +28,17 @@ export function currentStage(state: UtopiaGame): Stage | undefined {
 
 /** Your deck: the starter cards plus everything you bought in the shop. */
 export function ownedCards(state: UtopiaGame): PlayerCard[] {
-  return playerCards.filter(card => card.price === 0 || state.owned.includes(card.id));
+  return playerCards.filter(card => (card.price === 0 && !card.learned) || state.owned.includes(card.id));
+}
+
+/** Counter cards you can learn from the corporations; `known` tells whether you already have them. */
+export function learnableCards(state: UtopiaGame): { card: PlayerCard; known: boolean }[] {
+  return playerCards.filter(card => card.learned).map(card => ({ card, known: state.owned.includes(card.id) }));
 }
 
 /** The cards of the shop, cheapest first. */
 export function shopCards(): PlayerCard[] {
-  return playerCards.filter(card => card.price > 0).sort((a, b) => a.price - b.price);
+  return playerCards.filter(card => card.price > 0 && !card.learned).sort((a, b) => a.price - b.price);
 }
 
 /** Why a card cannot be bought right now, or null when it can. */
@@ -90,14 +95,14 @@ function countersOf(played: BattleCard[]): string[] {
   return played.filter(card => card.effects.some(effect => effect.kind === 'counter')).map(card => card.id);
 }
 
-interface InstantResult { dealt: number; recoil: number; counteredBy: string | null; usedCounters: BattleCard[] }
+interface InstantResult { dealt: number; recoil: number; counteredBy: string | null; usedCounters: BattleCard[]; hits: CardEffect[] }
 
 /**
  * Instant battle: every instant card hits for its amount (no block helps) unless the defender played its counter card
  * last turn (`armed`); then `recoilShare` of it strikes back at the attacker.
  */
 function instantBattle(played: BattleCard[], factor: number, armed: BattleCard[]): InstantResult {
-  const result: InstantResult = { dealt: 0, recoil: 0, counteredBy: null, usedCounters: [] };
+  const result: InstantResult = { dealt: 0, recoil: 0, counteredBy: null, usedCounters: [], hits: [] };
   for (const card of played) {
     for (const effect of card.effects) {
       if (effect.kind !== 'instant') continue;
@@ -110,6 +115,7 @@ function instantBattle(played: BattleCard[], factor: number, armed: BattleCard[]
         result.usedCounters.push(counter);
       } else {
         result.dealt += amount;
+        result.hits.push(effect);
       }
     }
   }
@@ -251,19 +257,36 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
 
 /** Credibility ran out: the battle is lost. */
 function lose(state: UtopiaGame): UtopiaGame {
-  return { ...state, credibility: 0, losses: state.losses + 1, outcome: 'lost', selected: [] };
+  return { ...state, credibility: 0, losses: state.losses + 1, credits: state.credits + battleRules.credits.loss, outcome: 'lost', selected: [] };
+}
+
+/** What a won battle pays: the win, a bonus for high credibility, and more when the corporation is beaten for good. */
+export function battleReward(credibility: number, corporationBeaten: boolean): Reward {
+  const rules = battleRules.credits;
+  const reward: Reward = { credits: rules.win, reasons: ['win'] };
+  if (credibility > rules.highCredibility && rules.highCredibilityBonus) {
+    reward.credits += rules.highCredibilityBonus;
+    reward.reasons.push(`credibility above ${rules.highCredibility}`);
+  }
+  if (corporationBeaten && rules.corporationBeaten) {
+    reward.credits += rules.corporationBeaten;
+    reward.reasons.push('corporation beaten');
+  }
+  return reward;
 }
 
 /** The corporation is beaten: count the win, heal a little and move on to the next battle (or win the level). */
 function winBattle(state: UtopiaGame, random: () => number): UtopiaGame {
+  const stage = campaign[state.stage]!;
+  const nextBattle = state.battle + 1 < stage.battles ? { stage: state.stage, battle: state.battle + 1 } : { stage: state.stage + 1, battle: 0 };
+  const reward = battleReward(state.credibility, nextBattle.stage !== state.stage);
   const won: UtopiaGame = {
     ...state,
     wins: state.wins + 1,
-    credits: state.credits + battleRules.creditsPerWin,
+    credits: state.credits + reward.credits,
+    lastReward: reward,
     credibility: Math.min(battleRules.maxCredibility, state.credibility + battleRules.healAfterWin)
   };
-  const stage = campaign[state.stage]!;
-  const nextBattle = state.battle + 1 < stage.battles ? { stage: state.stage, battle: state.battle + 1 } : { stage: state.stage + 1, battle: 0 };
   if (nextBattle.stage >= campaign.length) return { ...won, outcome: 'won', turn: 'player', selected: [] };
   return startBattle(won, nextBattle.stage, nextBattle.battle, random);
 }
@@ -285,11 +308,16 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
   const damage = result.damage + instant.dealt;
   const credibility = Math.max(0, state.credibility - damage);
   const power = Math.max(0, Math.min(state.enemy.maxPower, state.enemy.power + result.healed) - instant.recoil);
+  // An instant card that hits teaches you its answer.
+  const learned = instant.hits.map(effect => effect.kind === 'instant' ? effect.counter : '')
+    .filter(id => playerCard(id)?.learned && !state.owned.includes(id));
   const next: UtopiaGame = {
     ...state,
     credibility,
     block: result.damage + result.blocked > 0 ? 0 : state.block,
     counters: [],
+    owned: learned.length ? [...state.owned, ...learned] : state.owned,
+    credits: state.credits + instant.usedCounters.length * battleRules.credits.counter,
     enemy: {
       ...state.enemy,
       power,
@@ -300,7 +328,7 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
     turn: 'player',
     log: logAttack(state, {
       by: 'enemy', corpId: state.enemy.corpId, cards: played.map(card => card.id), ...result, damage,
-      recoil: instant.recoil, counteredBy: instant.counteredBy
+      recoil: instant.recoil, counteredBy: instant.counteredBy, learned
     }),
     stats: { ...state.stats, damageTaken: state.stats.damageTaken + damage, damageDealt: state.stats.damageDealt + instant.recoil }
   };

@@ -12,6 +12,15 @@ export interface ShopEntry {
   owned: boolean;
 }
 
+/** A counter card you learn from a corporation: known, or still hidden with a hint where it comes from. */
+export interface LearnEntry {
+  card: PlayerCard;
+  category: CardCategory;
+  summary: string;
+  known: boolean;
+  hint: string;
+}
+
 /** The card shop: cards for credits (one credit per won battle). */
 @Component({
   selector: 'app-card-shop',
@@ -22,7 +31,7 @@ export interface ShopEntry {
         <h1 id="shop-title">Card shop</h1>
         <span class="shop-credits" aria-live="polite">🪙 {{ credits() }} {{ credits() === 1 ? 'credit' : 'credits' }}</span>
       </header>
-      <p>Every won battle earns {{ creditsPerWin() }} {{ creditsPerWin() === 1 ? 'credit' : 'credits' }}. Bought cards join your deck for good.</p>
+      <p>Credits: {{ earnRules() }}. Bought cards join your deck for good.</p>
       <div class="shop-grid">
         @for (entry of entries(); track entry.card.id) {
           <article class="play-card shop-card" [class.owned]="entry.owned" [attr.data-category]="entry.category">
@@ -42,6 +51,28 @@ export interface ShopEntry {
           </article>
         }
       </div>
+      <h2 class="shop-subheading">Learned counters</h2>
+      <p>Never for sale: when a corporation's instant card hits you, you learn the answer.</p>
+      <div class="shop-grid">
+        @for (entry of learnable(); track entry.card.id) {
+          @if (entry.known) {
+            <article class="play-card shop-card" [attr.data-category]="entry.category">
+              <span class="card-chip">{{ labels[entry.category] }}</span>
+              <app-card-art [id]="entry.card.id" [category]="entry.category" />
+              <strong>{{ entry.card.name }}</strong>
+              <small>{{ entry.card.description }}</small>
+              <span class="play-card-effect">{{ entry.summary }}</span>
+              <span class="shop-owned">✓ In your deck</span>
+            </article>
+          } @else {
+            <article class="play-card shop-card shop-unknown">
+              <span class="card-chip">???</span>
+              <strong>Unknown answer</strong>
+              <small>{{ entry.hint }}</small>
+            </article>
+          }
+        }
+      </div>
       <button class="intro-button event-decline shop-close" type="button" autofocus (click)="closed.emit()">Close</button>
     </dialog>
   `
@@ -49,7 +80,9 @@ export interface ShopEntry {
 export class CardShopComponent extends ModalDialog {
   readonly entries = input.required<ShopEntry[]>();
   readonly credits = input.required<number>();
-  readonly creditsPerWin = input(1);
+  /** How credits are earned, in a few words. */
+  readonly earnRules = input('');
+  readonly learnable = input<LearnEntry[]>([]);
   readonly bought = output<string>();
   readonly closed = output<void>();
   protected readonly labels: Record<CardCategory, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo' };

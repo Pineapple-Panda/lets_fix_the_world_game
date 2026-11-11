@@ -1867,13 +1867,16 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   const nearly = { ...fresh(), credibility: 60, enemy: { ...fresh().enemy, power: 5 } };
   const won = utopia.attack(picked(nearly, 'antitrust'), () => 0);
   assert.equal(won.wins, 1);
-  assert.equal(won.credits, 1, 'one credit per win');
+  assert.equal(won.credits, 2, 'one credit per win, one more for winning with more than 50 credibility');
+  assert.deepEqual(won.lastReward.reasons, ['win', 'credibility above 50']);
   assert.equal(won.credibility, 60 + 25, 'heals after a win');
   assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [0, 1, 'bananas', 100], 'second battle, back at full power');
   assert.equal(won.turn, 'player');
   assert.deepEqual(won.cooldowns, {});
-  const next = utopia.attack(picked({ ...won, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
+  const next = utopia.attack(picked({ ...won, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
   assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [1, 0, 'mississippi', 100]);
+  assert.equal(next.credits, won.credits + 1 + 2, 'a win (no bonus at 40 credibility) and the corporation beaten for good');
+  assert.deepEqual(next.lastReward.reasons, ['win', 'corporation beaten']);
   const last = { ...fresh(), stage: 2, battle: 5, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, counters: [], cooldowns: {} } };
   const victory = utopia.attack(picked(last, last.hand[0]), () => 0);
   assert.equal(victory.outcome, 'won');
@@ -1960,6 +1963,36 @@ test('level 3: instant battle hits unless the opponent played the counter last t
   // Your counter cards work the same way: picked, played, waiting for its next attack.
   const mine = { ...fresh(), hand: ['antitrust', 'like-a-cow'] };
   assert.deepEqual(utopia.toggleCard(mine, 'like-a-cow').selected, ['like-a-cow']);
+});
+
+test('level 3: the corporations\' instant cards teach you their counter; countering them pays a credit', () => {
+  // Try random sequences until Bananas Inc. plays its instant card.
+  const attacked = { ...fresh(), turn: 'enemy', credibility: 90 };
+  let hitBy = null;
+  for (let i = 0; i < 60 && !hitBy; i++) {
+    const answer = utopia.enemyAttack(attacked, () => i / 60);
+    if (answer.log[0].cards.includes('plan-is-bananas')) hitBy = answer;
+  }
+  assert.ok(hitBy, 'Bananas Inc. plays its instant card');
+  assert.deepEqual(hitBy.log[0].learned, ['not-monoculture']);
+  assert.ok(hitBy.owned.includes('not-monoculture'), 'you learned the answer');
+  assert.ok(utopia.ownedCards(hitBy).some(card => card.id === 'not-monoculture'));
+  assert.ok(!utopia.shopCards().some(card => card.learned), 'learned cards are never sold');
+  assert.equal(utopia.ownedCards(fresh()).length, 5, 'unknown answers are not in the deck');
+  assert.deepEqual(utopia.learnableCards(hitBy).find(entry => entry.card.id === 'not-monoculture').known, true);
+  // Played last turn, the answer counters the instant card: half strikes back, and you earn a credit.
+  const ready = { ...fresh(), turn: 'enemy', owned: ['not-monoculture'], counters: ['not-monoculture'], credits: 0 };
+  let countered = null;
+  for (let i = 0; i < 60 && !countered; i++) {
+    const answer = utopia.enemyAttack(ready, () => i / 60);
+    if (answer.log[0].cards.includes('plan-is-bananas')) countered = answer;
+  }
+  assert.equal(countered.log[0].counteredBy, 'not-monoculture');
+  assert.equal(countered.log[0].recoil, 4, 'half of 8');
+  assert.equal(countered.enemy.power, 96, 'the recoil hits the corporation (it starts at full power, so healing adds nothing)');
+  assert.equal(countered.credits, 1, 'a credit for the counter');
+  assert.deepEqual(countered.log[0].learned, [], 'nothing new to learn');
+  assert.deepEqual(utopia.battleReward(80, true), { credits: 4, reasons: ['win', 'credibility above 50', 'corporation beaten'] });
 });
 
 test('winning level 3 shows a summary of all three levels', () => {
