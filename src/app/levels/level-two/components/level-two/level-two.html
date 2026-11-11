@@ -27,7 +27,7 @@
                                     (click)="productUpgraded.emit(released.id)">Upgrade version</button>
                         </div>
                         @if (panel.upgradeBlocker; as blocker) {
-                            <small class="upgrade-hint panel-warning">{{ blocker }}</small>
+                            <small class="upgrade-hint" [class.panel-warning]="!panel.solved" [class.epic-done]="panel.solved">{{ blocker }}</small>
                         } @else {
                             <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
                         }

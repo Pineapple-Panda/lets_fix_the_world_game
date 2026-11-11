@@ -831,6 +831,7 @@ export function upgradeCost(state: LaunchedGame, productId: string): number {
 export function upgradeBlocker(state: LaunchedGame, productId: string): string | null {
   const released = product(state, productId);
   if (!released?.active) return 'Activate the application first';
+  if (productSolved(state, productId)) return 'Every problem of this application is solved: no new versions needed.';
   if (integrityBlocked(state)) return 'Integrity is 0%: nobody works on new versions. Raise integrity first (Tegridy, fewer shady deals).';
   if (state.budget < upgradeCost(state, productId)) return `Not enough budget: the next version costs ${upgradeCost(state, productId).toLocaleString('en-US')}.`;
   return null;

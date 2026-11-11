@@ -2160,6 +2160,9 @@ test('the upgrade button says why a version cannot be upgraded', () => {
   assert.equal(launched.upgradeProduct(broken, 'green-world'), null, 'nobody cooperates at 0% integrity');
   assert.match(launched.upgradeBlocker({ ...live, budget: 0 }, 'green-world'), /Not enough budget/);
   assert.match(launched.upgradeBlocker(live, 'fair-share'), /Activate/);
+  const solved = { ...live, worldProgress: { ...live.worldProgress, climate: 100 } };
+  assert.match(launched.upgradeBlocker(solved, 'green-world'), /solved/);
+  assert.equal(launched.upgradeProduct(solved, 'green-world'), null, 'no upgrades once every problem is solved');
 });
 
 // ---------- smoothing ----------
