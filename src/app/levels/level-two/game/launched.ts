@@ -291,12 +291,14 @@ export function epicDuration(epic: EpicDefinition, dataCenters = false): number 
 /**
  * One second in level 2: actions grow by 50–300 per server slot (scaled by the focus slider), running epics advance by one second of server time,
  * and the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
- * Then clients, finished epics, programs, lawsuits and product releases are applied.
+ * Then clients, finished epics, programs, lawsuits and product releases are applied. Once the world is fixed, the
+ * level stands still: time, TCA, budget and the stats of the summary stop.
  */
 export function tickLaunched(
   state: LaunchedGame,
   random: () => number = Math.random
 ): LaunchedGame {
+  if (worldFixed(state)) return state;
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
   // Every server slot adds a full share of actions per second.
   const gained = Math.round(base * actionBoost(state) * state.serverSlots);
@@ -377,9 +379,14 @@ export function shadyDeals(state: LaunchedGame): boolean {
     });
 }
 
-/** Closes the "world fixed" dialog for good. */
+/** Closes the "world fixed" dialog. */
 export function dismissVictory(state: LaunchedGame): LaunchedGame | null {
   return state.victorySeen ? null : { ...state, victorySeen: true };
+}
+
+/** Opens the "world fixed" dialog again (to continue to level 3 or restart after closing it). */
+export function showVictory(state: LaunchedGame): LaunchedGame | null {
+  return worldFixed(state) && state.victorySeen ? { ...state, victorySeen: false } : null;
 }
 
 export function product(state: LaunchedGame, id: string): LaunchedProduct | undefined {

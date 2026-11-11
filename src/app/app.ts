@@ -29,7 +29,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame, gameSmoothing
 } from './levels/level-one/game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level1Summary, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, showVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level1Summary, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched, launchedSmoothing } from './levels/level-two/game/launched';
 import { newsFeed } from './levels/level-two/game/news';
 import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './shared/game/storage';
@@ -434,6 +434,16 @@ export class AppComponent {
   dismissVictory(): void {
     this.updateLaunched(state => dismissVictory(state));
   }
+
+  showVictory(): void {
+    this.updateLaunched(state => showVictory(state));
+  }
+
+  /** Level 2 is won and its dialog was closed: the footer offers to open it again. */
+  readonly victoryClosed = computed(() => {
+    const live = this.launched();
+    return !!live && worldFixed(live) && live.victorySeen;
+  });
 
   settleLawsuit(): void {
     this.updateLaunched(state => settleLawsuit(state));

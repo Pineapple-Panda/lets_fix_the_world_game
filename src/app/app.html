@@ -55,6 +55,9 @@
                            (lawsuitFought)="fightLawsuit()" (pitched)="pitch()" />
             <footer><span>LET’S FIX THE WORLD GAME / LEVEL 2</span>
                 <span class="footer-actions">
+                    @if (victoryClosed()) {
+                        <button id="show-results" class="reset" type="button" (click)="showVictory()">Results &amp; next level</button>
+                    }
                     <app-github-link />
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
                 </span>

@@ -2167,6 +2167,16 @@ test('the upgrade button says why a version cannot be upgraded', () => {
   assert.equal(launched.upgradeProduct(solved, 'green-world'), null, 'no upgrades once every problem is solved');
 });
 
+test('level 2 stands still once the world is fixed, and its dialog can be opened again', () => {
+  const fixed = liveState({ worldProgress: { climate: 100, war: 100, hunger: 100, poverty: 100, corruption: 100 }, seconds: 600, budget: 5,
+    rentals: ['ministry-digital'], perks: ['workflow-abstraction', 'network-financing'], serverSlots: 2 });
+  assert.equal(launched.tickLaunched(fixed, () => 0.5), fixed, 'time, TCA, budget and stats stop');
+  assert.equal(launched.showVictory(fixed), null, 'the dialog is still open');
+  const closed = launched.dismissVictory(fixed);
+  assert.equal(launched.showVictory(closed).victorySeen, false);
+  assert.equal(launched.showVictory(liveState({ victorySeen: true })), null, 'only once the world is fixed');
+});
+
 // ---------- smoothing ----------
 
 const smoothing = require('../src/app/shared/game/smoothing.ts');
