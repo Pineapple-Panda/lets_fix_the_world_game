@@ -117,7 +117,6 @@ export class LevelThreeComponent {
         .map(card => ({ card, turns: state.cooldowns[card.id]! })),
       deckSize: ownedCards(state).length,
       credits: state.credits,
-      lastReward: state.lastReward ?? null,
       learnable: learnableCards(state).map(({ card, known }) => {
         const counter = card.effects.find(effect => effect.kind === 'counter');
         const source = counter?.kind === 'counter' ? corporations.map(corp => ({ corp, card: corp.cards.find(entry => entry.id === counter.of) })).find(entry => entry.card) : undefined;

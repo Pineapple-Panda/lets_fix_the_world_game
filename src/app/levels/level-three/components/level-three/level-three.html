@@ -136,11 +136,8 @@
             @if (v.resting.length) {
                 <small class="upgrade-hint">Resting: @for (entry of v.resting; track entry.card.id; let last = $last) {{{ entry.card.name }} ({{ entry.turns }}){{ last ? '' : ', ' }}}</small>
             }
-            <!-- Right: what the last win paid, and the card shop (the badge counts the cards you can afford). -->
+            <!-- Right: the card shop (the badge counts the cards you can afford). -->
             <div class="shop-corner">
-                @if (v.lastReward; as reward) {
-                    <small class="last-reward">Last win: +{{ reward.credits }} <app-coin-icon /><br>{{ reward.reasons.join(', ') }}</small>
-                }
                 <button class="shop-button" type="button" (click)="shopOpen.set(true)"
                         [attr.aria-label]="'Card shop, ' + v.credits + ' credits, ' + v.affordableCount + ' cards you can afford'">
                     <app-cart-icon />

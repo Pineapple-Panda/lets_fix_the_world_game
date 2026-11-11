@@ -2625,11 +2625,6 @@ footer {
     color: var(--faint);
 }
 
-.last-reward {
-    color: var(--yellow);
-    line-height: 1.4;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .play-card {
         transition: none;
