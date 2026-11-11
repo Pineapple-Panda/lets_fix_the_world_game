@@ -214,7 +214,12 @@ export function newUtopia(history: LevelSummary[] = [], random: () => number = M
 
 /** True while you can pick cards and attack. */
 export function playerTurn(state: UtopiaGame): boolean {
-  return state.outcome === null && state.turn === 'player';
+  return state.outcome === null && state.turn === 'player' && !state.resolving;
+}
+
+/** The battle is over: won or lost. It is applied a few ticks later, once the last cards have been shown. */
+function resolveBattle(state: UtopiaGame, result: 'win' | 'loss'): UtopiaGame {
+  return { ...state, selected: [], resolving: { result, wait: battleRules.resolveDelay } };
 }
 
 /** How many cards you may play this turn: `maxCards`, plus the extra cards of a special card played last turn. */
@@ -347,8 +352,8 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     }
   };
   next.hand = drawHand(next, random);
-  if (power <= 0) return winBattle(next, random);
-  return credibility <= 0 ? lose(next) : next;
+  if (power <= 0) return resolveBattle(next, 'win');
+  return credibility <= 0 ? resolveBattle(next, 'loss') : next;
 }
 
 /** Credibility ran out: the battle is lost. */
@@ -439,7 +444,7 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
     }),
     stats: { ...state.stats, damageTaken: state.stats.damageTaken + damage, damageDealt: state.stats.damageDealt + instant.recoil }
   };
-  if (credibility <= 0) return lose(next);
+  if (credibility <= 0) return resolveBattle(next, 'loss');
   // Shuffle: your hand is drawn afresh; lock: random cards of your hand cannot be picked next turn.
   if (effects.some(effect => effect.kind === 'shuffle')) {
     next.hand = drawHand({ ...next, hand: [] }, random);
@@ -453,7 +458,7 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
     next.locked = locked;
     if (locked.length) notes.push(`locked ${locked.map(id => `“${playerCard(id)?.name ?? id}”`).join(', ')}`);
   }
-  return power <= 0 ? winBattle(next, random) : next;
+  return power <= 0 ? resolveBattle(next, 'win') : next;
 }
 
 /**
@@ -463,6 +468,12 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
   if (state.outcome !== null) return state;
   const next = { ...state, seconds: state.seconds + 1 };
+  // A battle that just ended waits for its last cards, then the next battle starts (or the game is over).
+  if (next.resolving) {
+    if (next.resolving.wait > 1) return { ...next, resolving: { ...next.resolving, wait: next.resolving.wait - 1 } };
+    const settled = { ...next, resolving: null };
+    return next.resolving.result === 'win' ? winBattle(settled, random) : lose(settled);
+  }
   if (next.turn !== 'enemy') return next;
   const wait = (next.enemyWait ?? 0) - 1;
   return wait > 0 ? { ...next, enemyWait: wait } : enemyAttack({ ...next, enemyWait: 0 }, random);

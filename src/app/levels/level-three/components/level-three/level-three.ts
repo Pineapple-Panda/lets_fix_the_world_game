@@ -102,6 +102,8 @@ export class LevelThreeComponent {
       regen: state.regen.length ? { amount: state.regen.reduce((total, entry) => total + entry.amount, 0), turns: Math.max(...state.regen.map(entry => entry.turns)) } : null,
       counters: state.counters.map(id => playerCard(id)?.name ?? id),
       yourTurn: playerTurn(state),
+      // A battle that just ended, shown until the next one starts.
+      resolving: state.resolving?.result ?? null,
       hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
         card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), selected: state.selected.includes(card.id),
         locked: state.locked.includes(card.id)

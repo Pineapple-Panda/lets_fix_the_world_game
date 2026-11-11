@@ -77,7 +77,11 @@
                 }
                 <div class="stage-center">
                     <span class="stage-vs" aria-hidden="true">VS</span>
-                    <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">{{ v.yourTurn ? 'Your move' : v.enemy.corp?.name + ' strikes back…' }}</p>
+                    @if (v.resolving; as result) {
+                        <p class="turn battle-end" [class.lost]="result === 'loss'" role="status">{{ result === 'win' ? 'Victory!' : 'Defeated…' }}</p>
+                    } @else {
+                        <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">{{ v.yourTurn ? 'Your move' : v.enemy.corp?.name + ' strikes back…' }}</p>
+                    }
                 </div>
                 @if (v.stageEnemy; as current) {
                     @for (stage of [current]; track stage.id) {

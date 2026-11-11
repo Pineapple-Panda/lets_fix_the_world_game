@@ -114,6 +114,8 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !isPercent(enemy.block) || !isCountRecord(enemy.cooldowns) || !isIdList(enemy.counters) || !isIdList(game.counters) ||
     !isCount(game.blockAttacks) || !isCount(enemy.blockAttacks) || !isIdList(game.locked) ||
     !(game.extraCards === undefined || isCount(game.extraCards)) ||
+    !(game.resolving === undefined || game.resolving === null ||
+      (isObject(game.resolving) && (game.resolving.result === 'win' || game.resolving.result === 'loss') && isCount(game.resolving.wait))) ||
     !Array.isArray(game.regen) || !game.regen.every(entry => isObject(entry) && isCount(entry.amount) && isCount(entry.turns)) ||
     !isIdList(game.hand) || !isIdList(game.selected) || !isCountRecord(game.cooldowns) || !isPercent(game.block) ||
     (game.turn !== 'player' && game.turn !== 'enemy') || !Array.isArray(game.log) ||

@@ -1800,6 +1800,12 @@ const fresh = () => {
 };
 /** A state with the given cards picked. */
 const picked = (state, ...ids) => ids.reduce((current, id) => utopia.toggleCard(current, id), state);
+/** Ticks until a battle that just ended is applied (the next battle starts, or the game is over). */
+const settle = (state, random = () => 0) => {
+  let next = state;
+  for (let tick = 0; tick < 10 && next.resolving; tick++) next = utopia.tickUtopia(next, random);
+  return next;
+};
 /** Ticks until the corporation has answered your attack (it waits `enemyDelay` ticks, time for the animation). */
 const answer = (state, random) => {
   let next = state;
@@ -1882,7 +1888,11 @@ test('level 3: the corporation answers a few ticks after your attack; blockers a
 
 test('level 3: a beaten corporation counts as a win; the campaign moves on', () => {
   const nearly = { ...fresh(), credibility: 60, enemy: { ...fresh().enemy, power: 5 } };
-  const won = utopia.attack(picked(nearly, 'antitrust'), () => 0);
+  const ending = utopia.attack(picked(nearly, 'antitrust'), () => 0);
+  assert.deepEqual([ending.resolving, ending.wins, ending.enemy.power], [{ result: 'win', wait: 3 }, 0, 0], 'the win is applied after the last cards are shown');
+  assert.equal(utopia.toggleCard(ending, ending.hand[0]), null, 'nobody plays meanwhile');
+  assert.equal(utopia.tickUtopia(ending).resolving.wait, 2);
+  const won = settle(ending);
   assert.equal(won.wins, 1);
   assert.equal(won.credits, 2, 'one credit per win, one more for winning with more than 50 credibility');
   assert.deepEqual(won.lastReward.reasons, ['win', 'credibility above 50']);
@@ -1890,12 +1900,12 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [2, 1, 'bananas', 100], 'second battle, back at full power');
   assert.equal(won.turn, 'player');
   assert.deepEqual(won.cooldowns, {});
-  const next = utopia.attack(picked({ ...won, battle: 2, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
+  const next = settle(utopia.attack(picked({ ...won, battle: 2, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0));
   assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [3, 0, 'mississippi', 100]);
   assert.equal(next.credits, won.credits + 1 + 2, 'a win (no bonus at 40 credibility) and the corporation beaten for good');
   assert.deepEqual(next.lastReward.reasons, ['win', 'corporation beaten']);
   const last = { ...fresh(), stage: 4, battle: 4, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, counters: [], cooldowns: {} } };
-  const victory = utopia.attack(picked(last, last.hand[0]), () => 0);
+  const victory = settle(utopia.attack(picked(last, last.hand[0]), () => 0));
   assert.equal(victory.outcome, 'won');
   assert.equal(utopia.tickUtopia(victory), victory, 'the game stands still');
   assert.equal(utopia.dismissOutcome(victory).outcomeSeen, true);
@@ -1903,7 +1913,10 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
 
 test('level 3: credibility carries over; at 0 the battle is lost and level 3 starts from scratch', () => {
   const weak = { ...fresh(), stage: 3, battle: 2, credibility: 3, wins: 4, credits: 2, owned: ['leak', 'not-monoculture'], seconds: 300, turn: 'enemy' };
-  const lost = utopia.tickUtopia(weak, () => 0);
+  const defeated = utopia.tickUtopia(weak, () => 0);
+  assert.equal(defeated.resolving.result, 'loss', 'game over waits for the last cards');
+  assert.equal(defeated.outcome, null);
+  const lost = settle(defeated);
   assert.equal(lost.credibility, 0);
   assert.equal(lost.outcome, 'lost');
   assert.equal(lost.losses, 1);
@@ -1970,7 +1983,7 @@ test('level 3: instant battle hits unless the opponent played the counter last t
   // Each counter only answers its own instant card.
   assert.equal(utopia.attack(picked(ready, 'leather-jackets'), () => 0).enemy.power, 90, 'the cow does not answer the jackets');
   // Recoil can lose the battle.
-  assert.equal(utopia.attack(picked({ ...ready, credibility: 4 }, 'dairy-farmer'), () => 0).outcome, 'lost');
+  assert.equal(settle(utopia.attack(picked({ ...ready, credibility: 4 }, 'dairy-farmer'), () => 0)).outcome, 'lost');
   // The corporation plays counter cards like any card; they wait for your next attack.
   let cowPlayed = null;
   for (let i = 0; i < 40 && !cowPlayed; i++) {

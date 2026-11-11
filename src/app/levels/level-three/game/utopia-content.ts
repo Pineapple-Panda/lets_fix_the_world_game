@@ -26,7 +26,9 @@ export const battleRules = {
   /** Attacks kept in the log. */
   logLength: 6,
   /** Ticks (seconds) between your attack and the corporation's answer, so your cards (and its unused counters) can be shown. */
-  enemyDelay: 3
+  enemyDelay: 3,
+  /** Ticks between the end of a battle and the next battle (or game over), so the last cards can be shown. */
+  resolveDelay: 3
 };
 
 /**

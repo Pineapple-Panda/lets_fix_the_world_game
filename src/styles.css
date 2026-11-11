@@ -1860,6 +1860,17 @@ footer {
     color: var(--red);
 }
 
+/* The end of a battle, before the next one starts. */
+.turn.battle-end {
+    color: var(--yellow);
+    font-size: 18px;
+    animation: result-pop .4s ease-out both;
+}
+
+.turn.battle-end.lost {
+    color: var(--red);
+}
+
 /* The stage in the battle card: the cards of the latest attack fly in (yours from below, theirs from above) and light
    up one after another as they are applied; then the results pop up. */
 .stage {

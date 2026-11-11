@@ -35,6 +35,8 @@ export interface UtopiaGame {
   /** Whose move it is. The corporation answers `enemyWait` ticks after your attack (time for the animation). */
   turn: 'player' | 'enemy';
   enemyWait?: number;
+  /** A battle that just ended: won or lost, applied after `wait` more ticks (time for the last cards to be shown). */
+  resolving?: { result: 'win' | 'loss'; wait: number } | null;
   /** The latest attacks, newest first. */
   log: Attack[];
   /** Battles won and lost, over all attempts. */
