@@ -24,7 +24,9 @@ export const battleRules = {
   /** Blocks stack up to this many percent. */
   maxBlock: 80,
   /** Attacks kept in the log. */
-  logLength: 6
+  logLength: 6,
+  /** Ticks (seconds) between your attack and the corporation's answer, so your cards can be shown. */
+  enemyDelay: 2
 };
 
 /**

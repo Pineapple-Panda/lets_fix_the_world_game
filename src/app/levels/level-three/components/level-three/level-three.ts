@@ -5,7 +5,7 @@ import {
   buyBlocker, cardCategory, cardSummary, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, corporations, megaCorpName } from '../../game/utopia-content';
-import type { Attack, UtopiaGame } from '../../models/utopia.model';
+import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: a card game against the corporations, one after another. */
 @Component({
@@ -95,9 +95,38 @@ export class LevelThreeComponent {
       shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
       // Something in the shop you can afford: the shop button shows a dot.
       affordable: shopCards().some(card => !buyBlocker(state, card.id)),
-      log: state.log.map(entry => this.describe(entry))
+      log: state.log.map(entry => this.describe(entry)),
+      stage: this.stage(state)
     };
   });
+
+  /** Order in which played cards are applied on the battle card. */
+  private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4 };
+
+  /** The latest attack for the battle card: its cards in the order they are applied, and what it did. */
+  private stage(state: UtopiaGame) {
+    const latest = state.log[0];
+    if (!latest) return null;
+    const factor = latest.by === 'enemy' ? (currentStage(state) ? enemyStrength(currentStage(state)!, state.battle) : 1) : 1;
+    const cards = latest.cards
+      .map(id => latest.by === 'player' ? playerCard(id) : enemyCard(latest.corpId, id))
+      .filter((card): card is BattleCard => !!card)
+      .map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, factor, latest.by === 'player' ? state.wins : 0) }))
+      .sort((a, b) => LevelThreeComponent.applyOrder[a.category] - LevelThreeComponent.applyOrder[b.category]);
+    const results = [
+      latest.shield ? { kind: 'block', text: `🛡 ${latest.shield}%` } : null,
+      latest.blocked ? { kind: 'blocked', text: `🛡 ${latest.blocked} blocked` } : null,
+      latest.damage ? { kind: 'damage', text: `−${latest.damage}` } : null,
+      latest.recoil ? { kind: 'recoil', text: `↩ ${latest.recoil} back` } : null,
+      latest.healed ? { kind: 'heal', text: `+${latest.healed}` } : null,
+      ...(latest.notes ?? []).map((note, index) => ({ kind: 'note' + index, text: note })),
+      ...(latest.learned ?? []).map(id => ({ kind: 'learned-' + id, text: `learned “${playerCard(id)?.name ?? id}”` }))
+    ].filter((chip): chip is { kind: string; text: string } => !!chip);
+    return {
+      id: latest.id, mine: latest.by === 'player', by: corporation(latest.corpId)?.name ?? latest.corpId,
+      names: cards.map(entry => entry.card.name).join(', '), cards, results
+    };
+  }
 
   /** One line per attack, e.g. "You: Antitrust Lawsuit + Fact Check → 20 damage (5 blocked)". */
   private describe(entry: Attack) {

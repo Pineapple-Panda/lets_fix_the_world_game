@@ -30,8 +30,9 @@ export interface UtopiaGame {
   regen: { amount: number; turns: number }[];
   /** Cards of your hand the corporation locked: they cannot be picked this turn. */
   locked: string[];
-  /** Whose move it is. The corporation moves one second after you. */
+  /** Whose move it is. The corporation answers `enemyWait` ticks after your attack (time for the animation). */
   turn: 'player' | 'enemy';
+  enemyWait?: number;
   /** The latest attacks, newest first. */
   log: Attack[];
   /** Battles won and lost, over all attempts. */

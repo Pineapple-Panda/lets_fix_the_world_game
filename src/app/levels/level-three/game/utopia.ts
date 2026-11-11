@@ -312,6 +312,7 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],
     turn: 'enemy',
+    enemyWait: battleRules.enemyDelay,
     log: logAttack(state, {
       by: 'player', corpId: state.enemy.corpId, cards: played.map(card => card.id),
       damage, blocked: result.blocked, healed: result.healed, shield: result.shield,
@@ -431,11 +432,16 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
   return power <= 0 ? winBattle(next, random) : next;
 }
 
-/** One second of level 3: the clock runs, and the corporation answers your attack. Nothing happens once it is over. */
+/**
+ * One second of level 3: the clock runs, and the corporation answers your attack once `enemyWait` ticks have passed.
+ * Nothing happens once it is over.
+ */
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
   if (state.outcome !== null) return state;
   const next = { ...state, seconds: state.seconds + 1 };
-  return next.turn === 'enemy' ? enemyAttack(next, random) : next;
+  if (next.turn !== 'enemy') return next;
+  const wait = (next.enemyWait ?? 0) - 1;
+  return wait > 0 ? { ...next, enemyWait: wait } : enemyAttack({ ...next, enemyWait: 0 }, random);
 }
 
 // ---------- The end ----------

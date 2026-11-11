@@ -5,8 +5,8 @@
                        (bought)="cardBought.emit($event)" (closed)="shopOpen.set(false)" />
     }
 
-    <!-- The table: the corporation on top, the battle below. -->
-    <section class="ops-card table" aria-label="Battle">
+    <!-- The corporation: power, how often to beat it, its cards. -->
+    <section class="ops-card enemy-card" aria-label="Opponent">
         <div class="fighter fighter-enemy" [class.boss]="v.enemy.boss">
             <div class="fighter-details">
                 <h2 class="fighter-name">{{ v.enemy.corp?.name }}@if (v.enemy.boss) { <span class="boss-tag">Boss</span>}</h2>
@@ -34,7 +34,10 @@
                 }
             </ul>
         </div>
+    </section>
 
+    <!-- The battle: the cards of the latest attack fly in and are applied one after another. -->
+    <section class="ops-card battle-card" aria-label="Battle">
         <div class="battlefield">
             <!-- Left: your record and the shop. -->
             <div class="record">
@@ -49,19 +52,28 @@
                     <small class="last-reward">Last win: +{{ reward.credits }} 🪙<br>{{ reward.reasons.join(', ') }}</small>
                 }
             </div>
-            <div class="battle-feed">
-            <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">
-                {{ v.yourTurn ? 'Your move: pick up to ' + rules.maxCards + ' cards and attack.' : v.enemy.corp?.name + ' strikes back…' }}
-            </p>
-            <ol class="battle-log" aria-label="Latest attacks">
-                @for (line of v.log; track line.id) {
-                    <li [class.mine]="line.mine">
-                        <b>{{ line.mine ? 'You' : line.by }}:</b> {{ line.cards }} <span>→ {{ line.result }}</span>
-                    </li>
-                } @empty {
-                    <li class="empty">The battle begins. {{ megaCorpName }} is watching.</li>
+            <div class="stage">
+                <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">{{ v.yourTurn ? 'Your move' : v.enemy.corp?.name + ' strikes back…' }}</p>
+                @if (v.stage; as current) {
+                @for (stage of [current]; track stage.id) {
+                    <div class="stage-row" [class.from-enemy]="!stage.mine" [attr.aria-label]="(stage.mine ? 'You played ' : stage.by + ' played ') + stage.names">
+                        @for (entry of stage.cards; track entry.card.id; let i = $index) {
+                            <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i">
+                                <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                                <strong>{{ entry.card.name }}</strong>
+                                <small>{{ entry.summary }}</small>
+                            </div>
+                        }
+                    </div>
+                    <div class="stage-results" [style.--n]="stage.cards.length">
+                        @for (chip of stage.results; track chip.kind) {
+                            <span class="result-chip" [attr.data-kind]="chip.kind">{{ chip.text }}</span>
+                        }
+                    </div>
                 }
-            </ol>
+                } @else {
+                    <p class="stage-empty">The battle begins. {{ megaCorpName }} is watching.</p>
+                }
             </div>
         </div>
     </section>

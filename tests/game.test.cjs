@@ -1796,6 +1796,8 @@ const utopiaContent = require('../src/app/levels/level-three/game/utopia-content
 const fresh = () => utopia.newUtopia([], () => 0);
 /** A state with the given cards picked. */
 const picked = (state, ...ids) => ids.reduce((current, id) => utopia.toggleCard(current, id), state);
+/** Ticks until the corporation has answered your attack (it waits `enemyDelay` ticks, time for the animation). */
+const answer = (state, random) => utopia.tickUtopia(utopia.tickUtopia(state, random), random);
 
 test('level 3 is a card game campaign: Bananas Inc. twice, Mississippi Corp four times, EdisonX six times', () => {
   assert.deepEqual(utopiaContent.campaign.map(stage => [stage.corpId, stage.battles]), [['bananas', 2], ['mississippi', 4], ['edison', 6]]);
@@ -1830,21 +1832,23 @@ test('level 3: pick up to three cards and attack; played cards rest', () => {
 
 test('level 3: cards rest for their number of own turns', () => {
   let state = utopia.attack(picked(fresh(), 'firewall'), () => 0);
-  state = utopia.tickUtopia(state, () => 0);
+  state = answer(state, () => 0);
   state = utopia.attack(picked(state, 'fact-check'), () => 0);
   assert.equal(state.cooldowns.firewall, 1, 'one turn less');
-  state = utopia.tickUtopia(state, () => 0);
+  state = answer(state, () => 0);
   state = utopia.attack(picked(state, 'fact-check'), () => 0);
   assert.equal(state.cooldowns.firewall, undefined, 'rested two turns');
   assert.ok(state.hand.includes('firewall'), 'back in the hand');
 });
 
-test('level 3: the corporation answers on the next tick; blockers absorb attacks', () => {
+test('level 3: the corporation answers two ticks after your attack; blockers absorb attacks', () => {
   const blocked = utopia.attack(picked(fresh(), 'firewall'), () => 0);
+  assert.equal(blocked.enemyWait, 2);
+  assert.equal(utopia.tickUtopia(blocked, () => 0).turn, 'enemy', 'it waits a moment: your cards are shown');
   // Random 0: one card, the first of its deck: Banana Blockade, 12 damage.
-  const answered = utopia.tickUtopia(blocked, () => 0);
+  const answered = answer(blocked, () => 0);
   assert.equal(answered.turn, 'player');
-  assert.equal(answered.seconds, blocked.seconds + 1);
+  assert.equal(answered.seconds, blocked.seconds + 2);
   assert.equal(answered.credibility, 100 - 6, '12 damage, half of it blocked');
   assert.equal(answered.block, 0, 'the block is used up');
   assert.equal(answered.enemy.cooldowns['banana-blockade'], 2);
@@ -2018,13 +2022,13 @@ test('level 3: new cards remove blocks, cost you, grow with wins, block twice, h
   // Fact Check Marathon: 30% for two of its attacks.
   let marathon = utopia.attack(picked(own('fact-check-marathon'), 'fact-check-marathon'), () => 0);
   assert.deepEqual([marathon.block, marathon.blockAttacks], [30, 2]);
-  marathon = utopia.tickUtopia(marathon, () => 0);
+  marathon = answer(marathon, () => 0);
   assert.deepEqual([marathon.block, marathon.blockAttacks], [30, 1], 'still there after the first attack');
   assert.equal(marathon.credibility, 50 - Math.round(12 * 0.7), 'Banana Blockade, 30% blocked');
   // Union Contract: +4 after each of its next three attacks.
   let union = utopia.attack(picked({ ...own('union-contract'), credibility: 90 }, 'union-contract'), () => 0);
   assert.deepEqual(union.regen, [{ amount: 4, turns: 3 }]);
-  union = utopia.tickUtopia(union, () => 0);
+  union = answer(union, () => 0);
   assert.equal(union.credibility, 90 - 12 + 4);
   assert.deepEqual(union.regen, [{ amount: 4, turns: 2 }]);
   // Tax Audit: its strongest card rests two turns longer (here: none rests, so its strongest starts resting).

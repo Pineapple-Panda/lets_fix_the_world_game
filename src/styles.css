@@ -1617,7 +1617,7 @@ footer {
 
 .cardgame {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 10px;
     min-height: 100%;
 }
@@ -1674,12 +1674,14 @@ footer {
     color: var(--muted);
 }
 
-/* The table: the corporation on top, the battle in the middle, you at the bottom. */
-.table {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 12px;
-    min-height: 0;
+/* Three cards: the corporation on top, the battle in the middle, you at the bottom. */
+.enemy-card {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 90%, var(--red)) 0%, var(--surface) 80%);
+}
+
+.battle-card {
+    display: flex;
+    min-height: 230px;
     background: radial-gradient(ellipse at center, color-mix(in srgb, var(--surface) 85%, var(--green)) 0%, var(--surface) 70%);
 }
 
@@ -1814,11 +1816,9 @@ footer {
 /* The battle in the middle: whose move it is and the latest attacks. */
 .battlefield {
     display: flex;
+    flex: 1;
     gap: 16px;
     min-height: 0;
-    padding: 10px 0;
-    border-top: 1px dashed var(--line);
-    border-bottom: 1px dashed var(--line);
 }
 
 @media (max-width: 640px) {
@@ -1834,18 +1834,11 @@ footer {
     }
 }
 
-.battle-feed {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
-}
-
 .turn {
     margin: 0;
     color: var(--green);
     font-weight: 600;
+    font-size: 13px;
     text-align: center;
 }
 
@@ -1853,43 +1846,85 @@ footer {
     color: var(--red);
 }
 
-.battle-log {
+/* The stage in the battle card: the cards of the latest attack fly in (yours from below, theirs from above) and light
+   up one after another as they are applied; then the results pop up. */
+.stage {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    gap: 4px;
-    max-height: 9.5em;
-    margin: 0;
-    padding: 0;
-    overflow-y: auto;
-    list-style: none;
-    font: 12px/1.5 var(--mono);
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-width: 0;
+    --step: 380ms;
 }
 
-.battle-log li {
-    padding: 3px 8px;
-    border-left: 3px solid var(--red);
-    color: var(--muted);
+.stage-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
 }
 
-.battle-log li.mine {
-    border-left-color: var(--green);
+.stage-card {
+    animation:
+        stage-in-up .45s cubic-bezier(.2, .8, .3, 1.2) both calc(var(--i) * var(--step)),
+        stage-apply .35s ease-in-out calc(var(--i) * var(--step) + 450ms);
 }
 
-.battle-log li:first-child {
+.from-enemy .stage-card {
+    animation-name: stage-in-down, stage-apply;
+}
+
+.stage-results {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.result-chip {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
     color: var(--ink);
+    font: 700 13px var(--mono);
+    animation: result-pop .35s ease-out both calc(var(--n) * var(--step) + 600ms);
 }
 
-.battle-log li.empty {
-    border: 0;
-    text-align: center;
-}
+.result-chip[data-kind="damage"] { background: color-mix(in srgb, var(--red) 30%, var(--surface-2)); color: #ff8a8a; font-size: 16px; }
+.result-chip[data-kind="heal"] { background: color-mix(in srgb, var(--green) 30%, var(--surface-2)); color: #7be3a6; }
+.result-chip[data-kind="block"], .result-chip[data-kind="blocked"] { background: color-mix(in srgb, var(--blue) 30%, var(--surface-2)); color: #8cc4ff; }
+.result-chip[data-kind="recoil"] { background: color-mix(in srgb, #d77bff 30%, var(--surface-2)); color: #e3a8ff; }
 
-.battle-log span {
+.stage-empty {
+    margin: 0;
     color: var(--faint);
 }
 
-.battle-log li:first-child span {
-    color: var(--yellow);
+@keyframes stage-in-up {
+    from { opacity: 0; transform: translateY(90px) scale(.7) rotate(-6deg); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes stage-in-down {
+    from { opacity: 0; transform: translateY(-90px) scale(.7) rotate(6deg); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes stage-apply {
+    50% { transform: scale(1.12); box-shadow: 0 0 0 3px var(--cat), 0 0 22px var(--cat); }
+}
+
+@keyframes result-pop {
+    from { opacity: 0; transform: scale(.4); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stage-card, .result-chip {
+        animation: none;
+    }
 }
 
 /* Your hand: big cards you pick, then attack. */
