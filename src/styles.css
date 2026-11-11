@@ -1651,16 +1651,6 @@ footer {
     gap: 8px;
 }
 
-/* At the bottom of the battle card: wins and losses in one line. */
-.record {
-    grid-column: 1 / -1;
-    justify-self: center;
-    display: flex;
-    gap: 16px;
-    margin: 0;
-    font-size: 13px;
-}
-
 /* The card shop on the right of your card's action row. */
 .shop-corner .shop-button {
     padding: 5px 12px;
@@ -1675,16 +1665,6 @@ footer {
     text-align: right;
 }
 
-.record b {
-    font: 700 16px var(--mono);
-}
-
-.record .good { color: var(--green); }
-.record .bad { color: var(--red); }
-
-.record small {
-    color: var(--muted);
-}
 
 /* Three cards: the corporation on top, the battle in the middle, you at the bottom. */
 .enemy-card {

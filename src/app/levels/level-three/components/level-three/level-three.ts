@@ -114,8 +114,6 @@ export class LevelThreeComponent {
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
         .map(card => ({ card, turns: state.cooldowns[card.id]! })),
       deckSize: ownedCards(state).length,
-      wins: state.wins,
-      losses: state.losses,
       credits: state.credits,
       lastReward: state.lastReward ?? null,
       learnable: learnableCards(state).map(({ card, known }) => {
