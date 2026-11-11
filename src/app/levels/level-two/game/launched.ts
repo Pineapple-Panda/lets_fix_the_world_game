@@ -14,7 +14,6 @@ export const launchCoverage = 100000;
 export const minActionsPerSecond = 50;
 export const maxActionsPerSecond = 300;
 /** Every this many seconds the budget grows by the new actions times `budgetPerAction`. */
-export const budgetInterval = 5;
 export const budgetPerAction = 1;
 
 // ---------- Ids that the logic refers to ----------
@@ -233,11 +232,24 @@ export function budgetBoost(state: LaunchedGame): number {
     : 1 - maxBudgetPenalty * -focus;
 }
 
-/** Moves the focus slider; values are clamped to -100…100. */
+/** Budget the actions since the last payout are worth at the current focus. */
+export function pendingPayout(state: LaunchedGame): number {
+  return Math.round((state.actions - state.budgetActions) * budgetPerAction * budgetBoost(state));
+}
+
+/** Pays the actions since the last payout at the current focus. */
+function settleBudget(state: LaunchedGame): LaunchedGame {
+  return { ...state, budget: cap(state.budget + pendingPayout(state)), budgetActions: state.actions };
+}
+
+/**
+ * Moves the focus slider; values are clamped to -100…100. The actions gathered so far are paid at the old focus
+ * first, so moving the slider does not pay them at the new rate.
+ */
 export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | null {
   if (!Number.isFinite(focus)) return null;
   const next = clampFocus(focus);
-  return next === state.focus ? null : { ...state, focus: next };
+  return next === state.focus ? null : { ...settleBudget(state), focus: next };
 }
 
 /** Actions per second from clients (Mississippi Corp): their actions per slot × your server slots. */
@@ -278,7 +290,7 @@ export function epicDuration(epic: EpicDefinition, dataCenters = false): number 
 
 /**
  * One second in level 2: actions grow by 50–300 per server slot (scaled by the focus slider), running epics advance by one second of server time,
- * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
+ * and the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
  * Then clients, finished epics, programs, lawsuits and product releases are applied.
  */
 export function tickLaunched(
@@ -300,10 +312,8 @@ export function tickLaunched(
       return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, dataCenters) : 0) };
     })
   };
-  if (next.seconds % budgetInterval === 0) {
-    next.budget = cap(next.budget + Math.round((next.actions - next.budgetActions) * budgetPerAction * budgetBoost(next)));
-    next.budgetActions = next.actions;
-  }
+  next.budget = cap(next.budget + pendingPayout(next));
+  next.budgetActions = next.actions;
   // Rented slots pay every second, nudge the solution progress a tiny bit and move integrity.
   next.budget = cap(next.budget + rentalIncome(next));
   // Client actions (Mississippi Corp) count as coding actions but are not paid out as budget again.

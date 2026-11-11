@@ -218,7 +218,7 @@
             <div class="live-stat">
                 <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
                 <small>≈ {{ signedAmount(v.budgetPerSecond) }} per second</small>
-                <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
+                <small>+{{ v.payoutRate }} per new action</small>
             </div>
         </div>
         @if (v.canPitch) {

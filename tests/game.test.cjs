@@ -649,19 +649,30 @@ test('level 2 adds 50 to 300 actions per second', () => {
   }
 });
 
-test('every 5 seconds the budget grows by the new actions (1 budget per action)', () => {
+test('every second the budget grows by the new actions (1 budget per action)', () => {
   let live = liveState({ budget: 7 });
-  for (let second = 1; second <= 4; second++) {
-    live = launched.tickLaunched(live, () => 0);
-    assert.equal(live.budget, 7, 'no payout before 5 seconds');
-  }
-  live = launched.tickLaunched(live, () => 0);
-  assert.equal(live.seconds, 5);
   assert.equal(launched.budgetPerAction, 1);
-  assert.equal(live.budget, 7 + 5 * 50);
-  assert.equal(live.budgetActions, live.actions);
+  for (let second = 1; second <= 5; second++) {
+    live = launched.tickLaunched(live, () => 0);
+    assert.equal(live.budget, 7 + second * 50, 'paid every second');
+    assert.equal(live.budgetActions, live.actions);
+  }
   for (let second = 1; second <= 5; second++) live = launched.tickLaunched(live, () => 0.999999);
   assert.equal(live.budget, 7 + 5 * 50 + 5 * 300);
+});
+
+test('moving the focus slider pays the actions so far at the old focus', () => {
+  // Fully left: many actions, no budget. Moving right afterwards must not pay them at the higher rate.
+  const left = liveState({ budget: 100, focus: -100, actions: 50000, budgetActions: 40000 });
+  assert.equal(launched.pendingPayout(left), 0);
+  const right = launched.setFocus(left, 100);
+  assert.equal(right.budget, 100, 'the actions gathered fully left earn nothing');
+  assert.equal(right.budgetActions, right.actions);
+  assert.equal(launched.tickLaunched(right, () => 0).budget, 100 + Math.round(50 * launched.actionBoost(right) * launched.budgetBoost(right)),
+    'only the new actions are paid at the new rate');
+  // The other way round: what was earned fully right is paid at once.
+  const earned = launched.setFocus({ ...left, focus: 100 }, -100);
+  assert.equal(earned.budget, 100 + Math.round(10000 * launched.budgetBoost({ ...left, focus: 100 })));
 });
 
 test('the focus slider trades actions against budget', () => {
@@ -963,7 +974,7 @@ test('rented slots pay every second and take a server slot', () => {
   assert.equal(launched.serverLoad(live), 1);
   assert.equal(launched.canStartEpic({ ...live, budget: 100000 }, 'climate-algorithm'), false, 'rented slots block epics too');
   assert.equal(launched.rentalIncome(live), 1133, '1,100 plus 3% for the added server');
-  assert.equal(launched.tickLaunched(live, () => 0).budget, 1133);
+  assert.equal(launched.tickLaunched(live, () => 0).budget, 1133 + 2 * 50, 'rent plus the payout for the new actions');
   live = launched.endRental(live, 'ministry-digital');
   assert.deepEqual(live.rentals, ['blue-helmets']);
   assert.equal(launched.endRental(live, 'ministry-digital'), null);
@@ -1014,7 +1025,7 @@ test('the NSA rents five slots at once, always signs and costs integrity', () =>
   assert.equal(launched.rentSlot(live, 'blue-helmets').rentals.length, 2, 'one slot left for a normal client');
   assert.equal(launched.canRentSlot(launched.rentSlot(live, 'blue-helmets'), 'ministry-digital'), false);
   live = launched.tickLaunched(live, () => 0);
-  assert.equal(live.budget, 1150, '1,000 plus 3% for each of the five added servers');
+  assert.equal(live.budget, 1150 + 6 * 50, '1,000 plus 3% for each of the five added servers, plus the payout for the new actions');
   assert.ok(Math.abs(live.integrity - 49.9) < 1e-9, '-0.1 integrity per second');
   assert.deepEqual(live.worldProgress, liveState().worldProgress, 'no solution progress');
   assert.equal(launched.usedSlots(launched.endRental(live, 'nsa')), 0, 'ending the contract frees all five');
@@ -1168,7 +1179,8 @@ test('running programs cost upkeep and add climate progress every second', () =>
   const without = climateAfter({ ...start, programs: [] }, 100);
   assert.ok(Math.abs(live.worldProgress.climate - 0.2) < 1e-9, '0.002% per second');
   assert.equal(without.budget - live.budget, 100 * 100, 'upkeep of 100 per second is paid');
-  let broke = launched.startProgram(greenWorldActive({ budget: 200050 }), 'reforestation-network');
+  // Fully left the new actions earn nothing, so the 50 left over cannot pay the upkeep of 100.
+  let broke = launched.startProgram(greenWorldActive({ budget: 200050, focus: -100 }), 'reforestation-network');
   broke = climateAfter(broke, 3);
   assert.equal(broke.worldProgress.climate, 0, 'paused without budget for the upkeep');
   assert.ok(broke.budget >= 0, 'budget never goes negative');
@@ -1254,7 +1266,7 @@ test('Mississippi Corp pays in actions: 3,000 per second per server slot', () =>
   assert.equal(launched.clientActions(rented), 12000, '3,000 × 4 slots');
   const next = launched.tickLaunched(rented, () => 0);
   assert.equal(next.actions, 50 * 4 + 12000, 'own actions plus client actions');
-  assert.equal(next.budgetActions, 12000, 'client actions are not paid out as budget');
+  assert.equal(next.budget - rented.budget, 50 * 4 + launched.rentalIncome(rented), 'client actions are not paid out as budget');
   assert.ok(Math.abs(next.integrity - 49.98) < 1e-9, '−0.02 integrity per second');
   assert.equal(launched.averageActionsPerSecond(rented), 175 * 4 + 12000);
 });
@@ -1321,7 +1333,7 @@ test('a lawsuit freezes the programs until it is settled or won in court', () =>
   for (let second = 0; second < 89; second++) court = launched.tickLaunched(court, () => 0.99);
   assert.equal(court.lawsuit.courtSeconds, 1);
   assert.equal(court.worldProgress.climate, 30, 'still frozen while in court');
-  const beforeVerdict = { ...court, seconds: 1 }; // no budget payout in the verdict second
+  const beforeVerdict = court;
   court = launched.tickLaunched(beforeVerdict, () => 0);
   assert.equal(court.lawsuit, null, 'the verdict comes after 90 seconds');
   assert.deepEqual(court.verdict, { product: 'green-world', plaintiff: 'Bananas Inc.', won: true, damages: 0 }, 'won (65% chance)');
@@ -1332,7 +1344,8 @@ test('a lawsuit freezes the programs until it is settled or won in court', () =>
   const lost = launched.tickLaunched(beforeVerdict, () => 0.99);
   assert.equal(lost.lawsuit, null);
   assert.deepEqual(lost.verdict, { product: 'green-world', plaintiff: 'Bananas Inc.', won: false, damages: 1000000 }, 'a loss costs twice the settlement');
-  assert.equal(lost.budget, beforeVerdict.budget - 1000000 - 100, 'damages, then the program runs again and pays its upkeep');
+  const payout = lost.actions - beforeVerdict.actions;
+  assert.equal(lost.budget, beforeVerdict.budget + payout - 1000000 - 100, 'damages, then the program runs again and pays its upkeep');
   const broke = launched.tickLaunched({ ...beforeVerdict, budget: 300000 }, () => 0.99);
   assert.equal(broke.budget, 0, 'the budget does not drop below 0');
   const next = launched.tickLaunched({ ...lost, integrity: 90 }, () => 0);

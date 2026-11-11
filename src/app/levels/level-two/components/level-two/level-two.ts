@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionBoost, addedServers, addServerPerk, budgetBoost, budgetInterval, budgetPerAction, canBuyTegridy, canRentSlot,
+  actionBoost, addedServers, addServerPerk, budgetBoost, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, winChance, lawyerOnCase, programUpkeep, dataCentersActive, epicDefinition, epicDone, epicDuration,
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
   integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
@@ -45,7 +45,6 @@ export class LevelTwoComponent {
     const halved = dataCentersActive(state);
     const factor = clientFactor(state);
     return {
-      nextPayout: budgetInterval - (state.seconds % budgetInterval),
       payoutRate: Math.round(budgetPerAction * budgetBoost(state) * 10) / 10,
       actionsPerSecond: averageActionsPerSecond(state),
       budgetPerSecond: averageBudgetPerSecond(state),
