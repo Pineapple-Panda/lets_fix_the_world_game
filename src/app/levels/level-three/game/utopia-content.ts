@@ -154,6 +154,9 @@ export const playerCards: PlayerCard[] = [
     effects: [{ kind: 'regen', amount: 4, turns: 3 }], cooldown: 4, price: 3 },
   { id: 'tax-audit', name: 'Tax Audit', description: 'Their best move is stuck in paperwork.',
     effects: [{ kind: 'delay', turns: 2 }], cooldown: 3, price: 2 },
+  // Special
+  { id: 'respect-my-authority', name: 'Respect my authoritah!', description: 'Nobody argues. Next turn you get to do a lot more.',
+    effects: [{ kind: 'extraCards', count: 2 }], cooldown: 3, price: 3 },
   // Learned: the answers to the corporations' instant cards.
   { id: 'not-monoculture', name: 'At least it’s not a monoculture', description: 'Learned the hard way from Bananas Inc.',
     effects: [{ kind: 'counter', of: 'plan-is-bananas' }], cooldown: 2, price: 0, learned: true },

@@ -210,6 +210,12 @@ import type { CardCategory } from '../../models/utopia.model';
           <path d="M6 46 H20 C26 46 28 40 30 34 M36 24 C38 20 40 18 44 18 H56 M50 12 L56 18 L50 24" />
           <circle class="art-fill" cx="32" cy="32" r="5" stroke-width="2" />
         }
+        @case ('respect-my-authority') {
+          <!-- a sheriff's star -->
+          <path class="art-fill" d="M32 4 L38 20 L56 20 L42 31 L47 49 L32 39 L17 49 L22 31 L8 20 L26 20 Z" />
+          <circle cx="32" cy="27" r="6" stroke-width="2.5" />
+          <path d="M20 56 H44 M24 60 H40" stroke-width="2.5" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />
@@ -293,6 +299,7 @@ import type { CardCategory } from '../../models/utopia.model';
             @case ('block') { <path class="art-fill" d="M32 7 L53 15 V31 C53 45 43 54 32 58 C21 54 11 45 11 31 V15 Z" /> }
             @case ('heal') { <path class="art-fill" d="M32 54 C10 38 8 24 16 16 C22 10 30 12 32 18 C34 12 42 10 48 16 C56 24 54 38 32 54 Z" /> }
             @case ('instant') { <path d="M12 12 L52 52 M52 12 L12 52" stroke-width="5" /> }
+            @case ('special') { <path class="art-fill" d="M10 46 L14 18 L24 30 L32 12 L40 30 L50 18 L54 46 Z" /> }
             @case ('counter') { <path class="art-fill" d="M44 14 A20 20 0 1 0 52 34 M44 6 V16 H34" /> }
             @default { <path class="art-fill" d="M32 6 L39 24 L58 25 L43 37 L48 56 L32 45 L16 56 L21 37 L6 25 L25 24 Z" /> }
           }

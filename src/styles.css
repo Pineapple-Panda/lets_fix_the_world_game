@@ -2147,6 +2147,7 @@ footer {
 [data-category="combo"] { --cat: #f5c451; --cat-deep: #9b59d9; }
 [data-category="instant"] { --cat: #d77bff; --cat-deep: #7b2fbe; }
 [data-category="counter"] { --cat: #ff9f43; --cat-deep: #c0611b; }
+[data-category="special"] { --cat: #f5c451; --cat-deep: #8a6a1c; }
 
 @property --shine-angle {
     syntax: '<angle>';
@@ -2236,6 +2237,57 @@ footer {
 
 .play-card[data-category="instant"].selected {
     box-shadow: 0 0 0 2px var(--cat), 0 0 18px rgba(215, 123, 255, .45), 0 12px 26px rgba(0, 0, 0, .45);
+}
+
+/* Special cards: black with a shiny gold frame that turns, a gold glint, gold text. */
+.play-card[data-category="special"] {
+    border: 2px solid transparent;
+    background:
+        linear-gradient(170deg, #1a1810 0%, #0b0b0d 70%) padding-box,
+        conic-gradient(from var(--shine-angle), #8a6a1c, #f5c451, #fff3c4, #f5c451, #8a6a1c, #f5c451, #8a6a1c) border-box;
+    animation: shine-frame 5s linear infinite;
+}
+
+.play-card[data-category="special"]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 233, 160, .22) 48%, transparent 60%);
+    background-size: 260% 100%;
+    animation: shine-glint 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.play-card[data-category="special"] strong,
+.play-card[data-category="special"] .play-card-effect {
+    color: #f5c451;
+}
+
+.play-card[data-category="special"] small {
+    color: #c9b27a;
+}
+
+.play-card[data-category="special"] .card-chip {
+    background: linear-gradient(90deg, #8a6a1c, #f5c451, #fff3c4, #f5c451);
+    color: #1a1308;
+}
+
+.play-card[data-category="special"] .card-art {
+    background: radial-gradient(circle at 50% 55%, rgba(245, 196, 81, .35) 0%, transparent 70%);
+}
+
+.mini-card[data-category="special"] {
+    border-color: #f5c451;
+    background: linear-gradient(170deg, #1a1810, #0b0b0d);
+}
+
+.mini-card[data-category="special"] strong {
+    color: #f5c451;
+}
+
+.extra-cards {
+    color: #f5c451;
+    font-weight: 600;
 }
 
 @keyframes shine-frame {

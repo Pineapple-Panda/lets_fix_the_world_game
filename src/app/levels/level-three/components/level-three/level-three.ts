@@ -2,7 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  buyBlocker, cardCategory, cardSummary, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardLimit, cardSummary, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, corporations, megaCorpName } from '../../game/utopia-content';
 import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/utopia.model';
@@ -31,7 +31,7 @@ export class LevelThreeComponent {
     ...(battleRules.credits.loss ? [`+${battleRules.credits.loss} per lost battle`] : [])
   ].join(', ');
   /** Label of each colour scheme. */
-  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo' };
+  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo', special: 'Special' };
   protected readonly megaCorpName = megaCorpName;
 
   protected readonly view = computed(() => {
@@ -77,6 +77,8 @@ export class LevelThreeComponent {
         locked: state.locked.includes(card.id)
       })),
       selectedCount: state.selected.length,
+      // Cards you may play this turn (more after a special card).
+      maxCards: cardLimit(state),
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
         .map(card => ({ card, turns: state.cooldowns[card.id]! })),
       deckSize: ownedCards(state).length,
@@ -104,7 +106,7 @@ export class LevelThreeComponent {
   });
 
   /** Order in which played cards are applied on the battle card. */
-  private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4 };
+  private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4, special: 5 };
 
   /**
    * An attack for the battle card: its cards in the order they are applied, and what it did. Counter cards the

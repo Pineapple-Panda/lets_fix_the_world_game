@@ -70,7 +70,8 @@ export function enemyStrength(stage: Stage, battle: number): number {
  * opponent's cards protects (block); healing over time heals. What a card costs you does not change its colour. */
 const effectCategory: Record<CardEffect['kind'], CardCategory | null> = {
   damage: 'damage', strip: 'damage', lock: 'damage', shuffle: 'damage',
-  block: 'block', delay: 'block', heal: 'heal', regen: 'heal', instant: 'instant', counter: 'counter', selfDamage: null
+  block: 'block', delay: 'block', heal: 'heal', regen: 'heal', instant: 'instant', counter: 'counter', selfDamage: null,
+  extraCards: 'special'
 };
 
 /** A card's colour scheme: damage, block, heal, instant battle or counter, or combo when it does more than one of them. */
@@ -94,6 +95,7 @@ export function cardSummary(card: BattleCard, factor = 1, wins = 0): string {
       case 'delay': return `their strongest card rests +${effect.turns}`;
       case 'lock': return `locks ${effect.count} of your ${effect.count === 1 ? 'cards' : 'cards'}`;
       case 'shuffle': return 'shuffles your hand';
+      case 'extraCards': return `+${effect.count} cards next turn`;
       case 'heal': return `+${Math.round(effect.amount * factor)} heal`;
       case 'instant': return `${Math.round(effect.amount * factor)} instant damage`;
       case 'counter': return `counters “${playerCard(effect.of)?.name ?? enemyCardById(effect.of)?.name ?? effect.of}”`;
@@ -202,11 +204,16 @@ export function playerTurn(state: UtopiaGame): boolean {
   return state.outcome === null && state.turn === 'player';
 }
 
-/** Picks a card of your hand for the next attack, or puts it back. At most `maxCards` at once. */
+/** How many cards you may play this turn: `maxCards`, plus the extra cards of a special card played last turn. */
+export function cardLimit(state: UtopiaGame): number {
+  return battleRules.maxCards + (state.extraCards ?? 0);
+}
+
+/** Picks a card of your hand for the next attack, or puts it back. At most `cardLimit` at once. */
 export function toggleCard(state: UtopiaGame, id: string): UtopiaGame | null {
   if (!playerTurn(state) || !state.hand.includes(id) || state.locked.includes(id)) return null;
   if (state.selected.includes(id)) return { ...state, selected: state.selected.filter(entry => entry !== id) };
-  if (state.selected.length >= battleRules.maxCards) return null;
+  if (state.selected.length >= cardLimit(state)) return null;
   return { ...state, selected: [...state.selected, id] };
 }
 
@@ -308,6 +315,8 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     counters: countersOf(played),
     regen,
     locked: [],
+    // A special card makes room for more cards next turn; this turn's bonus is used up.
+    extraCards: effects.reduce((total, effect) => total + (effect.kind === 'extraCards' ? effect.count : 0), 0),
     cooldowns: restCards(state.cooldowns, played),
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],

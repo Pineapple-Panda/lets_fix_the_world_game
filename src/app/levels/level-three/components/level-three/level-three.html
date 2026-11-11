@@ -105,7 +105,7 @@
                         </div>
                     }
                 } @else {
-                    <div class="stage-side stage-empty"><span class="stage-label">You</span><p>Pick up to {{ rules.maxCards }} cards and attack.</p></div>
+                    <div class="stage-side stage-empty"><span class="stage-label">You</span><p>Pick up to {{ v.maxCards }} cards and attack.</p></div>
                 }
             </div>
         </div>
@@ -126,6 +126,7 @@
             <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
                 ⚔️ Attack@if (v.selectedCount) { ({{ v.selectedCount }})}
             </button>
+            @if (v.maxCards > rules.maxCards) { <small class="extra-cards">👑 Up to {{ v.maxCards }} cards this turn</small> }
             <small class="upgrade-hint">Deck: {{ v.deckSize }} cards</small>
             @if (v.resting.length) {
                 <small class="upgrade-hint">Resting: @for (entry of v.resting; track entry.card.id; let last = $last) {{{ entry.card.name }} ({{ entry.turns }}){{ last ? '' : ', ' }}}</small>
@@ -134,7 +135,7 @@
         <div class="hand">
             @for (entry of v.hand; track entry.card.id) {
                 <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
-                        [disabled]="!v.yourTurn || entry.locked || (!entry.selected && v.selectedCount >= rules.maxCards)" [class.locked]="entry.locked"
+                        [disabled]="!v.yourTurn || entry.locked || (!entry.selected && v.selectedCount >= v.maxCards)" [class.locked]="entry.locked"
                         (click)="cardToggled.emit(entry.card.id)">
                     <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
                     @if (entry.locked) { <span class="locked-tag">🔒 Locked this turn</span> }

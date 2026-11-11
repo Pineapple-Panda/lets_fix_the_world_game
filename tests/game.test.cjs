@@ -1909,7 +1909,7 @@ test('level 3: one credit per win buys cards in the card shop', () => {
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
     [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['whistleblower', 2], ['open-source', 2],
       ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['viral-petition', 3], ['general-strike', 3],
-      ['union-contract', 3], ['investigative-desk', 4]]);
+      ['union-contract', 3], ['respect-my-authority', 3], ['investigative-desk', 4]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -2054,6 +2054,22 @@ test('level 3: the corporations can lock your cards and shuffle your hand', () =
   assert.equal(shuffled.hand.length, 5, 'drawn afresh');
   assert.ok(shuffled.log[0].notes.includes('shuffled your hand'));
   assert.equal(utopia.corporation('bananas').cards.find(card => card.id === 'banana-republic').cooldown, 4);
+});
+
+test('level 3: a special card lets you play two more cards in your next turn', () => {
+  const card = utopia.playerCard('respect-my-authority');
+  assert.deepEqual([utopia.cardCategory(card), utopia.cardSummary(card), card.price], ['special', '+2 cards next turn', 3]);
+  const hand = ['respect-my-authority', 'antitrust', 'fact-check', 'firewall', 'press-conference'];
+  let state = { ...fresh(), owned: ['respect-my-authority', 'protest-march'], hand };
+  assert.equal(utopia.cardLimit(state), 3);
+  state = utopia.attack(picked(state, 'respect-my-authority'), () => 0);
+  assert.equal(state.extraCards, 2);
+  state = answer(state, () => 0);
+  assert.equal(utopia.cardLimit(state), 5, 'up to five cards this turn');
+  const five = picked(state, ...state.hand.slice(0, 5));
+  assert.equal(five.selected.length, Math.min(5, state.hand.length));
+  const after = utopia.attack(five, () => 0);
+  assert.equal(utopia.cardLimit(after), 3, 'only for one turn');
 });
 
 test('winning level 3 shows a summary of all three levels', () => {

@@ -30,6 +30,8 @@ export interface UtopiaGame {
   regen: { amount: number; turns: number }[];
   /** Cards of your hand the corporation locked: they cannot be picked this turn. */
   locked: string[];
+  /** Extra cards you may play this turn, on top of `maxCards` (from a special card last turn). */
+  extraCards?: number;
   /** Whose move it is. The corporation answers `enemyWait` ticks after your attack (time for the animation). */
   turn: 'player' | 'enemy';
   enemyWait?: number;
@@ -130,11 +132,13 @@ export type CardEffect =
   | { kind: 'lock'; count: number }
   /** Draws your hand afresh (the corporations' cards). */
   | { kind: 'shuffle' }
+  /** Special: you may play `count` more cards in your next turn (your cards). */
+  | { kind: 'extraCards'; count: number }
   | { kind: 'instant'; amount: number; counter: string }
   | { kind: 'counter'; of: string };
 
 /** The colour scheme of a card: what it does, or 'combo' for cards with more than one kind of effect. */
-export type CardCategory = 'damage' | 'block' | 'heal' | 'instant' | 'counter' | 'combo';
+export type CardCategory = 'damage' | 'block' | 'heal' | 'instant' | 'counter' | 'combo' | 'special';
 
 /** A card in your deck or a corporation's deck. */
 export interface BattleCard extends Described {
