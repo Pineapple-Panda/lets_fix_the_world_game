@@ -2,7 +2,7 @@ import type { Game } from '../../levels/level-one/models/game.model.ts';
 import type { Item } from '../../levels/level-one/models/item.model.ts';
 import type { LaunchedGame } from '../../levels/level-two/models/launched.model.ts';
 import type { UtopiaGame } from '../../levels/level-three/models/utopia.model.ts';
-import { perks } from '../../levels/level-one/models/perk.model.ts';
+import { levelOnePerks as perks } from '../content/perks.ts';
 
 /**
  * The save is a plain JSON snapshot without format versions: `{ level: 1, game }` or `{ level: 2, game }`.

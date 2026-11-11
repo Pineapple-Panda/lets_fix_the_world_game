@@ -2,8 +2,9 @@ import { prefixed, unprefixed, type Smoothing } from '../../../shared/game/smoot
 import type { LevelSummary } from '../../level-two/models/launched.model.ts';
 import type { ActionCard, CardEffect, Corporation, CounterInitiative, Initiative, UtopiaCard, UtopiaGame, UtopiaMetric, UtopiaPerk, UtopiaPerkEffect } from '../models/utopia.model.ts';
 import {
-  attackRules, corporations, corpStartPower, counterInitiatives, duelRules, outcomeRules, initiatives, megacorpCards, metrics, playerCards, utopiaPerks, utopiaStart
+  attackRules, corporations, corpStartPower, counterInitiatives, duelRules, outcomeRules, initiatives, megacorpCards, metrics, playerCards, utopiaStart
 } from './utopia-content.ts';
+import { levelThreePerks } from '../../../shared/content/perks.ts';
 
 const percent = (value: number) => Math.max(0, Math.min(100, value));
 
@@ -60,7 +61,7 @@ type ValueEffect = Exclude<UtopiaPerkEffect, { kind: 'unlock' } | { kind: 'unloc
 
 /** The combined value of all activated perks of one kind (their multipliers multiplied). */
 export function perkValue(state: UtopiaGame, kind: ValueEffect['kind']): number {
-  const values = utopiaPerks
+  const values = levelThreePerks
     .filter(perk => state.perks.includes(perk.id) && perk.effect.kind === kind)
     .map(perk => (perk.effect as ValueEffect).value);
   return values.reduce((total, value) => total * value, 1);
@@ -78,12 +79,12 @@ export function budgetPerSecond(state: UtopiaGame): number {
 
 /** Whether a hidden card (Utopia, MegaCorp) has been opened by its perk. */
 export function cardUnlocked(state: UtopiaGame, card: UtopiaCard): boolean {
-  return utopiaPerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlock' && perk.effect.card === card);
+  return levelThreePerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlock' && perk.effect.card === card);
 }
 
 /** The perk that opens a hidden card. */
 export function unlockPerk(card: UtopiaCard): UtopiaPerk | undefined {
-  return utopiaPerks.find(perk => perk.effect.kind === 'unlock' && perk.effect.card === card);
+  return levelThreePerks.find(perk => perk.effect.kind === 'unlock' && perk.effect.card === card);
 }
 
 /** Coding actions gained since level 3 started (what perk thresholds count). */
@@ -97,14 +98,14 @@ export function utopiaPerkAvailable(state: UtopiaGame, perk: UtopiaPerk): boolea
 
 /** Perks not taken yet: available ones first, then by TCA threshold; at most five. */
 export function openUtopiaPerks(state: UtopiaGame, limit = 5): UtopiaPerk[] {
-  return utopiaPerks
+  return levelThreePerks
     .filter(perk => !state.perks.includes(perk.id))
     .sort((a, b) => Number(utopiaPerkAvailable(state, b)) - Number(utopiaPerkAvailable(state, a)) || a.actionsRequired - b.actionsRequired)
     .slice(0, limit);
 }
 
 export function activateUtopiaPerk(state: UtopiaGame, id: string): UtopiaGame | null {
-  const perk = utopiaPerks.find(entry => entry.id === id);
+  const perk = levelThreePerks.find(entry => entry.id === id);
   if (!perk || !utopiaPerkAvailable(state, perk)) return null;
   return { ...state, budget: state.budget - perk.cost, perks: [...state.perks, id] };
 }
@@ -302,7 +303,7 @@ export function megacorpMove(state: UtopiaGame, random: () => number): UtopiaGam
 export function cardOwned(state: UtopiaGame, id: string): boolean {
   const card = playerCards.find(entry => entry.id === id);
   if (!card) return false;
-  return !card.locked || utopiaPerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlockAction' && perk.effect.action === id);
+  return !card.locked || levelThreePerks.some(perk => state.perks.includes(perk.id) && perk.effect.kind === 'unlockAction' && perk.effect.action === id);
 }
 
 /** Your cards you can use (owned), in config order. */

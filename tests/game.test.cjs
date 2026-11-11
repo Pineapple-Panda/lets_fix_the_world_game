@@ -5,6 +5,7 @@ const content = require('../src/app/levels/level-one/game/content.ts');
 const storage = require('../src/app/shared/game/storage.ts');
 const launched = require('../src/app/levels/level-two/game/launched.ts');
 const version = require('../src/app/levels/level-one/models/version.model.ts');
+const allPerks = require('../src/app/shared/content/perks.ts');
 
 const {
   newGame, perks, perkUnlocked, openPerks, activePerks, activatePerk, isAvailable, boardItems, boardColumns,
@@ -1543,7 +1544,7 @@ test('shady deals are counted every second', () => {
 test('protests take at most 50 clicks, mediators calm them faster and peacefully', () => {
   const protest = overrides => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }], ...overrides });
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
+  const perk = allPerks.levelTwoPerks.find(entry => entry.id === 'mediation-academy');
   assert.equal(perk.actionsRequired, 45000000);
   assert.deepEqual(perk.requiresProducts, ['green-world']);
   assert.ok(!launched.openLaunchedPerks(liveState()).some(entry => entry.id === 'mediation-academy'), 'hidden without Green World');
@@ -1586,7 +1587,7 @@ test('Peace & Integrity has three corruption programs', () => {
 
 test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens assembly', () => {
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  const perk = id => content.launchedPerks.find(entry => entry.id === id);
+  const perk = id => allPerks.levelTwoPerks.find(entry => entry.id === id);
   assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
     [25000000, 100000000, 150000000, 200000000, 300000000]);
   const lawyers = ['decent-lawyer', 'good-lawyer', 'chewbacca-defense'];
@@ -1628,7 +1629,7 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
 
 test('Premium Hosting Contracts make clients pay ten times the rent', () => {
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  assert.equal(content.launchedPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
+  assert.equal(allPerks.levelTwoPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
   const online = { perks: ['workflow-abstraction', 'network-financing'], rentals: ['blue-helmets'] };
   assert.equal(launched.rentalIncome(liveState(online)), 500);
   const premium = liveState({ ...online, perks: [...online.perks, 'premium-hosting'] });
@@ -1722,7 +1723,7 @@ test('after the world is fixed, a new run starts with a head start', () => {
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  assert.equal(content.launchedPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
+  assert.equal(allPerks.levelTwoPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
   const start = liveState({ budget: 1000, perks: ['pitch-deck'] });
   assert.equal(launched.pitchValue(start), 100, 'at least 100: 175 actions per second only make 35');
   const pitched = launched.pitch(start);
@@ -1898,8 +1899,8 @@ test('initiatives cost budget', () => {
 });
 
 test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'prefab-factory', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
-  assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
+  assert.deepEqual(allPerks.levelThreePerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'prefab-factory', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.ok(allPerks.levelThreePerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
     { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'initiativeGain', value: 2 } },
@@ -1907,7 +1908,7 @@ test('level 3 perks: card unlocks and action unlocks; the effect kinds still wor
     { id: 't-drift', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'driftShield', value: 0.5 } },
     { id: 't-upkeep', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'upkeep', value: 0.5 } }
   ];
-  utopiaContent.utopiaPerks.push(...extra);
+  allPerks.levelThreePerks.push(...extra);
   try {
     let state = opened();
     assert.ok(utopia.openUtopiaPerks(state).length <= 5, 'at most five shown');
@@ -1919,7 +1920,7 @@ test('level 3 perks: card unlocks and action unlocks; the effect kinds still wor
     const counter = utopiaContent.counterInitiatives[0];
     assert.ok(Math.abs(utopia.counterRate({ ...state, megacorpSeconds: 999 }, counter) - 0.075) < 1e-12, 'counter initiatives hit half as hard');
   } finally {
-    utopiaContent.utopiaPerks.splice(-extra.length);
+    allPerks.levelThreePerks.splice(-extra.length);
   }
 });
 

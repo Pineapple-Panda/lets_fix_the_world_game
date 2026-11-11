@@ -6,7 +6,8 @@ import type {
   SpecialEvent,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, lawsuits, products, programs, rentalClients, specialEvents, worldGoals, worldProblems } from './launched-content.ts';
+import { levelTwoPerks } from '../../../shared/content/perks.ts';
+import { epics, lawsuits, products, programs, rentalClients, specialEvents, worldGoals, worldProblems } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -431,7 +432,7 @@ export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
   return [
     // Some perks wait until one of their products is activated (the Mediation Academy needs Green World,
     // the lawyers any product card).
-    ...launchedPerks.filter(perk => !state.perks.includes(perk.id) &&
+    ...levelTwoPerks.filter(perk => !state.perks.includes(perk.id) &&
       (!perk.requiresProducts || perk.requiresProducts.some(id => productActive(state, id)))),
     addServerPerk(state),
     // The Tegridy deal is offered once Network & Financing is open.
@@ -959,7 +960,7 @@ export function epicRevealed(state: LaunchedGame, id: string): boolean {
 export function epicPerkMissing(state: LaunchedGame, id: string): string | null {
   const perk = epicDefinition(id)?.requiresPerk;
   if (!perk || state.perks.includes(perk)) return null;
-  return launchedPerks.find(entry => entry.id === perk)?.name ?? perk;
+  return levelTwoPerks.find(entry => entry.id === perk)?.name ?? perk;
 }
 
 /** Special epics outside the world goal chains (e.g. infrastructure) that are visible right now. */
