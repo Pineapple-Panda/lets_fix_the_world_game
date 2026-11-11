@@ -1628,6 +1628,8 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
   assert.equal(launched.winChance(liveState()), 0.65);
   assert.ok(Math.abs(launched.winChance(liveState({ perks: ['good-lawyer'] })) - 0.85) < 1e-12);
   assert.equal(launched.winChance(liveState({ perks: ['good-lawyer', 'chewbacca-defense'] })), 0.95);
+  assert.equal(launched.courtDuration(liveState({ perks: ['chewbacca-defense'], lawsuitsFiled: 1 })), 45, 'half of 90 seconds');
+  assert.equal(launched.courtDuration(liveState({ perks: ['chewbacca-defense'], lawsuitsFiled: 2 })), 54, 'half of 108 seconds');
   const verdict = launched.tickLaunched({ ...sued, seconds: 1, lawsuit: { caseId: 0, courtSeconds: 1 },
     perks: [...sued.perks, 'chewbacca-defense'] }, () => 0.9);
   assert.equal(verdict.verdict.won, true, '0.9 wins with the Chewbacca defense');

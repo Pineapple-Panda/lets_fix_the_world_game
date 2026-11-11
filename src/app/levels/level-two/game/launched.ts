@@ -1031,9 +1031,10 @@ export const decentLawyerPerk = 'decent-lawyer';
 /** Perk: +20 percentage points in court. */
 export const goodLawyerPerk = 'good-lawyer';
 export const goodLawyerBonus = 0.2;
-/** Perk: court cases are won with a fixed 95%. */
+/** Perk: court cases are won with a fixed 95% and take half the time. */
 export const chewbaccaPerk = 'chewbacca-defense';
 export const chewbaccaChance = 0.95;
+export const chewbaccaDurationFactor = 0.5;
 
 /** Chance to win the current court case: 65%, 85% with a good lawyer, a fixed 95% with the Chewbacca defense. */
 export function winChance(state: LaunchedGame): number {
@@ -1065,9 +1066,10 @@ export function settlementCost(state: LaunchedGame): number {
   return Math.round(baseSettlementCost * escalation(state) * (lawsuitCase(state)?.costFactor ?? 1));
 }
 
-/** Seconds in court for the current lawsuit. */
+/** Seconds in court for the current lawsuit: 90, 20% more for every recent lawsuit, half with the Chewbacca defense. */
 export function courtDuration(state: LaunchedGame): number {
-  return Math.round(baseCourtDuration * escalation(state));
+  const factor = state.perks.includes(chewbaccaPerk) ? chewbaccaDurationFactor : 1;
+  return Math.round(baseCourtDuration * escalation(state) * factor);
 }
 
 /** Damages for losing the current lawsuit in court: twice the settlement. */

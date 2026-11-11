@@ -208,7 +208,7 @@ export const levelTwoPerks: LaunchedPerk[] = [
     {
         id: 'chewbacca-defense',
         name: 'Chewbacca Defense',
-        description: 'Ladies and gentlemen of the jury, this does not make sense. Court cases are won with a fixed 95%.',
+        description: 'Ladies and gentlemen of the jury, this does not make sense. Court cases are won with a fixed 95% and take half the time.',
         icon: 'CD',
         actionsRequired: 200000000,
         cost: 6000000,
