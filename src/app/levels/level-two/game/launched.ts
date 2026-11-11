@@ -827,11 +827,20 @@ export function upgradeCost(state: LaunchedGame, productId: string): number {
   return upgradeCostStep * (steps + 1);
 }
 
+/** Why a product cannot be upgraded right now, or null when it can. */
+export function upgradeBlocker(state: LaunchedGame, productId: string): string | null {
+  const released = product(state, productId);
+  if (!released?.active) return 'Activate the application first';
+  if (integrityBlocked(state)) return 'Integrity is 0%: nobody works on new versions. Raise integrity first (Tegridy, fewer shady deals).';
+  if (state.budget < upgradeCost(state, productId)) return `Not enough budget: the next version costs ${upgradeCost(state, productId).toLocaleString('en-US')}.`;
+  return null;
+}
+
 /** Raises an active product's version by 0.1; at v1.9 the next step is v2.0. */
 export function upgradeProduct(state: LaunchedGame, productId: string): LaunchedGame | null {
   const released = product(state, productId);
   const cost = upgradeCost(state, productId);
-  if (!released?.active || integrityBlocked(state) || state.budget < cost) return null;
+  if (!released || upgradeBlocker(state, productId)) return null;
   const minor = released.minor === 9 ? 0 : released.minor + 1;
   const major = released.minor === 9 ? released.major + 1 : released.major;
   return {

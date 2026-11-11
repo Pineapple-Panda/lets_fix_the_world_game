@@ -4,7 +4,7 @@ import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, winChance, lawyerOnCase, programUpkeep, dataCentersActive, epicDefinition, epicDone, epicDuration,
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
-  integrityBlocked, launchedPerkAvailable, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
+  integrityBlocked, launchedPerkAvailable, upgradeBlocker, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, suedProducts, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
@@ -194,7 +194,7 @@ export class LevelTwoComponent {
       maxResistance,
       boostPercent: Math.round((boost - 1) * 100),
       upgradeCost: cost,
-      canUpgrade: !integrityBlocked(state) && state.budget >= cost,
+      upgradeBlocker: upgradeBlocker(state, productId),
       programs: cardPrograms.map(program => {
         const running = state.programs.find(entry => entry.id === program.id);
         return {

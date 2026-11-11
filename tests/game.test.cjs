@@ -2151,6 +2151,17 @@ test('a solved application can no longer be sued', () => {
   assert.notEqual(launched.answerEvent(oneOpen, false).lawsuit, null);
 });
 
+test('the upgrade button says why a version cannot be upgraded', () => {
+  const live = greenWorldActive({ budget: 10000000, integrity: 30 });
+  assert.equal(launched.upgradeBlocker(live, 'green-world'), null);
+  assert.notEqual(launched.upgradeProduct(live, 'green-world'), null);
+  const broken = { ...live, integrity: 0 };
+  assert.match(launched.upgradeBlocker(broken, 'green-world'), /Integrity is 0%/);
+  assert.equal(launched.upgradeProduct(broken, 'green-world'), null, 'nobody cooperates at 0% integrity');
+  assert.match(launched.upgradeBlocker({ ...live, budget: 0 }, 'green-world'), /Not enough budget/);
+  assert.match(launched.upgradeBlocker(live, 'fair-share'), /Activate/);
+});
+
 // ---------- smoothing ----------
 
 const smoothing = require('../src/app/shared/game/smoothing.ts');
