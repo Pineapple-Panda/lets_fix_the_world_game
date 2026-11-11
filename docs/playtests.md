@@ -16,25 +16,28 @@ JSON.parse(localStorage.getItem('sprint-game'))
 
 | Lauf | Datum | Version / Commit | Level 1 | Level 2 | Level 3 | Gesamt | Notiz |
 |---|---|---|---|---|---|---|---|
-| 1 | YYYY-MM-DD | `abc1234` | – min | – min | – min | – min | |
+| 1 | 2026-11-11 | `03bdf2e` | 49 min | – | – | – | Level 1 komplett, alle 14 Perks |
 
 ---
 
-## Lauf 1 · YYYY-MM-DD
+## Lauf 1 · 2026-11-11
 
-**Version / Commit:** `abc1234` · **Config:** Level 1 ✓ · Level 2 ✓ · Level 3 ✓ · **Start:** normal / Restart at Level 1 / Restart at Level 2
+**Version / Commit:** `03bdf2e` · **Config:** Level 1 ✓ · Level 2 ✓ · Level 3 ✗ · **Start:** normal
 
 ### Level 1 · Building the platform (Launch-Dialog)
 
 | Stat | Wert |
 |---|---|
-| Time | |
-| App version at launch | |
-| Deployments | |
-| Bugs that showed up | |
-| Perks activated | |
-| Coding actions | |
-| Budget beim Launch | |
+| Time | 49 min (2,960 s) |
+| App version at launch | 11.1.0 |
+| Deployments | 102 |
+| Bugs that showed up | 440 |
+| Perks activated | 14 (alle) |
+| Coding actions | 42,047 |
+| Budget beim Launch | 2,871 |
+| Assistants (Performance-Upgrades) | 13 (15) |
+| Coverage-Upgrades manuell / automatisch | 16 / 29 |
+| Tasks angelegt | 1,402 |
 
 ### Level 2 · Fixing the world (Victory-Dialog)
 
