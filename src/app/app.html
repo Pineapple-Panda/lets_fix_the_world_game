@@ -13,12 +13,7 @@
             @if (finalSummary(); as summary) {
                 <app-utopia-won [summary]="summary" (dismissed)="dismissUtopiaWon()" />
             }
-            @if (world.duel; as duel) {
-                <app-duel-dialog [duel]="duel" [clickGain]="duelGain()" [boosts]="duelBoosts()" (boosted)="playCard($event)"
-                                 (finished)="finishDuel($event)" (closed)="closeDuel()" />
-            }
-            <app-level-three [state]="utopiaDisplay() ?? world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (effectCancelled)="cancelEffect($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
-                             (perkActivated)="activateUtopiaPerk($event)" />
+            <app-level-three [state]="utopiaDisplay() ?? world" (cardToggled)="toggleCard($event)" (attacked)="attack()" />
             <footer><span>LET’S FIX THE WORLD GAME / LEVEL 3</span>
                 <span class="footer-actions">
                     <app-github-link />

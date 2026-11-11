@@ -35,10 +35,16 @@ Play it on GitHub Pages: <https://pineapple-panda.github.io/lets_fix_the_world_g
 
 ### Level 3 · Building utopia
 
-- Keep employment, housing and food high with **initiatives**: build them, then run them for an upkeep.
-- **MegaCorp** (Bananas Inc., Mississippi Corp and EdisonX) runs counter initiatives, plays damage cards and starts
-  duels. Play your own action cards and win duels to bring its corporations' power down.
-- Win when every utopia bar reaches 100%; lose when all of them drop to 0%. The win screen sums up all three levels.
+A card game against the corporations, one after another: Bananas Inc. twice, Mississippi Corp four times, EdisonX six
+times.
+
+- **Your turn:** pick up to three cards from your hand of five and press *Attack*. Damage cards lower the
+  corporation's power, blockers soften its next attack, healing restores credibility. Played cards rest for a few turns.
+- **Their turn:** a moment later the corporation answers with up to three random cards of its own deck.
+- **Credibility** is your life and carries over from battle to battle; a win heals a little. At 0 the battle is lost and
+  you try the current corporation again with full credibility.
+- Wins and losses are counted over all attempts; more wins unlock new cards. Beat every corporation to win the level;
+  the win screen sums up all three levels.
 
 Progress is saved in the browser's `localStorage` (one save, key `sprint-game`). Saves that no longer match the game
 are ignored and the game starts over.
@@ -53,10 +59,10 @@ Balance and content live in plain data files:
 
 | What | Where |
 |---|---|
-| Perks of all three levels | [`src/app/shared/content/perks.ts`](src/app/shared/content/perks.ts) |
+| Perks of levels 1 and 2 | [`src/app/shared/content/perks.ts`](src/app/shared/content/perks.ts) |
 | Level 1 tasks, unlock thresholds and bugs | `src/app/levels/level-one/game/content.ts`, `initial-backlog.ts` |
 | Level 2 epics, products, programs, clients, lawsuits and events | `src/app/levels/level-two/game/launched-content.ts` |
-| Level 3 start values, bars, corporations, cards and initiatives | `src/app/levels/level-three/game/utopia-content.ts` |
+| Level 3 campaign, battle rules, corporations and cards | `src/app/levels/level-three/game/utopia-content.ts` |
 
 ## Development
 
@@ -81,10 +87,10 @@ src/app/
 ├── levels/
 │   ├── level-one/           Sprint board, perks, Earl, intro and launch dialogs
 │   ├── level-two/           World problems, products, programs, lawsuits, events, victory dialog
-│   └── level-three/         Utopia bars, initiatives, MegaCorp, action cards, duels
+│   └── level-three/         Card game: campaign, corporations, your deck, battles
 └── shared/
     ├── components/          Modal dialog base, facts list, GitHub link
-    ├── content/             Perks of all levels
+    ├── content/             Perks of levels 1 and 2
     ├── game/                Saving and loading, smooth value updates
     └── models/              Base types the level models extend (perks, programs, facts)
 ```

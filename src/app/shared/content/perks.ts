@@ -1,11 +1,10 @@
 /**
- * All perks of the game, one list per level. What a perk does is implemented in the level's game logic
- * (level-one/game/game.ts, level-two/game/launched.ts, level-three/game/utopia.ts); here are its name, text, icon,
+ * All perks of levels 1 and 2, one list per level (level 3 unlocks cards with wins instead). What a perk does is implemented in the level's game logic
+ * (level-one/game/game.ts, level-two/game/launched.ts); here are its name, text, icon,
  * unlock threshold (total coding actions) and price.
  */
 import type {Perk} from '../../levels/level-one/models/perk.model.ts';
 import type {LaunchedPerk} from '../../levels/level-two/models/launched.model.ts';
-import type {UtopiaPerk} from '../../levels/level-three/models/utopia.model.ts';
 
 /**
  * Level 1: unlocked by total coding actions, free. `kind: 'upgradeable'` perks can be upgraded with budget afterwards.
@@ -221,95 +220,5 @@ export const levelTwoPerks: LaunchedPerk[] = [
         icon: 'CA',
         actionsRequired: 300000000,
         cost: 10000000
-    }
-];
-
-/**
- * Level 3: unlocked by total coding actions, bought with budget. `effect` says what a perk does: open a card,
- * multiply the rates or unlock an action card. A threshold of 0 means it is available from the start. More perks can
- * use the other effect kinds (initiativeGain, attackShield, driftShield, upkeep).
- */
-export const levelThreePerks: UtopiaPerk[] = [
-    {
-        id: 'utopia-blueprint',
-        name: 'Blueprint for Utopia',
-        description: 'Your AI drafts a plan for a world where everyone has a job, a home and a full plate. Opens the Utopia card.',
-        icon: 'BU',
-        actionsRequired: 250000000,
-        cost: 0,
-        effect: {kind: 'unlock', card: 'utopia'}
-    },
-    {
-        id: 'opposition-research',
-        name: 'Opposition Research',
-        description: 'Somebody is buying up farmland, warehouses and influencers. Find out who. Opens the MegaCorp card, and MegaCorp starts fighting back.',
-        icon: 'OR',
-        actionsRequired: 260000000,
-        cost: 0,
-        effect: {kind: 'unlock', card: 'megacorp'}
-    },
-    {
-        id: 'hyper-scaling',
-        name: 'Hyper-Scaling',
-        description: 'Every server, every process, every intern at full throttle. TCA and budget per second ×10.',
-        icon: 'HS',
-        actionsRequired: 310000000,
-        cost: 5000000,
-        effect: {kind: 'rateBoost', value: 10}
-    },
-    // One perk per locked action card.
-    {
-        id: 'prefab-factory',
-        name: 'Prefab Factory',
-        description: 'Unlocks the move "Pop-Up Homes": Housing +3%/s for 5s.',
-        icon: 'PF',
-        actionsRequired: 0,
-        cost: 5000000,
-        effect: {kind: 'unlockAction', action: 'pop-up-homes'}
-    },
-    {
-        id: 'rapid-response',
-        name: 'Rapid Response Team',
-        description: 'Unlocks the move "Shut It Down": stops a running MegaCorp move of your choice, every 120s.',
-        icon: 'RR',
-        actionsRequired: 0,
-        cost: 10000000,
-        effect: {kind: 'unlockAction', action: 'shut-it-down'}
-    },
-    {
-        id: 'rally-network',
-        name: 'Rally Network',
-        description: 'Unlocks the move "Battle Cry": in a battle, each push moves the bar by 2% for 15s.',
-        icon: 'RN',
-        actionsRequired: 0,
-        cost: 10000000,
-        effect: {kind: 'unlockAction', action: 'battle-cry'}
-    },
-    {
-        id: 'housing-policy',
-        name: 'Housing Policy Desk',
-        description: 'Unlocks the move "Cut Rent Taxes": Housing +0.1%/s and Credibility +0.5/s for 15s.',
-        icon: 'HP',
-        actionsRequired: 285000000,
-        cost: 2000000,
-        effect: {kind: 'unlockAction', action: 'rent-tax-cut'}
-    },
-    {
-        id: 'kitchen-network',
-        name: 'Kitchen Network',
-        description: 'Unlocks the move "Community Kitchens": Food +3 at once.',
-        icon: 'KN',
-        actionsRequired: 300000000,
-        cost: 3000000,
-        effect: {kind: 'unlockAction', action: 'community-kitchens'}
-    },
-    {
-        id: 'investigative-desk',
-        name: 'Investigative Desk',
-        description: 'Unlocks the move "Leak the Emails": −3% power for every corporation and Credibility +2.',
-        icon: 'ID',
-        actionsRequired: 320000000,
-        cost: 5000000,
-        effect: {kind: 'unlockAction', action: 'leak'}
     }
 ];

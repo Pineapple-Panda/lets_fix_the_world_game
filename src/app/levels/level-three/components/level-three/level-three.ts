@@ -1,99 +1,82 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import {
-  actionCard, actionsGained, canCancelEffect, megacorpDefeated, megacorpPower, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
-  initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
+  cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, nextUnlock, playerCard, playerTurn, unlockedCards
 } from '../../game/utopia';
-import { corporations, initiatives, megaCorpName, metrics } from '../../game/utopia-content';
-import { levelThreePerks } from '../../../../shared/content/perks';
-import type { UtopiaGame } from '../../models/utopia.model';
+import { battleRules, campaign, megaCorpName } from '../../game/utopia-content';
+import type { Attack, UtopiaGame } from '../../models/utopia.model';
 
-/** Level 3: you and MegaCorp face each other on top; development, the utopia and MegaCorp's corporations below. */
+/** Level 3: a card game against the corporations, one after another. */
 @Component({
   selector: 'app-level-three',
-  imports: [DecimalPipe],
   templateUrl: './level-three.html'
 })
 export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
-  readonly cardPlayed = output<string>();
-  readonly duelStarted = output<void>();
-  /** Index of the running MegaCorp effect you stop with Shut It Down. */
-  readonly effectCancelled = output<number>();
-  readonly initiativeInitialized = output<string>();
-  readonly initiativeStarted = output<string>();
-  readonly initiativeStopped = output<string>();
-  readonly perkActivated = output<string>();
+  readonly cardToggled = output<string>();
+  readonly attacked = output<void>();
 
+  protected readonly rules = battleRules;
   protected readonly megaCorpName = megaCorpName;
 
   protected readonly view = computed(() => {
     const state = this.state();
+    const stage = currentStage(state);
+    const corp = corporation(state.enemy.corpId);
+    const strength = stage ? enemyStrength(stage, state.battle) : 1;
+    const unlock = nextUnlock(state);
     return {
-      metrics: metrics.map(metric => ({ ...metric, value: state.metrics[metric.id], rate: Math.round(metricRate(state, metric.id) * 100000) / 100000 })),
-      initiatives: initiatives.map(initiative => ({
-        initiative,
-        metricName: metrics.find(metric => metric.id === initiative.metric)?.name ?? initiative.metric,
-        rate: Math.round(initiativeRate(state, initiative.id) * 100000) / 100000,
-        upkeep: initiativeUpkeep(state, initiative.id),
-        running: state.running.includes(initiative.id),
-        stage: initiativeStage(state, initiative.id),
-        buildProgress: (state.building[initiative.id] ?? 0) / initiative.buildTime * 100,
-        buildSeconds: state.building[initiative.id] ?? 0,
-        initializeBlocker: initializeBlocker(state, initiative.id),
-        funded: initiativeFunded(state, initiative.id),
-        blocker: state.running.includes(initiative.id) ? null : initiativeBlocker(state, initiative.id)
-      })),
-      counters: launchedCounters(state).map(counter => ({
-        counter,
-        corp: corporation(counter.corpId),
-        metricName: metrics.find(metric => metric.id === counter.metric)?.name ?? counter.metric,
-        rate: Math.round(counterRate(state, counter) * 100000) / 100000,
-        power: state.corpPower[counter.corpId] ?? 0
-      })),
-      corps: corporations.map(corp => ({ corp, power: state.corpPower[corp.id] ?? 0 })),
-      megaPower: megacorpPower(state),
-      integrity: state.integrity,
-      actionsPerSecond: actionsPerSecond(state),
-      budgetPerSecond: budgetPerSecond(state),
-      utopiaOpen: cardUnlocked(state, 'utopia'),
-      megacorpOpen: cardUnlocked(state, 'megacorp'),
-      utopiaPerkName: unlockPerk('utopia')?.name ?? '',
-      megacorpPerkName: unlockPerk('megacorp')?.name ?? '',
-      actionsGained: actionsGained(state),
-      activePerks: levelThreePerks.filter(perk => state.perks.includes(perk.id)),
-      openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
-      nextAttack: state.nextAttack,
-      canDuel: canDuel(state),
-      defeated: megacorpDefeated(state),
-      duelCooldown: state.duelCooldown,
-      moves: state.attackLog.map((move, index) => {
-        const card = actionCard(move.cardId);
-        const corp = corporation(move.corpId);
-        return card ? { key: index + '-' + move.cardId, card, summary: cardSummary(card), corp } : null;
-      }).filter(move => move !== null).slice(0, 3),
-      cards: ownedCards(state).map(card => ({ card, summary: cardSummary(card), blocker: cardBlocker(state, card.id) })),
-      activeEffects: state.effects.map((active, index) => {
-        const card = actionCard(active.cardId);
+      stations: campaign.map((entry, index) => {
+        // One pip per battle: beaten ones filled.
+        const pips = Array.from({ length: entry.battles }, (_, battle) =>
+          index < state.stage || state.outcome === 'won' || (index === state.stage && battle < state.battle));
         return {
-          id: active.cardId + '-' + (active.corpId ?? 'you') + '-' + active.remaining,
-          name: card?.name ?? active.cardId,
-          by: card?.actor === 'megacorp' ? corporation(active.corpId ?? '')?.name ?? megaCorpName : 'You',
-          mine: card?.actor === 'player',
-          remaining: active.remaining,
-          index,
-          cancelable: canCancelEffect(state, index)
+          corp: corporation(entry.corpId),
+          boss: !!entry.boss,
+          current: index === state.stage && state.outcome !== 'won',
+          pips,
+          beaten: pips.filter(done => done).length
         };
-      })
+      }),
+      enemy: {
+        corp,
+        boss: !!stage?.boss,
+        battle: state.battle + 1,
+        battles: stage?.battles ?? 0,
+        power: Math.round(state.enemy.power),
+        maxPower: state.enemy.maxPower,
+        percent: state.enemy.power / state.enemy.maxPower * 100,
+        block: state.enemy.block,
+        // Its cards, with the turns they still rest.
+        deck: enemyDeck(state.enemy.corpId).map(card => ({
+          card, summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0
+        }))
+      },
+      credibility: Math.round(state.credibility),
+      credibilityPercent: state.credibility / battleRules.maxCredibility * 100,
+      block: state.block,
+      yourTurn: playerTurn(state),
+      hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
+        card, summary: cardSummary(card), selected: state.selected.includes(card.id)
+      })),
+      selectedCount: state.selected.length,
+      resting: unlockedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
+        .map(card => ({ card, turns: state.cooldowns[card.id]! })),
+      deckSize: unlockedCards(state).length,
+      wins: state.wins,
+      losses: state.losses,
+      unlock: unlock ? { card: unlock, winsLeft: unlock.unlockWins - state.wins } : null,
+      log: state.log.map(entry => this.describe(entry))
     };
   });
 
-  /** 0.012 → "+0.012", -0.02 → "−0.02", 0 → "±0". */
-  protected rate(value: number): string {
-    return value > 0 ? '+' + value : value < 0 ? '−' + -value : '±0';
-  }
-
-  protected format(value: number): string {
-    return Math.round(value).toLocaleString('en-US');
+  /** One line per attack, e.g. "You: Antitrust Lawsuit + Fact Check → 20 damage (5 blocked)". */
+  private describe(entry: Attack) {
+    const names = entry.cards.map(id => (entry.by === 'player' ? playerCard(id) : enemyCard(entry.corpId, id))?.name ?? id);
+    const parts = [
+      entry.damage || entry.blocked ? `${entry.damage} damage${entry.blocked ? ` (${entry.blocked} blocked)` : ''}` : '',
+      entry.healed ? `+${entry.healed} ${entry.by === 'player' ? 'credibility' : 'power'}` : '',
+      entry.shield ? `block ${entry.shield}%` : ''
+    ].filter(part => part);
+    return { id: entry.id, mine: entry.by === 'player', by: corporation(entry.corpId)?.name ?? entry.corpId, cards: names.join(' + '), result: parts.join(' · ') || 'no effect' };
   }
 }

@@ -1613,67 +1613,165 @@ footer {
     opacity: .8;
 }
 
-/* ---------- Level 3: utopia vs. MegaCorp ---------- */
+/* ---------- Level 3: the card game ---------- */
 
-.utopia {
+.cardgame {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
-    grid-template-rows: minmax(260px, auto) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 10px;
+    min-height: 100%;
 }
 
-.arena {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 150px minmax(0, 1fr) 150px;
-    align-items: center;
-    gap: 18px;
-}
-
-.arena-feed {
+/* The campaign: stations with one pip per battle, wins and losses. */
+.campaign {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
-    align-self: start;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-/* Avatars on the top card: your AI on the left, MegaCorp on the right. */
-.avatar {
+.stations {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-.avatar svg {
-    width: 130px;
-    height: 130px;
-}
-
-.avatar figcaption {
+.station {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 4px;
-    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
     font-size: 12px;
 }
 
-.avatar figcaption .world-track {
-    width: 100%;
+.station.current {
+    border-color: var(--yellow);
+    color: var(--ink);
+    background: color-mix(in srgb, var(--surface) 88%, var(--yellow));
 }
 
-.avatar figcaption small {
+.station.boss .station-name {
+    color: var(--red);
+    font-weight: 600;
+}
+
+.pips {
+    display: flex;
+    gap: 4px;
+}
+
+.pip {
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+}
+
+.pip.done {
+    border-color: var(--green);
+    background: var(--green);
+}
+
+.record {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.record b {
+    font: 700 16px var(--mono);
+}
+
+.record .good { color: var(--green); }
+.record .bad { color: var(--red); }
+
+.record small {
     color: var(--muted);
-    font-size: 11px;
 }
 
-.avatar-backdrop { fill: var(--surface-2); }
-.avatar-player .avatar-backdrop { fill: color-mix(in srgb, var(--surface-2) 85%, var(--green)); }
-.avatar-megacorp .avatar-backdrop { fill: color-mix(in srgb, var(--surface-2) 85%, var(--red)); }
+/* The table: the corporation on top, the battle in the middle, you at the bottom. */
+.table {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 0;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--surface) 85%, var(--green)) 0%, var(--surface) 70%);
+}
 
+.fighter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+
+.fighter-avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--surface-2) 80%, var(--red));
+    font-size: 40px;
+}
+
+.fighter-enemy.boss .fighter-avatar {
+    box-shadow: 0 0 0 3px var(--red);
+}
+
+.fighter-robot {
+    flex: none;
+    width: 72px;
+    height: 72px;
+}
+
+.fighter-details {
+    display: flex;
+    flex: 1 1 220px;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.fighter-details small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.fighter-name {
+    margin: 0;
+    font: 700 16px var(--sans);
+}
+
+.boss-tag {
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--red);
+    color: #fff;
+    font-size: 11px;
+    vertical-align: middle;
+}
+
+.shield {
+    color: var(--blue);
+}
+
+.corp-power {
+    background: var(--red);
+}
+
+.avatar-backdrop { fill: color-mix(in srgb, var(--surface-2) 85%, var(--green)); }
 .robot-head { fill: #cfd6de; }
 .robot-visor { fill: #1e2a33; }
 .robot-eye { fill: var(--green); }
@@ -1683,346 +1781,207 @@ footer {
 .robot-body { fill: var(--blue); }
 .robot-heart { fill: #f78fa0; }
 
-.mega-hat { fill: #18181b; }
-.mega-band { fill: var(--purple); }
-.mega-face { fill: #e9c39b; }
-.mega-brow { stroke: #3b2a1a; stroke-width: 3; stroke-linecap: round; }
-.mega-eye { fill: #18181b; }
-.mega-monocle { fill: rgba(255, 255, 255, .25); stroke: var(--yellow); stroke-width: 2; }
-.mega-chain { stroke: var(--yellow); stroke-width: 1.5; }
-.mega-grin { fill: #f5f5f5; stroke: #3b2a1a; stroke-width: 1.5; }
-.mega-suit { fill: #2b2d42; }
-.mega-shirt { fill: #f5f5f5; }
-.mega-tie { fill: var(--red); }
-.mega-pin.banana { fill: var(--yellow); }
-.mega-pin.box { fill: #c89b6d; }
-.mega-pin.rocket { fill: #d0d4dc; }
-.mega-unknown { fill: var(--ink); font: 700 40px var(--mono); }
-
-/* Before MegaCorp shows itself it is only a silhouette. */
-.avatar-megacorp.unknown svg > :not(.avatar-backdrop):not(.mega-unknown) {
-    fill: #0f0f12;
-    stroke: #0f0f12;
-}
-
-@media (max-width: 760px) {
-    .arena {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .arena-feed {
-        grid-column: 1 / -1;
-        order: 3;
-    }
-}
-
-.arena-intro {
+/* The corporation's cards, small: resting ones are faded. */
+.enemy-deck {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     margin: 0;
-    color: var(--muted);
-    font-size: 13px;
-    max-width: 70ch;
+    padding: 0;
+    list-style: none;
 }
 
+.mini-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 120px;
+    padding: 6px 8px;
+    border: 1px solid color-mix(in srgb, var(--line) 50%, var(--red));
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface-2) 90%, var(--red));
+    font-size: 11px;
+}
 
+.mini-card strong {
+    font-size: 11px;
+}
 
+.mini-card small {
+    color: var(--muted);
+}
 
+.mini-card.resting {
+    opacity: .45;
+}
 
+.mini-card .rest {
+    color: var(--yellow);
+}
 
+/* The battle in the middle: whose move it is and the latest attacks. */
+.battlefield {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px 0;
+    border-top: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--line);
+}
 
+.turn {
+    margin: 0;
+    color: var(--green);
+    font-weight: 600;
+    text-align: center;
+}
 
-
-
-
-
+.turn.enemy-turn {
+    color: var(--red);
+}
 
 .battle-log {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 9.5em;
     margin: 0;
-    padding-left: 18px;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    font: 12px/1.5 var(--mono);
+}
+
+.battle-log li {
+    padding: 3px 8px;
+    border-left: 3px solid var(--red);
     color: var(--muted);
-    font: 12px/1.6 var(--mono);
+}
+
+.battle-log li.mine {
+    border-left-color: var(--green);
 }
 
 .battle-log li:first-child {
     color: var(--ink);
 }
 
-.utopia-employment { background: var(--blue); }
-.utopia-housing { background: #e5a050; }
-.utopia-food { background: var(--yellow); }
-
-.initiative span {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+.battle-log li.empty {
+    border: 0;
+    text-align: center;
 }
 
-.initiative small {
-    color: var(--muted);
-    font-size: 11px;
+.battle-log span {
+    color: var(--faint);
 }
 
-.corp-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--line);
-}
-
-.corp-row.defeated {
-    opacity: .5;
-}
-
-.corp-icon {
-    font-size: 26px;
-}
-
-.corp-details {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.corp-details small {
-    color: var(--muted);
-    font-size: 11px;
-}
-
-.corp-power {
-    background: var(--purple);
-}
-
-
-
-
-@media (max-width: 760px) {
-    .utopia {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-/* Level 3 stats sit in a narrower column. */
-.utopia .live-stat strong {
-    font-size: 17px;
-}
-
-/* Level 3 initiatives: yours on the left, MegaCorp's counter initiatives (red tint) on the right. */
-.initiative-columns {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    align-items: start;
-}
-
-.initiative-column {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-}
-
-.initiative-column-title {
-    color: var(--muted);
-    font: 600 10px var(--mono);
-    letter-spacing: .5px;
-    text-transform: uppercase;
-}
-
-.program.counter {
-    background: color-mix(in srgb, var(--bg) 88%, var(--red));
-}
-
-.program.counter.running {
-    border-color: color-mix(in srgb, var(--red) 60%, var(--line));
-}
-
-/* Level 3 action cards on the top card. */
-.arena-columns {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    gap: 14px;
-}
-
-.action-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 6px;
-}
-
-.action-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    padding: 7px 9px;
-    border: 2px solid var(--green);
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--bg) 62%, var(--green));
-    color: var(--ink);
-    text-align: left;
-    cursor: pointer;
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--green) 45%, #000);
-}
-
-/* Your damage cards: purple. */
-.action-card.damage {
-    border-color: var(--purple);
-    background: color-mix(in srgb, var(--bg) 58%, var(--purple));
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--purple) 45%, #000);
-}
-
-/* MegaCorp's cards: red, powerups orange. */
-.action-card.megacorp {
-    border-color: #e5a050;
-    background: color-mix(in srgb, var(--bg) 58%, #e5a050);
-    box-shadow: 0 2px 0 color-mix(in srgb, #e5a050 45%, #000);
-    cursor: default;
-}
-
-.action-card.megacorp.damage {
-    border-color: var(--red);
-    background: color-mix(in srgb, var(--bg) 55%, var(--red));
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--red) 45%, #000);
-}
-
-.action-card.megacorp:not(.latest) {
-    opacity: .7;
-}
-
-.action-card:hover:not(:disabled):not(.megacorp) {
-    filter: brightness(1.15);
-}
-
-.action-card:disabled {
-    filter: grayscale(.6);
-    opacity: .6;
-    cursor: not-allowed;
-}
-
-.action-card strong {
-    font-size: 12px;
-}
-
-.action-card small {
-    color: color-mix(in srgb, var(--ink) 75%, transparent);
-    font-size: 10px;
-}
-
-.action-card .action-card-effect {
-    color: var(--ink);
-    font-weight: 600;
-}
-
-.action-card .action-card-wait {
+.battle-log li:first-child span {
     color: var(--yellow);
 }
 
-.megacorp-moves {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-.effect-chips {
+/* Your hand: big cards you pick, then attack. */
+.hand-area {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    align-items: stretch;
+    gap: 14px;
 }
 
-.effect-chip {
-    padding: 2px 7px;
-    border: 1px solid color-mix(in srgb, var(--red) 60%, var(--line));
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--bg) 85%, var(--red));
-    font: 11px var(--mono);
-}
-
-.effect-chip.mine {
-    border-color: color-mix(in srgb, var(--green) 60%, var(--line));
-    background: color-mix(in srgb, var(--bg) 85%, var(--green));
-}
-
-@media (max-width: 1100px) {
-    .arena-columns {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .megacorp-moves {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
-}
-
-/* Level 3: the development column is narrow (25%), so the stats stack. */
-.utopia .live-stats {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-/* Level 3 duels: a centred start button on the top card and a tug-of-war dialog. */
-.duel-start {
+.hand {
     display: flex;
+    flex: 1 1 520px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding-top: 10px;
+    gap: 10px;
+}
+
+.play-card {
+    display: flex;
+    flex: 1 1 110px;
+    max-width: 170px;
     flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    gap: 6px;
+    min-height: 170px;
+    padding: 10px;
+    border: 2px solid var(--line-strong);
+    border-radius: 10px;
+    background: linear-gradient(160deg, var(--surface-2), var(--surface));
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
 }
 
-.duel-button {
+.play-card:hover:not(:disabled) {
+    transform: translateY(-4px);
+    border-color: var(--blue);
+}
+
+.play-card.selected {
+    transform: translateY(-10px);
+    border-color: var(--green);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
+}
+
+.play-card:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.play-card strong {
+    font-size: 13px;
+}
+
+.play-card small {
+    flex: 1;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.play-card-effect {
+    color: var(--yellow);
+    font: 600 12px var(--mono);
+}
+
+.play-card-rest {
+    color: var(--faint);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.hand-actions {
+    display: flex;
+    flex: 0 1 200px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+}
+
+.attack-button {
+    padding: 14px 16px;
     background: var(--red);
-    font-size: 14px;
-    padding: 9px 22px;
+    font-size: 16px;
 }
 
-.duel-button:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--red) 80%, #fff);
+.attack-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--red) 85%, #fff);
 }
 
-.duel-button:disabled {
+.attack-button:disabled {
     background: var(--surface-2);
     color: var(--faint);
     cursor: not-allowed;
 }
 
-.duel-bar {
-    position: relative;
-    height: 28px;
-    margin: 14px 0;
-    border: 1px solid var(--line-strong);
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--bg) 80%, var(--red));
-    overflow: hidden;
-}
-
-.duel-fill {
-    height: 100%;
-    background: var(--blue);
-    transition: width .1s linear;
-}
-
-.duel-fill.low { background: var(--red); }
-.duel-fill.high { background: var(--green); }
-
-.duel-value {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font: 700 13px var(--mono);
-    color: var(--ink);
-    text-shadow: 0 1px 2px #000;
-}
-
-.duel-push {
-    width: 100%;
-    padding: 14px;
-    font-size: 16px;
-    user-select: none;
-}
-
-.duel-result {
-    color: var(--red);
-    font-weight: 600;
-}
-
-.duel-result.won {
-    color: var(--green);
+@media (prefers-reduced-motion: reduce) {
+    .play-card {
+        transition: none;
+    }
 }
 
 /* Level 3 game over: the screen fades to black, then the verdict fades in. */
@@ -2077,59 +2036,6 @@ footer {
         animation-duration: .01s;
         animation-delay: 0s;
     }
-}
-
-.duel-boost {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    width: 100%;
-    margin-top: 8px;
-    background: var(--green);
-    color: #1e1f22;
-}
-
-.duel-boost small {
-    font-weight: 400;
-    font-size: 11px;
-}
-
-.duel-boost:disabled {
-    background: var(--surface-2);
-    color: var(--faint);
-    cursor: not-allowed;
-}
-
-/* A running MegaCorp move you can stop with Shut It Down. */
-.effect-chip.cancelable {
-    color: var(--ink);
-    cursor: pointer;
-    animation: chip-pulse 1.4s ease-in-out infinite;
-}
-
-.effect-chip.cancelable b {
-    margin-left: 4px;
-    color: var(--red);
-}
-
-.effect-chip.cancelable:hover {
-    background: color-mix(in srgb, var(--bg) 60%, var(--red));
-}
-
-@keyframes chip-pulse {
-    50% { border-color: var(--red); }
-}
-
-.megacorp-defeated {
-    margin: 0;
-    padding: 8px 12px;
-    border: 2px solid var(--green);
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--bg) 70%, var(--green));
-    color: var(--ink);
-    text-align: center;
-    font-weight: 600;
 }
 
 /* Final summary when level 3 is won: one section per level. */
