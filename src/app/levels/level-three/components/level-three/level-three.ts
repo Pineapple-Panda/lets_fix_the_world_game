@@ -106,14 +106,22 @@ export class LevelThreeComponent {
   /** Order in which played cards are applied on the battle card. */
   private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4 };
 
-  /** An attack for the battle card: its cards in the order they are applied, and what it did. */
+  /**
+   * An attack for the battle card: its cards in the order they are applied, and what it did. Counter cards the
+   * opponent's next attack did not need (no matching instant card) are marked `wasted`.
+   */
   private stage(state: UtopiaGame, latest: Attack | undefined) {
     if (!latest) return null;
+    // The opponent's attack right after this one (the log is newest first).
+    const answer = state.log.slice(0, state.log.indexOf(latest)).filter(entry => entry.by !== latest.by).pop();
     const factor = latest.by === 'enemy' ? (currentStage(state) ? enemyStrength(currentStage(state)!, state.battle) : 1) : 1;
     const cards = latest.cards
       .map(id => latest.by === 'player' ? playerCard(id) : enemyCard(latest.corpId, id))
       .filter((card): card is BattleCard => !!card)
-      .map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, factor, latest.by === 'player' ? state.wins : 0) }))
+      .map(card => ({
+        card, category: cardCategory(card), summary: cardSummary(card, factor, latest.by === 'player' ? state.wins : 0),
+        wasted: !!answer && card.effects.some(effect => effect.kind === 'counter') && answer.counteredBy !== card.id
+      }))
       .sort((a, b) => LevelThreeComponent.applyOrder[a.category] - LevelThreeComponent.applyOrder[b.category]);
     const results = [
       latest.shield ? { kind: 'block', text: `🛡 Block ${latest.shield}%` } : null,
@@ -126,6 +134,8 @@ export class LevelThreeComponent {
     ].filter((chip): chip is { kind: string; text: string } => !!chip);
     return {
       id: latest.id, mine: latest.by === 'player', by: corporation(latest.corpId)?.name ?? latest.corpId,
+      // Wasted counters grey out once the answering cards are applied.
+      wait: answer?.cards.length ?? 0,
       names: cards.map(entry => entry.card.name).join(', '), cards, results
     };
   }

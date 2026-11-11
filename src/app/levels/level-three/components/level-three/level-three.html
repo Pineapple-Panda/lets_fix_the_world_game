@@ -61,10 +61,12 @@
                             <span class="stage-label">{{ v.enemy.corp?.name }}</span>
                             <div class="stage-row">
                                 @for (entry of stage.cards; track entry.card.id; let i = $index) {
-                                    <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i">
+                                    <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i"
+                                         [class.wasted]="entry.wasted" [style.--wait]="stage.wait">
                                         <app-card-art [id]="entry.card.id" [category]="entry.category" />
                                         <strong>{{ entry.card.name }}</strong>
                                         <small>{{ entry.summary }}</small>
+                                        @if (entry.wasted) { <span class="wasted-tag">unused</span> }
                                     </div>
                                 }
                             </div>
@@ -86,10 +88,12 @@
                             <span class="stage-label">You</span>
                             <div class="stage-row">
                                 @for (entry of stage.cards; track entry.card.id; let i = $index) {
-                                    <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i">
+                                    <div class="mini-card stage-card" [attr.data-category]="entry.category" [style.--i]="i"
+                                         [class.wasted]="entry.wasted" [style.--wait]="stage.wait">
                                         <app-card-art [id]="entry.card.id" [category]="entry.category" />
                                         <strong>{{ entry.card.name }}</strong>
                                         <small>{{ entry.summary }}</small>
+                                        @if (entry.wasted) { <span class="wasted-tag">unused</span> }
                                     </div>
                                 }
                             </div>

@@ -1912,6 +1912,36 @@ footer {
     animation: none;
 }
 
+/* A counter card the opponent's answer did not need: it greys out once the answering cards are applied. */
+.stage-side .stage-card.wasted {
+    position: relative;
+    animation: stage-wasted .6s ease-out forwards calc(var(--wait) * var(--step) + 500ms);
+}
+
+.stage-card .wasted-tag {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font: 700 10px var(--mono);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    transform: translate(-50%, -50%) rotate(-12deg);
+    opacity: 0;
+    animation: wasted-tag .4s ease-out forwards calc(var(--wait) * var(--step) + 900ms);
+}
+
+@keyframes stage-wasted {
+    to { filter: grayscale(1); opacity: .45; transform: scale(.94); }
+}
+
+@keyframes wasted-tag {
+    to { opacity: 1; }
+}
+
 .stage-card {
     animation:
         stage-in-up .45s cubic-bezier(.2, .8, .3, 1.2) both calc(var(--i) * var(--step)),
@@ -1981,6 +2011,17 @@ footer {
 @media (prefers-reduced-motion: reduce) {
     .stage-card, .result-chip {
         animation: none;
+    }
+
+    .stage-side .stage-card.wasted {
+        animation: none;
+        filter: grayscale(1);
+        opacity: .45;
+    }
+
+    .stage-card .wasted-tag {
+        animation: none;
+        opacity: 1;
     }
 }
 
