@@ -64,6 +64,9 @@
                             <small class="panel-warning">Integrity below 50%: people distrust you. Protest risk {{ panel.protestRisk }}% per program and second.</small>
                         }
 
+                        @if (panel.solved) {
+                            <small class="epic-done">All problems of {{ panel.productName }} are solved ✓ No programs needed anymore.</small>
+                        }
                         <div class="program-grid">
                         @for (entry of panel.programs; track entry.program.id) {
                             <div class="program" [class.running]="entry.running" [class.protest]="entry.protest">

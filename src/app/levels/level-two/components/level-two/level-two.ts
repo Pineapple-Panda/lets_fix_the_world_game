@@ -4,7 +4,7 @@ import {
   actionBoost, addedServers, addServerPerk, budgetBoost, budgetPerAction, canBuyTegridy, canRentSlot,
   canStartEpic, clientAvailable, clientFactor, courtDamages, courtDuration, winChance, lawyerOnCase, programUpkeep, dataCentersActive, epicDefinition, epicDone, epicDuration,
   epicPerkMissing, epicUnlocked, focusPower, goalComplete, goalEpics, inProtest, infrastructureEpics, missingPrograms, programDefinition, programRevealed,
-  integrityBlocked, launchedPerkAvailable, upgradeBlocker, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
+  integrityBlocked, launchedPerkAvailable, upgradeBlocker, productSolved, lawsuitCase, networkOnline, openLaunchedPerks, previousEpic, product,
   productDefinition, productForGoal, productProblems, productTitle, programBlocker, programBoost, programFunded, protestChance, rentalIncome, rentedSlots,
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, suedProducts, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
@@ -158,7 +158,7 @@ export class LevelTwoComponent {
     };
   }
 
-  /** The control panel of an active product card (programs, protests, upgrade). Completed programs are hidden. */
+  /** The control panel of an active product card (programs, protests, upgrade). Completed programs and programs for solved problems are hidden. */
   private panel(state: LaunchedGame, productId: string) {
     const released = product(state, productId);
     const productPrograms = programs.filter(program => program.product === productId);
@@ -166,13 +166,14 @@ export class LevelTwoComponent {
     const boost = programBoost(state, productId);
     const cost = upgradeCost(state, productId);
     const cardPrograms = productPrograms.filter(program =>
-      !state.completedPrograms.includes(program.id) && programRevealed(state, program.id));
+      !state.completedPrograms.includes(program.id) && programRevealed(state, program.id) && !problemSolved(state, program.problem));
     return {
       productName: productDefinition(productId)?.name ?? productId,
       // Any running program blocked by a protest; makes the card border pulse.
       protest: state.programs.some(entry => inProtest(entry) && programDefinition(entry.id)?.product === productId),
       problems: productProblems(productId).map(id => ({ id, name: problemName(id), progress: state.worldProgress[id], solved: problemSolved(state, id) })),
       frozen: integrityBlocked(state),
+      solved: productSolved(state, productId),
       protestRisk: Math.round(protestChance(state) * 1000) / 10,
       lawsuit: state.lawsuit && suedProducts(state).includes(productId) ? {
         ...lawsuitCase(state)!,
