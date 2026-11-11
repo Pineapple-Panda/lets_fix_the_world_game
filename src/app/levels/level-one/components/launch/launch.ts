@@ -12,7 +12,7 @@ import type { Fact } from '../../../../shared/models/shared.model';
   imports: [FactsListComponent],
   template: `
     <dialog #dialog class="intro-dialog launch-dialog" aria-labelledby="launch-title" (cancel)="$event.preventDefault()">
-      <h1 id="launch-title">Ready to launch</h1>
+      <h1 id="launch-title">READY TO LAUNCH</h1>
       <dl appFactsList [facts]="facts()"></dl>
       @if (nextLevelEnabled()) {
         <button class="intro-button launch-button" type="button" autofocus aria-describedby="launch-next" (click)="launch()">Launch</button>
