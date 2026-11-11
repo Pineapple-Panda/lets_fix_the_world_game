@@ -116,11 +116,11 @@ export class LevelThreeComponent {
       .map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, factor, latest.by === 'player' ? state.wins : 0) }))
       .sort((a, b) => LevelThreeComponent.applyOrder[a.category] - LevelThreeComponent.applyOrder[b.category]);
     const results = [
-      latest.shield ? { kind: 'block', text: `🛡 ${latest.shield}%` } : null,
-      latest.blocked ? { kind: 'blocked', text: `🛡 ${latest.blocked} blocked` } : null,
-      latest.damage ? { kind: 'damage', text: `−${latest.damage}` } : null,
-      latest.recoil ? { kind: 'recoil', text: `↩ ${latest.recoil} back` } : null,
-      latest.healed ? { kind: 'heal', text: `+${latest.healed}` } : null,
+      latest.shield ? { kind: 'block', text: `🛡 Block ${latest.shield}%` } : null,
+      latest.blocked ? { kind: 'blocked', text: `🛡 Blocked ${latest.blocked}` } : null,
+      latest.damage ? { kind: 'damage', text: `💥 Damage −${latest.damage}` } : null,
+      latest.recoil ? { kind: 'recoil', text: `↩ Countered −${latest.recoil}` } : null,
+      latest.healed ? { kind: 'heal', text: `♥ Healed +${latest.healed}` } : null,
       ...(latest.notes ?? []).map((note, index) => ({ kind: 'note' + index, text: note })),
       ...(latest.learned ?? []).map(id => ({ kind: 'learned-' + id, text: `learned “${playerCard(id)?.name ?? id}”` }))
     ].filter((chip): chip is { kind: string; text: string } => !!chip);
