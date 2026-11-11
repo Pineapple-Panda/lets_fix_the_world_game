@@ -109,6 +109,8 @@ export class AppComponent {
 
   readonly view = computed((): AppView => {
     const game = this.game();
+    /** The same state with actions, budget and coverage gliding towards the latest tick. */
+    const shown = this.levelOne.display();
     const bugs = openBugs(game);
     const assistants = assistantCount(game);
     const multiAgent = game.activatedPerks.includes('multi-agent');
@@ -129,8 +131,8 @@ export class AppComponent {
       deploymentBudget: deploymentBudgetReward(game),
       availablePerks: available.filter(entry => entry.available).map(entry => entry.perk),
       stats: {
-        actions: this.levelOne.display().actions,
-        budget: this.levelOne.display().budget,
+        actions: shown.actions,
+        budget: shown.budget,
         completed: game.items.filter(item => item.type !== 'bug' && item.done).length,
         total: game.items.filter(item => item.type !== 'bug').length,
         automationRate: Number(currentAutomationRate(game).toFixed(1)),
@@ -148,12 +150,12 @@ export class AppComponent {
         performanceCost: nextAssistantUpgrade(game),
         clicksPerPress: clicksPerPress(game),
         assistantOutput: assistantOutput(game),
-        coverage: coveragePercent(game)
+        coverage: coveragePercent(shown)
       },
       earl: game.activatedPerks.includes('earl') ? {
         budget: game.budget,
-        coverage: coveragePercent(game),
-        coverageUnits: game.testCoverage,
+        coverage: coveragePercent(shown),
+        coverageUnits: shown.testCoverage,
         coverageCost,
         coverageStep: coverageStep(game),
         testingSkills: game.activatedPerks.includes('testing-skills'),

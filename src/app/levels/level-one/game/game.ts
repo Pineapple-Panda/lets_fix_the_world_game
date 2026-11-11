@@ -598,8 +598,13 @@ export function addBug(game: Game): Item | null {
   return bug;
 }
 
-/** Numbers that glide between ticks in level 1: actions and budget. */
+/** Numbers that glide between ticks in level 1: actions, budget and Earl's test coverage. */
 export const gameSmoothing: Smoothing<Game> = {
-  read: state => ({ actions: state.actions, budget: state.budget }),
-  write: (state, values) => ({ ...state, actions: Math.round(values['actions'] ?? state.actions), budget: Math.round(values['budget'] ?? state.budget) })
+  read: state => ({ actions: state.actions, budget: state.budget, testCoverage: state.testCoverage }),
+  write: (state, values) => ({
+    ...state,
+    actions: Math.round(values['actions'] ?? state.actions),
+    budget: Math.round(values['budget'] ?? state.budget),
+    testCoverage: values['testCoverage'] ?? state.testCoverage
+  })
 };

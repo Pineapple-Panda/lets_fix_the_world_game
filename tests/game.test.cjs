@@ -2169,10 +2169,11 @@ test('smoothing: a player action shows at once and keeps gliding', () => {
 
 test('smoothing: level 1 and level 3 glide their headline numbers', () => {
   const start = game.newGame();
-  const later = { ...start, actions: start.actions + 10, budget: start.budget + 20 };
+  const later = { ...start, actions: start.actions + 10, budget: start.budget + 20, testCoverage: start.testCoverage + 5 };
   const shown = smoothing.blend(game.gameSmoothing, game.gameSmoothing.read(start), later, 0.5);
   assert.equal(shown.actions, start.actions + 5);
   assert.equal(shown.budget, start.budget + 10);
+  assert.equal(shown.testCoverage, start.testCoverage + 2.5, 'the test coverage glides too');
 
   const world = utopia.newUtopia();
   const next = { ...world, metrics: { ...world.metrics, housing: world.metrics.housing + 2 } };
