@@ -1710,6 +1710,13 @@ footer {
     font-size: 12px;
 }
 
+/* Your credits beside your name. */
+.fighter-credits {
+    margin-left: 8px;
+    color: var(--yellow);
+    font: 600 13px var(--mono);
+}
+
 .fighter-name {
     margin: 0;
     font: 700 16px var(--sans);
@@ -2415,8 +2422,9 @@ footer {
     text-align: center;
 }
 
-/* The flat coin: one text line high. */
+/* The coin: one text line high, in gold. */
 .coin-icon {
+    color: var(--yellow);
     display: inline-block;
     width: 1.05em;
     height: 1.05em;

@@ -119,7 +119,7 @@
     <section class="ops-card hand-area" aria-label="Your hand">
         <div class="fighter-player">
             <div class="fighter-details">
-                <h2 class="fighter-name">Your AI</h2>
+                <h2 class="fighter-name">Your AI <span class="fighter-credits" [attr.aria-label]="v.credits + ' credits'"><app-coin-icon /> {{ v.credits }}</span></h2>
                 <div class="world-track" role="meter" aria-label="Credibility" aria-valuemin="0" [attr.aria-valuemax]="rules.maxCredibility" [attr.aria-valuenow]="v.credibility">
                     <div class="world-fill integrity-fill" [class.low]="v.credibilityPercent < 30" [class.high]="v.credibilityPercent > 70" [style.width.%]="v.credibilityPercent"></div>
                 </div>
@@ -128,7 +128,7 @@
         </div>
         <div class="hand-actions">
             <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
-                Attack@if (v.selectedCount) { ({{ v.selectedCount }})}
+                Attack
             </button>
             @if (v.maxCards > rules.maxCards) { <small class="extra-cards">Up to {{ v.maxCards }} cards this turn</small> }
             @if (v.openDeck) { <small class="extra-cards">Your whole deck this turn</small> }

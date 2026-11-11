@@ -1,15 +1,14 @@
 import { Component } from '@angular/core';
 
-/** A flat gold coin: the credits of the card shop. Sized by the font size around it. */
+/** A coin, a circle with a dollar sign in the line style of the cart: the credits of the card shop. Sized by the font size around it. */
 @Component({
   selector: 'app-coin-icon',
   host: { class: 'coin-icon', 'aria-hidden': 'true' },
   template: `
-    <svg viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="11" fill="#c8901f" />
-      <circle cx="12" cy="11.2" r="10" fill="#f5c451" />
-      <circle cx="12" cy="11.2" r="6.6" fill="none" stroke="#c8901f" stroke-width="1.6" />
-      <path d="M14.4 8.6 A3.4 3.4 0 1 0 14.4 13.8" fill="none" stroke="#a8721a" stroke-width="2" stroke-linecap="round" />
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="16" cy="16" r="13" />
+      <path d="M16 7.5 V24.5" />
+      <path d="M20.5 11.5 C20.5 9.5 11.5 9.2 11.5 13 C11.5 16.5 20.5 15.5 20.5 19.2 C20.5 22.8 11.5 22.5 11.5 20.5" />
     </svg>
   `
 })
