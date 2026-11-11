@@ -228,7 +228,35 @@ export class AppComponent {
     });
   }
 
+  /** Cheat: click "WORLD" in the footer, then press 3 within a few seconds to skip to level 3. */
+  private cheatArmedUntil = 0;
+
+  armCheat(): void {
+    this.cheatArmedUntil = Date.now() + 5000;
+  }
+
+  /** Jumps straight to level 3 from level 1 or 2; the levels before count as played as far as they got. */
+  private skipToLevelThree(): void {
+    if (!gameConfig.levelThreeEnabled || this.utopia()) return;
+    const live = this.launched();
+    const history = live ? [...live.history, level2Summary(live)] : [level1Summary(this.game())];
+    const state = newUtopia(history);
+    this.showIntro.set(false);
+    this.levelTwo.set(null);
+    this.levelThree.set(state);
+    this.persistUtopia(state);
+  }
+
   onKeydown(event: KeyboardEvent): void {
+    if (this.cheatArmedUntil) {
+      const armed = Date.now() <= this.cheatArmedUntil;
+      this.cheatArmedUntil = 0;
+      if (armed && event.key === '3') {
+        event.preventDefault();
+        this.skipToLevelThree();
+        return;
+      }
+    }
     if (event.key !== ' ' || event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target;
     if (target instanceof HTMLElement && target.isContentEditable) return;

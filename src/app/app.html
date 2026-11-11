@@ -14,7 +14,7 @@
                 <app-utopia-won [summary]="summary" (dismissed)="dismissUtopiaWon()" />
             }
             <app-level-three [state]="utopiaDisplay() ?? world" (cardToggled)="toggleCard($event)" (attacked)="attack()" />
-            <footer><span>LET’S FIX THE WORLD GAME / LEVEL 3</span>
+            <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 3</span>
                 <span class="footer-actions">
                     <app-github-link />
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
@@ -48,7 +48,7 @@
                            (programStopped)="stopProgram($event)" (protestResolved)="resolveProtest($event)"
                            (productUpgraded)="upgradeProduct($event)" (lawsuitSettled)="settleLawsuit()"
                            (lawsuitFought)="fightLawsuit()" (pitched)="pitch()" />
-            <footer><span>LET’S FIX THE WORLD GAME / LEVEL 2</span>
+            <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 2</span>
                 <span class="footer-actions">
                     @if (victoryClosed()) {
                         <button id="show-results" class="reset" type="button" (click)="showVictory()">Results &amp; next level</button>
@@ -112,7 +112,7 @@
                        [multiAgent]="state.multiAgent" [agentTargets]="game().agentTargets"
                        (itemSelected)="select($event)" (agentAssigned)="assignAgent($event)" />
         </div>
-        <footer><span>LET’S FIX THE WORLD GAME / LEVEL 1</span>
+        <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 1</span>
             <span class="footer-actions">
                 <app-github-link />
                 <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
