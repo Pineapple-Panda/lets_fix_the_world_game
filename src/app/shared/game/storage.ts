@@ -2,6 +2,8 @@ import type { Game } from '../../levels/level-one/models/game.model.ts';
 import type { Item } from '../../levels/level-one/models/item.model.ts';
 import type { LaunchedGame } from '../../levels/level-two/models/launched.model.ts';
 import type { UtopiaGame } from '../../levels/level-three/models/utopia.model.ts';
+import { newUtopia } from '../../levels/level-three/game/utopia.ts';
+import { campaign } from '../../levels/level-three/game/utopia-content.ts';
 import { levelOnePerks as perks } from '../content/perks.ts';
 
 /**
@@ -83,43 +85,48 @@ const isHistory = (value: unknown): boolean => Array.isArray(value) && value.eve
   entry.facts.every(fact => isObject(fact) && typeof fact.label === 'string' && typeof fact.value === 'string'));
 
 const isPercent = (value: unknown): value is number => typeof value === 'number' && value >= 0 && value <= 100;
-const isPercentRecord = (value: unknown): boolean => isObject(value) && Object.values(value).every(isPercent);
 
 /** The level 3 state, or null when there is no compatible level 3 save. */
 export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null {
   const game = readSnapshot(storage, 3);
-  // Level 3 saves from before TCA, budget, integrity and perks existed get the starting values.
-  if (game && game.actions === undefined) Object.assign(game, { actions: 280000000, budget: 20000000, integrity: 50, perks: [] });
-  if (game && game.actionRate === undefined) Object.assign(game, { actionRate: 13000, budgetRate: 13000 });
-  if (game && game.startActions === undefined) game.startActions = game.actions;
-  if (game && game.running === undefined) { game.running = []; delete game.cooldowns; }
-  if (game && game.megacorpSeconds === undefined) game.megacorpSeconds = 0;
-  if (game && game.effects === undefined) Object.assign(game, { effects: [], cardCooldowns: {} });
-  if (game && game.duel === undefined) Object.assign(game, { duel: null, duelCooldown: 0 });
-  if (game && game.outcome === undefined) Object.assign(game, { outcome: null, outcomeSeen: false });
-  if (game && game.history === undefined) Object.assign(game, { history: [], stats: { duelsWon: 0, duelsLost: 0, cardsPlayed: 0, megacorpMoves: 0 } });
-  // The move log used to be text; it is now a list of played cards.
-  if (game && Array.isArray(game.attackLog) && game.attackLog.some(entry => typeof entry === 'string')) game.attackLog = [];
-  // Battles were removed; older saves may still carry one.
-  if (game) delete game.battle;
-  // Initiatives that ran before building existed count as built.
-  if (game && game.built === undefined) Object.assign(game, { built: Array.isArray(game.running) ? [...game.running] : [], building: {} });
+  if (!game) return null;
+  // Level 3 used to be a different game (utopia bars, initiatives, TCA). Such a save starts the card game afresh and
+  // keeps the summaries of levels 1 and 2.
+  if (game.stage === undefined) return newUtopia(isHistory(game.history) ? game.history as UtopiaGame['history'] : []);
+  const enemy = game.enemy;
+  // Log entries from before they named their corporation belong to the current one.
+  if (isObject(enemy) && Array.isArray(game.log)) for (const entry of game.log) if (isObject(entry) && entry.corpId === undefined) entry.corpId = enemy.corpId;
+  const isIdList = (value: unknown) => Array.isArray(value) && value.every(id => typeof id === 'string');
+  // Saves from before blocks over several attacks, healing over time and locked cards.
+  if (game.blockAttacks === undefined) game.blockAttacks = typeof game.block === 'number' && game.block > 0 ? 1 : 0;
+  if (isObject(game.enemy) && game.enemy.blockAttacks === undefined) game.enemy.blockAttacks = typeof game.enemy.block === 'number' && game.enemy.block > 0 ? 1 : 0;
+  if (game.regen === undefined) game.regen = [];
+  if (game.locked === undefined) game.locked = [];
+  // Saves from before counter cards were played: none waiting.
+  if (game.counters === undefined) game.counters = [];
+  if (isObject(game.enemy) && game.enemy.counters === undefined) game.enemy.counters = [];
+  // Saves from before the card shop: one credit per win so far, no cards bought.
+  if (game.credits === undefined) Object.assign(game, { credits: game.wins, owned: [] });
+  const isCountRecord = (value: unknown) => isObject(value) && Object.values(value).every(isCount);
   if (
-    !game || !isCount(game.seconds) || !isCount(game.nextAttack) || !isCount(game.actions) || !isCount(game.budget) ||
-    !isCount(game.actionRate) || !isCount(game.budgetRate) || !isCount(game.startActions) ||
-    !isPercent(game.integrity) || !Array.isArray(game.perks) || !game.perks.every(id => typeof id === 'string') ||
-    !isPercentRecord(game.metrics) || !isPercentRecord(game.corpPower) ||
-    !Array.isArray(game.running) || !game.running.every(id => typeof id === 'string') || !isCount(game.megacorpSeconds) ||
-    !Array.isArray(game.built) || !game.built.every(id => typeof id === 'string') ||
-    !isObject(game.building) || !Object.values(game.building).every(isCount) ||
-    !Array.isArray(game.attackLog) || !game.attackLog.every(entry => isObject(entry) && typeof entry.cardId === 'string' && typeof entry.corpId === 'string') ||
-    !Array.isArray(game.effects) || !game.effects.every(entry => isObject(entry) && typeof entry.cardId === 'string' && isCount(entry.remaining)) ||
-    !isObject(game.cardCooldowns) || !Object.values(game.cardCooldowns).every(isCount) || !isCount(game.duelCooldown) ||
+    !isCount(game.seconds) || !isCount(game.credibility) || !isCount(game.stage) || !isCount(game.battle) ||
+    !isObject(enemy) || typeof enemy.corpId !== 'string' || !isCount(enemy.power) || !isCount(enemy.maxPower) ||
+    !isPercent(enemy.block) || !isCountRecord(enemy.cooldowns) || !isIdList(enemy.counters) || !isIdList(game.counters) ||
+    !isCount(game.blockAttacks) || !isCount(enemy.blockAttacks) || !isIdList(game.locked) ||
+    !(game.extraCards === undefined || isCount(game.extraCards)) ||
+    !(game.openDeck === undefined || typeof game.openDeck === 'boolean') ||
+    !(game.resolving === undefined || game.resolving === null ||
+      (isObject(game.resolving) && (game.resolving.result === 'win' || game.resolving.result === 'loss') && isCount(game.resolving.wait))) ||
+    !Array.isArray(game.regen) || !game.regen.every(entry => isObject(entry) && isCount(entry.amount) && isCount(entry.turns)) ||
+    !isIdList(game.hand) || !isIdList(game.selected) || !isCountRecord(game.cooldowns) || !isPercent(game.block) ||
+    (game.turn !== 'player' && game.turn !== 'enemy') || !Array.isArray(game.log) ||
+    !game.log.every(entry => isObject(entry) && isCount(entry.id) && (entry.by === 'player' || entry.by === 'enemy') && typeof entry.corpId === 'string' && isIdList(entry.cards)) ||
+    !isCount(game.wins) || !isCount(game.losses) || !isCount(game.credits) || !isIdList(game.owned) ||
     ![null, 'won', 'lost'].includes(game.outcome as string | null) || typeof game.outcomeSeen !== 'boolean' || !isHistory(game.history) ||
-    !isObject(game.stats) || !['duelsWon', 'duelsLost', 'cardsPlayed', 'megacorpMoves'].every(key => isCount((game.stats as Snapshot)[key])) ||
-    !(game.duel === null || (isObject(game.duel) && (game.duel.startedBy === 'player' || game.duel.startedBy === 'megacorp') &&
-      [null, 'won', 'lost'].includes(game.duel.result as string | null)))
+    !isObject(game.stats) || !['cardsPlayed', 'damageDealt', 'damageTaken', 'attempts'].every(key => isCount((game.stats as Snapshot)[key]))
   ) return null;
+  // The campaign may have been shortened since: start it again rather than point at a station that is gone.
+  if (game.stage >= campaign.length && game.outcome !== 'won') return newUtopia(game.history as UtopiaGame['history']);
   return game as unknown as UtopiaGame;
 }
 

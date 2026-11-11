@@ -1,99 +1,190 @@
-import { DecimalPipe } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
+import { CardArtComponent } from '../card-art/card-art';
+import { CardShopComponent } from '../card-shop/card-shop';
+import { CartIconComponent, CoinIconComponent } from '../icons/icons';
 import {
-  actionCard, actionsGained, canCancelEffect, megacorpDefeated, megacorpPower, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
-  initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
+  buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
-import { corporations, initiatives, megaCorpName, metrics } from '../../game/utopia-content';
-import { levelThreePerks } from '../../../../shared/content/perks';
-import type { UtopiaGame } from '../../models/utopia.model';
+import { battleRules, corporations, megaCorpName } from '../../game/utopia-content';
+import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/utopia.model';
 
-/** Level 3: you and MegaCorp face each other on top; development, the utopia and MegaCorp's corporations below. */
+/** Level 3: a card game against the corporations, one after another. */
 @Component({
   selector: 'app-level-three',
-  imports: [DecimalPipe],
+  imports: [CardArtComponent, CardShopComponent, CartIconComponent, CoinIconComponent],
   templateUrl: './level-three.html'
 })
 export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
-  readonly cardPlayed = output<string>();
-  readonly duelStarted = output<void>();
-  /** Index of the running MegaCorp effect you stop with Shut It Down. */
-  readonly effectCancelled = output<number>();
-  readonly initiativeInitialized = output<string>();
-  readonly initiativeStarted = output<string>();
-  readonly initiativeStopped = output<string>();
-  readonly perkActivated = output<string>();
+  readonly cardToggled = output<string>();
+  readonly attacked = output<void>();
+  readonly cardBought = output<string>();
+  /** The card shop dialog is open. */
+  protected readonly shopOpen = signal(false);
 
+  /**
+   * Bars wait for the battle card: while the cards of the newest attack fly in and are applied, credibility and power
+   * still show their values from before the attack. `stageStep` matches `--step` in the styles.
+   */
+  private static readonly stageStep = 380;
+  private static readonly stageTail = 850;
+  private readonly now = signal(performance.now());
+  /** When each attack first showed up here. */
+  private readonly seenAt = new Map<number, number>();
+
+  constructor() {
+    const timer = setInterval(() => this.now.set(performance.now()), 100);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+  }
+
+  /** The newest attack while its animation still runs (its values from before count), or null. */
+  private animating(state: UtopiaGame): Attack | null {
+    const newest = state.log[0];
+    if (!newest?.before) return null;
+    let seen = this.seenAt.get(newest.id);
+    if (seen === undefined) {
+      seen = performance.now();
+      this.seenAt.set(newest.id, seen);
+    }
+    const duration = newest.cards.length * LevelThreeComponent.stageStep + LevelThreeComponent.stageTail;
+    return this.now() - seen < duration ? newest : null;
+  }
+
+  protected readonly rules = battleRules;
+  /** How credits are earned, for the shop. */
+  protected readonly earnRules = [
+    `${battleRules.credits.win} per win`,
+    `+${battleRules.credits.highCredibilityBonus} when you win with more than ${battleRules.credits.highCredibility} credibility`,
+    `+${battleRules.credits.counter} per countered instant card`,
+    `+${battleRules.credits.corporationBeaten} for beating a corporation completely`,
+    ...(battleRules.credits.loss ? [`+${battleRules.credits.loss} per lost battle`] : [])
+  ].join(', ');
+  /** Label of each colour scheme. */
+  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant', counter: 'Counter', combo: 'Combo', special: 'Special' };
   protected readonly megaCorpName = megaCorpName;
 
   protected readonly view = computed(() => {
     const state = this.state();
+    const stage = currentStage(state);
+    // Until the newest attack's cards are applied, the bars keep their old values.
+    const held = this.animating(state)?.before;
+    const shownPower = held && state.log[0]?.corpId === state.enemy.corpId ? held.power : state.enemy.power;
+    const shownCredibility = held ? held.credibility : state.credibility;
+    const corp = corporation(state.enemy.corpId);
+    const strength = stage ? enemyStrength(stage, state.battle) : 1;
     return {
-      metrics: metrics.map(metric => ({ ...metric, value: state.metrics[metric.id], rate: Math.round(metricRate(state, metric.id) * 100000) / 100000 })),
-      initiatives: initiatives.map(initiative => ({
-        initiative,
-        metricName: metrics.find(metric => metric.id === initiative.metric)?.name ?? initiative.metric,
-        rate: Math.round(initiativeRate(state, initiative.id) * 100000) / 100000,
-        upkeep: initiativeUpkeep(state, initiative.id),
-        running: state.running.includes(initiative.id),
-        stage: initiativeStage(state, initiative.id),
-        buildProgress: (state.building[initiative.id] ?? 0) / initiative.buildTime * 100,
-        buildSeconds: state.building[initiative.id] ?? 0,
-        initializeBlocker: initializeBlocker(state, initiative.id),
-        funded: initiativeFunded(state, initiative.id),
-        blocker: state.running.includes(initiative.id) ? null : initiativeBlocker(state, initiative.id)
+      enemy: {
+        corp,
+        boss: !!stage?.boss,
+        battle: state.battle + 1,
+        battles: stage?.battles ?? 0,
+        // One pip per battle against this corporation: beaten ones filled.
+        beaten: state.outcome === 'won' ? stage?.battles ?? 0 : state.battle,
+        pips: Array.from({ length: stage?.battles ?? 0 }, (_, battle) => state.outcome === 'won' || battle < state.battle),
+        power: Math.round(shownPower),
+        maxPower: state.enemy.maxPower,
+        percent: shownPower / state.enemy.maxPower * 100,
+        block: state.enemy.block,
+        blockAttacks: state.enemy.blockAttacks,
+        // Counter cards it played last turn, waiting for your next attack.
+        counters: state.enemy.counters.map(id => enemyCard(state.enemy.corpId, id)?.name ?? id),
+        // Its cards, with the turns they still rest.
+        deck: enemyDeck(state.enemy.corpId).map(card => ({
+          card, category: cardCategory(card), summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0,
+          // Instant cards it took over from an earlier corporation.
+          from: inheritedCards(state.enemy.corpId).find(entry => entry.card.id === card.id)?.from.name ?? null
+        }))
+      },
+      credibility: Math.round(shownCredibility),
+      credibilityPercent: shownCredibility / battleRules.maxCredibility * 100,
+      block: state.block,
+      blockAttacks: state.blockAttacks,
+      // Healing over time: per attack, and for how many more of its attacks.
+      regen: state.regen.length ? { amount: state.regen.reduce((total, entry) => total + entry.amount, 0), turns: Math.max(...state.regen.map(entry => entry.turns)) } : null,
+      counters: state.counters.map(id => playerCard(id)?.name ?? id),
+      yourTurn: playerTurn(state),
+      // A battle that just ended, shown until the next one starts.
+      resolving: state.resolving?.result ?? null,
+      hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
+        card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), selected: state.selected.includes(card.id),
+        locked: state.locked.includes(card.id)
       })),
-      counters: launchedCounters(state).map(counter => ({
-        counter,
-        corp: corporation(counter.corpId),
-        metricName: metrics.find(metric => metric.id === counter.metric)?.name ?? counter.metric,
-        rate: Math.round(counterRate(state, counter) * 100000) / 100000,
-        power: state.corpPower[counter.corpId] ?? 0
-      })),
-      corps: corporations.map(corp => ({ corp, power: state.corpPower[corp.id] ?? 0 })),
-      megaPower: megacorpPower(state),
-      integrity: state.integrity,
-      actionsPerSecond: actionsPerSecond(state),
-      budgetPerSecond: budgetPerSecond(state),
-      utopiaOpen: cardUnlocked(state, 'utopia'),
-      megacorpOpen: cardUnlocked(state, 'megacorp'),
-      utopiaPerkName: unlockPerk('utopia')?.name ?? '',
-      megacorpPerkName: unlockPerk('megacorp')?.name ?? '',
-      actionsGained: actionsGained(state),
-      activePerks: levelThreePerks.filter(perk => state.perks.includes(perk.id)),
-      openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
-      nextAttack: state.nextAttack,
-      canDuel: canDuel(state),
-      defeated: megacorpDefeated(state),
-      duelCooldown: state.duelCooldown,
-      moves: state.attackLog.map((move, index) => {
-        const card = actionCard(move.cardId);
-        const corp = corporation(move.corpId);
-        return card ? { key: index + '-' + move.cardId, card, summary: cardSummary(card), corp } : null;
-      }).filter(move => move !== null).slice(0, 3),
-      cards: ownedCards(state).map(card => ({ card, summary: cardSummary(card), blocker: cardBlocker(state, card.id) })),
-      activeEffects: state.effects.map((active, index) => {
-        const card = actionCard(active.cardId);
+      selectedCount: state.selected.length,
+      // Cards you may play this turn (more after a special card).
+      maxCards: cardLimit(state),
+      openDeck: !!state.openDeck,
+      resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
+        .map(card => ({ card, turns: state.cooldowns[card.id]! })),
+      deckSize: ownedCards(state).length,
+      credits: state.credits,
+      learnable: learnableCards(state).map(({ card, known }) => {
+        const counter = card.effects.find(effect => effect.kind === 'counter');
+        const source = counter?.kind === 'counter' ? corporations.map(corp => ({ corp, card: corp.cards.find(entry => entry.id === counter.of) })).find(entry => entry.card) : undefined;
         return {
-          id: active.cardId + '-' + (active.corpId ?? 'you') + '-' + active.remaining,
-          name: card?.name ?? active.cardId,
-          by: card?.actor === 'megacorp' ? corporation(active.corpId ?? '')?.name ?? megaCorpName : 'You',
-          mine: card?.actor === 'player',
-          remaining: active.remaining,
-          index,
-          cancelable: canCancelEffect(state, index)
+          card, category: cardCategory(card), summary: cardSummary(card), known,
+          hint: source ? `Get hit by “${source.card!.name}” (${source.corp.name}) to learn it.` : 'Learned from a corporation.'
         };
-      })
+      }),
+      shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
+      // Something in the shop you can afford: the shop button shows a dot.
+      // Cards in the shop you can afford right now: the number on the shop button.
+      affordableCount: shopCards().filter(card => !buyBlocker(state, card.id)).length,
+      log: state.log.map(entry => this.describe(entry)),
+      // The battle card: the corporation's latest attack in this battle on top, yours below.
+      stageEnemy: this.stage(state, state.log.find(entry => entry.by === 'enemy' && entry.corpId === state.enemy.corpId)),
+      stagePlayer: this.stage(state, state.log.find(entry => entry.by === 'player')),
+      newest: state.log[0]?.id ?? 0
     };
   });
 
-  /** 0.012 → "+0.012", -0.02 → "−0.02", 0 → "±0". */
-  protected rate(value: number): string {
-    return value > 0 ? '+' + value : value < 0 ? '−' + -value : '±0';
+  /** Order in which played cards are applied on the battle card. */
+  private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4, special: 5 };
+
+  /**
+   * An attack for the battle card: its cards in the order they are applied, and what it did. Counter cards the
+   * opponent's next attack did not need (no matching instant card) are marked `wasted`.
+   */
+  private stage(state: UtopiaGame, latest: Attack | undefined) {
+    if (!latest) return null;
+    // The opponent's attack right after this one (the log is newest first).
+    const answer = state.log.slice(0, state.log.indexOf(latest)).filter(entry => entry.by !== latest.by).pop();
+    const factor = latest.by === 'enemy' ? (currentStage(state) ? enemyStrength(currentStage(state)!, state.battle) : 1) : 1;
+    const cards = latest.cards
+      .map(id => latest.by === 'player' ? playerCard(id) : enemyCard(latest.corpId, id))
+      .filter((card): card is BattleCard => !!card)
+      .map(card => ({
+        card, category: cardCategory(card), summary: cardSummary(card, factor, latest.by === 'player' ? state.wins : 0),
+        wasted: !!answer && card.effects.some(effect => effect.kind === 'counter') && answer.counteredBy !== card.id
+      }))
+      .sort((a, b) => LevelThreeComponent.applyOrder[a.category] - LevelThreeComponent.applyOrder[b.category]);
+    const results = [
+      latest.shield ? { kind: 'block', text: `🛡 Block ${latest.shield}%` } : null,
+      latest.blocked ? { kind: 'blocked', text: `🛡 Blocked ${latest.blocked}` } : null,
+      latest.damage ? { kind: 'damage', text: `💥 Damage −${latest.damage}` } : null,
+      latest.recoil ? { kind: 'recoil', text: `↩ Countered −${latest.recoil}` } : null,
+      latest.healed ? { kind: 'heal', text: `♥ Healed +${latest.healed}` } : null,
+      ...(latest.notes ?? []).map((note, index) => ({ kind: 'note' + index, text: note })),
+      ...(latest.learned ?? []).map(id => ({ kind: 'learned-' + id, text: `learned “${playerCard(id)?.name ?? id}”` }))
+    ].filter((chip): chip is { kind: string; text: string } => !!chip);
+    return {
+      id: latest.id, mine: latest.by === 'player', by: corporation(latest.corpId)?.name ?? latest.corpId,
+      // Wasted counters grey out once the answering cards are applied.
+      wait: answer?.cards.length ?? 0,
+      names: cards.map(entry => entry.card.name).join(', '), cards, results
+    };
   }
 
-  protected format(value: number): string {
-    return Math.round(value).toLocaleString('en-US');
+  /** One line per attack, e.g. "You: Antitrust Lawsuit + Fact Check → 20 damage (5 blocked)". */
+  private describe(entry: Attack) {
+    const names = entry.cards.map(id => (entry.by === 'player' ? playerCard(id) : enemyCard(entry.corpId, id))?.name ?? id);
+    const parts = [
+      entry.damage || entry.blocked ? `${entry.damage} damage${entry.blocked ? ` (${entry.blocked} blocked)` : ''}` : '',
+      entry.healed ? `+${entry.healed} ${entry.by === 'player' ? 'credibility' : 'power'}` : '',
+      entry.shield ? `block ${entry.shield}%` : '',
+      ...(entry.notes ?? []),
+      entry.learned?.length ? `you learned ${entry.learned.map(id => `“${playerCard(id)?.name ?? id}”`).join(', ')}` : '',
+      entry.recoil ? `countered by “${(entry.by === 'player' ? enemyCard(entry.corpId, entry.counteredBy ?? '') : playerCard(entry.counteredBy ?? ''))?.name ?? 'a counter'}”, ${entry.recoil} back` : ''
+    ].filter(part => part);
+    return { id: entry.id, mine: entry.by === 'player', by: corporation(entry.corpId)?.name ?? entry.corpId, cards: names.join(' + '), result: parts.join(' · ') || 'no effect' };
   }
 }

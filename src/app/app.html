@@ -13,13 +13,8 @@
             @if (finalSummary(); as summary) {
                 <app-utopia-won [summary]="summary" (dismissed)="dismissUtopiaWon()" />
             }
-            @if (world.duel; as duel) {
-                <app-duel-dialog [duel]="duel" [clickGain]="duelGain()" [boosts]="duelBoosts()" (boosted)="playCard($event)"
-                                 (finished)="finishDuel($event)" (closed)="closeDuel()" />
-            }
-            <app-level-three [state]="utopiaDisplay() ?? world" (cardPlayed)="playCard($event)" (duelStarted)="startDuel()" (effectCancelled)="cancelEffect($event)" (initiativeInitialized)="initializeInitiative($event)" (initiativeStarted)="startInitiative($event)" (initiativeStopped)="stopInitiative($event)"
-                             (perkActivated)="activateUtopiaPerk($event)" />
-            <footer><span>LET’S FIX THE WORLD GAME / LEVEL 3</span>
+            <app-level-three [state]="utopiaDisplay() ?? world" (cardToggled)="toggleCard($event)" (attacked)="attack()" (cardBought)="buyCard($event)" />
+            <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 3</span>
                 <span class="footer-actions">
                     <app-github-link />
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
@@ -53,8 +48,11 @@
                            (programStopped)="stopProgram($event)" (protestResolved)="resolveProtest($event)"
                            (productUpgraded)="upgradeProduct($event)" (lawsuitSettled)="settleLawsuit()"
                            (lawsuitFought)="fightLawsuit()" (pitched)="pitch()" />
-            <footer><span>LET’S FIX THE WORLD GAME / LEVEL 2</span>
+            <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 2</span>
                 <span class="footer-actions">
+                    @if (victoryClosed()) {
+                        <button id="show-results" class="reset" type="button" (click)="showVictory()">Results &amp; next level</button>
+                    }
                     <app-github-link />
                     <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>
                 </span>
@@ -62,7 +60,7 @@
         </main>
     } @else {
     @if (view().canLaunch) {
-        <app-launch [nextLevelEnabled]="config.levelTwoEnabled" (launched)="launchApplication()" />
+        <app-launch [facts]="launchFacts()" [nextLevelEnabled]="config.levelTwoEnabled" (launched)="launchApplication()" />
     }
     <main>
         @let state = view();
@@ -114,7 +112,7 @@
                        [multiAgent]="state.multiAgent" [agentTargets]="game().agentTargets"
                        (itemSelected)="select($event)" (agentAssigned)="assignAgent($event)" />
         </div>
-        <footer><span>LET’S FIX THE WORLD GAME / LEVEL 1</span>
+        <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 1</span>
             <span class="footer-actions">
                 <app-github-link />
                 <button id="reset" class="reset" type="button" (click)="reset()">Reset game</button>

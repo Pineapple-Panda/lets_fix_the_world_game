@@ -1,48 +1,56 @@
-import type { BoughtPerk, Described, LevelSummary, RunningProgram } from '../../../shared/models/shared.model.ts';
-/** Level 3: building a utopia while MegaCorp fights back. */
+import type { Described, LevelSummary } from '../../../shared/models/shared.model.ts';
 
-/** The utopia's bars, each in percent (0–100). */
-export type UtopiaMetric = 'employment' | 'housing' | 'food';
-
+/**
+ * Level 3: a card game. You fight the corporations one after another; each attack is a few cards from your hand, then
+ * the corporation answers with its own cards. Credibility is your life and carries over from battle to battle.
+ */
 export interface UtopiaGame {
+  /** Seconds played in level 3. */
   seconds: number;
-  /** Total coding actions (TCA), budget and integrity carry over from level 2. */
-  actions: number;
-  budget: number;
-  /** Integrity in percent (0–100). */
-  integrity: number;
-  /** TCA and budget gained every second: the averages level 2 ended with. */
-  actionRate: number;
-  budgetRate: number;
-  /** Activated level 3 perks. */
-  perks: string[];
-  /** TCA when level 3 started; perk thresholds count the actions gained since. */
-  startActions: number;
-  /** Current value of every bar in percent. */
-  metrics: Record<UtopiaMetric, number>;
-  /** Power of every corporation in percent; 0 means defeated. */
-  corpPower: Record<string, number>;
-  /** Initiatives that are built and can be started. */
-  built: string[];
-  /** Initiatives being built: seconds of building done so far. */
-  building: Record<string, number>;
-  /** Initiatives that are running. */
-  running: string[];
-  /** Seconds since MegaCorp showed itself; its counter initiatives launch one after another. */
-  megacorpSeconds: number;
-  /** Seconds until MegaCorp plays its next card. */
-  nextAttack: number;
-  /** Latest cards MegaCorp played, newest first. */
-  attackLog: PlayedCard[];
-  /** Timed cards that are still running. */
-  effects: ActiveEffect[];
-  /** Seconds until each of your cards can be played again. */
-  cardCooldowns: Record<string, number>;
-  /** The duel shown in its dialog, or null. */
-  duel: Duel | null;
-  /** Seconds until the next duel can start. */
-  duelCooldown: number;
-  /** How level 3 ended: every bar at 100% (won) or one at 0% (lost); null while it runs. The game stops then. */
+  /** Your life in points (0 to `maxCredibility`); carries over from battle to battle. */
+  credibility: number;
+  /** Index of the current station of the campaign. */
+  stage: number;
+  /** Battle within the current station, counted from 0. */
+  battle: number;
+  /** The corporation you are fighting right now. */
+  enemy: Opponent;
+  /** Card ids in your hand. */
+  hand: string[];
+  /** Cards of your hand picked for the next attack. */
+  selected: string[];
+  /** Your turns until each card can be drawn again. */
+  cooldowns: Record<string, number>;
+  /** Percent of the corporation's attacks your blockers absorb, and for how many more of its attacks. */
+  block: number;
+  blockAttacks: number;
+  /** Counter cards you played last turn: they answer the corporation's next attack. */
+  counters: string[];
+  /** Healing over time: credibility you get back after each of the corporation's attacks, for `turns` more attacks. */
+  regen: { amount: number; turns: number }[];
+  /** Cards of your hand the corporation locked: they cannot be picked this turn. */
+  locked: string[];
+  /** Extra cards you may play this turn, on top of `maxCards` (from a special card last turn). */
+  extraCards?: number;
+  /** This turn your hand is your whole deck (every card that is not resting), from a special card last turn. */
+  openDeck?: boolean;
+  /** Whose move it is. The corporation answers `enemyWait` ticks after your attack (time for the animation). */
+  turn: 'player' | 'enemy';
+  enemyWait?: number;
+  /** A battle that just ended: won or lost, applied after `wait` more ticks (time for the last cards to be shown). */
+  resolving?: { result: 'win' | 'loss'; wait: number } | null;
+  /** The latest attacks, newest first. */
+  log: Attack[];
+  /** Battles won and lost, over all attempts. */
+  wins: number;
+  losses: number;
+  /** Earned in battle (see `battleRules.credits`), spent in the card shop. */
+  credits: number;
+  /** Cards bought in the shop or learned from the corporations; the starter cards are always yours. */
+  owned: string[];
+  /** What the last won battle paid, for the display. */
+  lastReward?: Reward | null;
+  /** How level 3 ended: every station beaten (won), or credibility ran out (lost, until you try again). */
   outcome: 'won' | 'lost' | null;
   /** True once the player closed the "utopia achieved" dialog. */
   outcomeSeen: boolean;
@@ -52,122 +60,127 @@ export interface UtopiaGame {
   stats: UtopiaStats;
 }
 
+/** A corporation in battle. */
+export interface Opponent {
+  corpId: string;
+  power: number;
+  maxPower: number;
+  /** Percent of your attacks its blockers absorb, and for how many more of your attacks. */
+  block: number;
+  blockAttacks: number;
+  /** Counter cards it played last turn: they answer your next attack. */
+  counters: string[];
+  /** Its turns until each of its cards can be played again. */
+  cooldowns: Record<string, number>;
+}
+
+/** Credits a battle paid and why, e.g. 3 for "win", "credibility above 50", "corporation beaten". */
+export interface Reward {
+  credits: number;
+  reasons: string[];
+}
+
+/** One attack: who played which cards, and what it did. */
+export interface Attack {
+  /** Running number, for the display. */
+  id: number;
+  by: 'player' | 'enemy';
+  /** The corporation of that battle (the log carries over from battle to battle). */
+  corpId: string;
+  cards: string[];
+  /** Damage after blocking. */
+  damage: number;
+  /** Damage the defender's blockers absorbed. */
+  blocked: number;
+  /** Credibility or power restored. */
+  healed: number;
+  /** Block the attacker built up for the next incoming attack, in percent. */
+  shield: number;
+  /** Instant battle: damage that struck back at the attacker, and the counter card that did it. */
+  recoil?: number;
+  counteredBy?: string | null;
+  /** Counter cards you learned because this attack's instant cards hit you. */
+  learned?: string[];
+  /** Anything else that happened, in a few words (a block removed, a card locked, …). */
+  notes?: string[];
+  /** Your credibility and the corporation's power before this attack: shown until its cards are applied. */
+  before?: { credibility: number; power: number };
+}
+
 export interface UtopiaStats {
-  duelsWon: number;
-  duelsLost: number;
-  /** Your moves played (including Shut It Down). */
   cardsPlayed: number;
-  megacorpMoves: number;
+  damageDealt: number;
+  damageTaken: number;
+  attempts: number;
 }
-
-/** A direct duel: a tug-of-war bar in a dialog. */
-export interface Duel {
-  startedBy: CardActor;
-  /** Set once the bar reached 100% (won) or 0% (lost); its effects are already applied. */
-  result: 'won' | 'lost' | null;
-}
-
-/** Who plays a card. */
-export type CardActor = 'player' | 'megacorp';
-/** Damage hurts the other side, a powerup helps the one who plays it. */
-export type CardCategory = 'damage' | 'powerup';
 
 /**
- * What a card does. Without a duration the amounts apply once; with a duration they apply every second
- * (powerShield and firewall simply hold for the duration).
+ * What a card does. Damage hits the opponent (minus its block); block and heal help the one who plays it.
+ * Instant battle: `amount` hits the opponent (no block helps) unless the opponent played the `counter` card in its last
+ * turn; then half of it strikes back at you. A counter card, once played, waits for the opponent's next attack (like a
+ * block) and answers the instant card `of`.
  */
 export type CardEffect =
-  /** Change a utopia bar by this many percentage points. */
-  | { kind: 'metric'; metric: UtopiaMetric; amount: number }
-  /** Change your credibility. */
-  | { kind: 'credibility'; amount: number }
-  /** Change corporation power: the one that plays the card, the strongest one, or all of them. */
-  | { kind: 'corpPower'; target: 'self' | 'strongest' | 'all'; amount: number }
-  /** MegaCorp loses no power while it holds. */
-  | { kind: 'powerShield' }
-  /** Only this share of MegaCorp's card effects reaches you while it holds. */
-  | { kind: 'firewall'; factor: number }
-  /** Each push in a duel moves the bar by this many points while it holds. */
-  | { kind: 'duelBoost'; clickGain: number }
-  /** Lets you stop a running MegaCorp move of your choice (picked from the effect chips). */
-  | { kind: 'cancelMove' };
+  /** `perWin`: more damage for every battle you have won (your cards). */
+  | { kind: 'damage'; amount: number; perWin?: number }
+  /** `attacks`: the block lasts for this many of the opponent's attacks (default 1). */
+  | { kind: 'block'; percent: number; attacks?: number }
+  | { kind: 'heal'; amount: number }
+  /** Removes the opponent's block before the damage. */
+  | { kind: 'strip' }
+  /** Costs the one who plays it. */
+  | { kind: 'selfDamage'; amount: number }
+  /** Heals `amount` after each of the opponent's next `turns` attacks (your cards). */
+  | { kind: 'regen'; amount: number; turns: number }
+  /** The opponent's strongest resting card (or strongest card) rests `turns` longer (your cards). */
+  | { kind: 'delay'; turns: number }
+  /** Locks `count` random cards of your hand for your next turn (the corporations' cards). */
+  | { kind: 'lock'; count: number }
+  /** Draws your hand afresh (the corporations' cards). */
+  | { kind: 'shuffle' }
+  /** Special: you may play `count` more cards in your next turn (your cards). */
+  | { kind: 'extraCards'; count: number }
+  /** Special: in your next turn you pick from your whole deck instead of a hand of five (your cards). */
+  | { kind: 'openDeck' }
+  | { kind: 'instant'; amount: number; counter: string }
+  | { kind: 'counter'; of: string };
 
-/** An action card for you or MegaCorp. */
-export interface ActionCard extends Described {
-  actor: CardActor;
-  category: CardCategory;
+/** The colour scheme of a card: what it does, or 'combo' for cards with more than one kind of effect. */
+export type CardCategory = 'damage' | 'block' | 'heal' | 'instant' | 'counter' | 'combo' | 'special';
+
+/** A card in your deck or a corporation's deck. */
+export interface BattleCard extends Described {
   effects: CardEffect[];
-  /** Seconds the card keeps working; one-time hit without it. */
-  duration?: number;
-  /** Your cards: seconds before it can be played again (until cards get a price). */
-  cooldown?: number;
-  /** MegaCorp cards: only this corporation plays it (any of them without). */
-  corpId?: string;
-  /** Your cards: needs a perk before it can be played (available from the start without). */
-  locked?: boolean;
+  /** Own turns the card rests after it was played; 0 means it can come back right away. */
+  cooldown: number;
 }
 
-/** A card MegaCorp played, for the list of its latest moves. */
-export interface PlayedCard {
-  cardId: string;
-  corpId: string;
-}
-
-/** A timed card that is still running. */
-export interface ActiveEffect {
-  cardId: string;
-  /** The corporation that played it (MegaCorp cards). */
-  corpId?: string;
-  remaining: number;
-}
-
-/** A bar of the utopia. */
-export interface MetricDefinition {
-  id: UtopiaMetric;
-  name: string;
-  /** Short explanation shown under the bar. */
-  hint: string;
-  start: number;
-  /** Change per second without any help (negative: it erodes). */
-  drift: number;
+/**
+ * One of your cards: a starter card (price 0), one to buy in the card shop for credits, or a counter card you learn
+ * (`learned`) when the corporations' instant card hits you; learned cards are never sold.
+ */
+export interface PlayerCard extends BattleCard {
+  price: number;
+  learned?: boolean;
 }
 
 export interface Corporation extends Described {
   icon: string;
+  /** The corporation's own cards; the shared MegaCorp cards come on top. */
+  cards: BattleCard[];
 }
 
-/** A program of your AI system: started once, then it raises a bar every second while it runs and pays its upkeep. */
-export interface Initiative extends RunningProgram {
-  metric: UtopiaMetric;
-  /** Seconds it takes to build before it can be started. */
-  buildTime: number;
-}
-
-/** A MegaCorp program against the utopia: it pushes a bar down every second while its corporation has power. */
-export interface CounterInitiative extends Described {
+/**
+ * A station of the campaign: a corporation to beat `battles` times. Every battle starts with `power`, and each
+ * further one adds `powerStep`; its damage is multiplied by `damage` + `damageStep` per battle.
+ */
+export interface Stage {
   corpId: string;
-  metric: UtopiaMetric;
-  /** Percentage points per second it takes at full corporation power. */
-  rate: number;
-  /** Seconds after MegaCorp shows itself before it starts. */
-  launchAfter: number;
-}
-
-/** What a level 3 perk changes. Add a kind here and handle it in `utopia.ts` to create new effects. */
-export type UtopiaPerkEffect =
-  | { kind: 'initiativeGain'; value: number }
-  | { kind: 'attackShield'; value: number }
-  | { kind: 'driftShield'; value: number }
-  | { kind: 'upkeep'; value: number }
-  /** Multiplies the TCA and budget gained per second. */
-  | { kind: 'rateBoost'; value: number }
-  | { kind: 'unlock'; card: UtopiaCard }
-  /** Makes one of your locked action cards playable. */
-  | { kind: 'unlockAction'; action: string };
-
-/** Cards of level 3 that start hidden. */
-export type UtopiaCard = 'utopia' | 'megacorp';
-
-export interface UtopiaPerk extends BoughtPerk {
-  effect: UtopiaPerkEffect;
+  battles: number;
+  power: number;
+  powerStep: number;
+  damage: number;
+  damageStep: number;
+  /** The final opponent: shown as such. */
+  boss?: boolean;
 }

@@ -1,295 +1,167 @@
 @let v = view();
-<div class="utopia">
-    <!-- Top: you on the left, MegaCorp on the right, what MegaCorp is up to in between. -->
-    <section class="ops-card arena" aria-labelledby="arena-title">
-        <figure class="avatar avatar-player">
-            <svg viewBox="0 0 120 120" role="img" aria-label="Your AI system: a friendly robot with a leaf on its antenna">
-                <circle class="avatar-backdrop" cx="60" cy="60" r="56" />
-                <!-- antenna with a leaf -->
-                <line class="robot-line" x1="60" y1="30" x2="60" y2="16" />
-                <path class="robot-leaf" d="M60 16 C 52 6, 70 2, 72 10 C 68 16, 62 17, 60 16 Z" />
-                <!-- head -->
-                <rect class="robot-head" x="32" y="30" width="56" height="44" rx="14" />
-                <rect class="robot-visor" x="39" y="39" width="42" height="20" rx="9" />
-                <circle class="robot-eye" cx="51" cy="49" r="4.5" />
-                <circle class="robot-eye" cx="69" cy="49" r="4.5" />
-                <path class="robot-line" d="M50 65 Q 60 71 70 65" fill="none" />
-                <!-- ears -->
-                <rect class="robot-head" x="26" y="45" width="7" height="14" rx="3" />
-                <rect class="robot-head" x="87" y="45" width="7" height="14" rx="3" />
-                <!-- body with a heart -->
-                <path class="robot-body" d="M30 112 C 30 90, 40 80, 60 80 C 80 80, 90 90, 90 112 Z" />
-                <path class="robot-heart" d="M60 104 C 50 96, 50 89, 55 88 C 58 87.5, 60 90, 60 91 C 60 90, 62 87.5, 65 88 C 70 89, 70 96, 60 104 Z" />
-            </svg>
-            <figcaption>
-                <strong>Your AI</strong>
-                <div class="world-track" role="meter" aria-label="Credibility" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
-                    <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70" [style.width.%]="v.integrity"></div>
-                </div>
-                <small>Credibility {{ v.integrity | number: '1.0-0' }}%</small>
-            </figcaption>
-        </figure>
+<div class="cardgame">
+    @if (shopOpen()) {
+        <app-card-shop [entries]="v.shop" [credits]="v.credits" [earnRules]="earnRules" [learnable]="v.learnable"
+                       (bought)="cardBought.emit($event)" (closed)="shopOpen.set(false)" />
+    }
 
-        <div class="arena-feed">
-            @if (!v.megacorpOpen) {
-                <h2 class="tool-heading" id="arena-title">The world is fixed. Now make it good.</h2>
-                <p class="arena-intro">Your AI runs the world's systems. Next: a place where everyone has work, a home and enough to eat.
-                    Somewhere, somebody does not like where this is going.</p>
-            } @else {
-                <h2 class="tool-heading" id="arena-title">{{ megaCorpName }} vs. you</h2>
-                @if (v.defeated) {
-                    <p class="megacorp-defeated" role="status">{{ megaCorpName }} is defeated. No more battles, moves or counter initiatives.</p>
-                } @else {
-                <div class="duel-start">
-                    <button class="intro-button duel-button" type="button" [disabled]="!v.canDuel" (click)="duelStarted.emit()">
-                        ⚔️ Start a battle
-                    </button>
-                    @if (v.duelCooldown > 0) { <small class="upgrade-hint">Next battle possible in {{ v.duelCooldown }}s</small> }
+    <!-- The corporation: power, how often to beat it, its cards. -->
+    <section class="ops-card enemy-card" aria-label="Opponent">
+        <div class="fighter fighter-enemy" [class.boss]="v.enemy.boss">
+            <div class="fighter-details">
+                <div class="enemy-head">
+                    <h2 class="fighter-name">{{ v.enemy.corp?.name }}@if (v.enemy.boss) { <span class="boss-tag">Boss</span>}</h2>
+                    <small class="enemy-description">{{ v.enemy.corp?.description }}</small>
                 </div>
-                }
-                @if (v.activeEffects.length) {
-                    <div class="effect-chips" aria-label="Running effects">
-                        @for (effect of v.activeEffects; track effect.id) {
-                            @if (effect.cancelable) {
-                                <button class="effect-chip cancelable" type="button" [attr.aria-label]="'Shut down ' + effect.name + ' by ' + effect.by"
-                                        (click)="effectCancelled.emit(effect.index)">{{ effect.name }} · {{ effect.by }} · {{ effect.remaining }}s <b>✕ Stop</b></button>
-                            } @else {
-                                <span class="effect-chip" [class.mine]="effect.mine">{{ effect.name }} · {{ effect.by }} · {{ effect.remaining }}s</span>
-                            }
-                        }
-                    </div>
-                }
-                <div class="arena-columns">
-                    <div>
-                        <h3 class="tool-heading ops-subheading">Your moves</h3>
-                        <div class="action-cards">
-                            @for (entry of v.cards; track entry.card.id) {
-                                <button class="action-card" type="button" [class.damage]="entry.card.category === 'damage'"
-                                        [disabled]="!!entry.blocker" [attr.aria-label]="entry.card.name + ': ' + entry.summary"
-                                        (click)="cardPlayed.emit(entry.card.id)">
-                                    <strong>{{ entry.card.name }}</strong>
-                                    <small>{{ entry.card.description }}</small>
-                                    <small class="action-card-effect">{{ entry.summary }}</small>
-                                    @if (entry.blocker) { <small class="action-card-wait">{{ entry.blocker }}</small> }
-                                </button>
-                            }
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="tool-heading ops-subheading">{{ megaCorpName }}'s moves</h3>
-                        <small class="upgrade-hint">{{ v.defeated ? 'No more moves.' : 'Next move in ' + v.nextAttack + 's' }}</small>
-                        <div class="action-cards megacorp-moves" aria-label="Latest MegaCorp moves">
-                            @for (move of v.moves; track move.key; let latest = $first) {
-                                <div class="action-card megacorp" [class.damage]="move.card.category === 'damage'" [class.latest]="latest">
-                                    <strong>{{ move.corp?.icon }} {{ move.card.name }}</strong>
-                                    <small>{{ move.card.description }}</small>
-                                    <small class="action-card-effect">{{ move.summary }}</small>
-                                    <small class="action-card-by">by {{ move.corp?.name }}</small>
-                                </div>
-                            } @empty {
-                                <small class="upgrade-hint">Nothing yet.</small>
-                            }
-                        </div>
-                    </div>
+                <div class="beat-count">
+                    <span class="pips" [attr.aria-label]="v.enemy.beaten + ' of ' + v.enemy.battles + ' beaten'">
+                        @for (done of v.enemy.pips; track $index) { <i class="pip" [class.done]="done" [class.current]="$index === v.enemy.beaten"></i> }
+                    </span>
+                    <small>Beat them {{ v.enemy.battles }}× · battle {{ v.enemy.battle }} of {{ v.enemy.battles }}</small>
                 </div>
-            }
+                <div class="world-track" role="meter" [attr.aria-label]="v.enemy.corp?.name + ' power'" aria-valuemin="0" [attr.aria-valuemax]="v.enemy.maxPower" [attr.aria-valuenow]="v.enemy.power">
+                    <div class="world-fill corp-power" [style.width.%]="v.enemy.percent"></div>
+                </div>
+                <small>Power {{ v.enemy.power }} / {{ v.enemy.maxPower }}@if (v.enemy.block) { · <span class="shield">🛡 {{ v.enemy.block }}% block@if (v.enemy.blockAttacks > 1) { × {{ v.enemy.blockAttacks }}}</span>}@for (name of v.enemy.counters; track name) { · <span class="counter-ready">🗨 {{ name }} ready</span>}</small>
+            </div>
+            <ul class="enemy-deck" aria-label="Their cards">
+                @for (entry of v.enemy.deck; track entry.card.id) {
+                    <!-- Like your cards: category, art, name, description; what exactly it does stays hidden. -->
+                    <li class="play-card enemy-play-card" [class.resting]="entry.resting > 0"
+                        [attr.data-category]="entry.category" [attr.title]="entry.card.name + ': ' + entry.card.description">
+                        <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
+                        <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                        <strong>{{ entry.card.name }}</strong>
+                        <small>{{ entry.card.description }}</small>
+                        <span class="enemy-card-tags">
+                            @if (entry.from) { <span class="from-tag">from {{ entry.from }}</span> }
+                            @if (entry.resting > 0) { <span class="rest">rests {{ entry.resting }}</span> }
+                        </span>
+                    </li>
+                }
+            </ul>
         </div>
-
-        <figure class="avatar avatar-megacorp" [class.unknown]="!v.megacorpOpen">
-            <svg viewBox="0 0 120 120" role="img" [attr.aria-label]="v.megacorpOpen ? megaCorpName + ': a grinning executive in a top hat' : 'An unknown opponent in the shadows'">
-                <circle class="avatar-backdrop" cx="60" cy="60" r="56" />
-                <!-- top hat -->
-                <rect class="mega-hat" x="40" y="10" width="40" height="26" rx="2" />
-                <rect class="mega-band" x="40" y="29" width="40" height="5" />
-                <rect class="mega-hat" x="30" y="34" width="60" height="6" rx="3" />
-                <!-- face -->
-                <ellipse class="mega-face" cx="60" cy="58" rx="22" ry="20" />
-                <path class="mega-brow" d="M44 50 L 55 53 M76 50 L 65 53" />
-                <circle class="mega-eye" cx="51" cy="57" r="2.6" />
-                <circle class="mega-monocle" cx="69" cy="57" r="6" />
-                <circle class="mega-eye" cx="69" cy="57" r="2.6" />
-                <line class="mega-chain" x1="75" y1="60" x2="80" y2="74" />
-                <path class="mega-grin" d="M48 67 Q 60 76 72 67 Q 60 71 48 67 Z" />
-                <!-- suit with tie -->
-                <path class="mega-suit" d="M24 114 C 24 92, 38 80, 60 80 C 82 80, 96 92, 96 114 Z" />
-                <path class="mega-shirt" d="M52 80 L 60 96 L 68 80 Z" />
-                <path class="mega-tie" d="M58 84 L 62 84 L 64 104 L 60 109 L 56 104 Z" />
-                <!-- the three corporations on the lapel -->
-                <circle class="mega-pin banana" cx="37" cy="98" r="4" />
-                <circle class="mega-pin box" cx="47" cy="102" r="4" />
-                <circle class="mega-pin rocket" cx="83" cy="99" r="4" />
-                @if (!v.megacorpOpen) {
-                    <text class="mega-unknown" x="60" y="66" text-anchor="middle">?</text>
-                }
-            </svg>
-            <figcaption>
-                @if (v.megacorpOpen) {
-                    <strong>{{ megaCorpName }}</strong>
-                    <div class="world-track" role="meter" [attr.aria-label]="megaCorpName + ' power'" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="v.megaPower">
-                        <div class="world-fill corp-power" [style.width.%]="v.megaPower"></div>
-                    </div>
-                    <small>{{ v.defeated ? 'Defeated' : 'Power ' + v.megaPower + '%' }}</small>
-                } @else {
-                    <strong>???</strong>
-                    <small>Unknown</small>
-                }
-            </figcaption>
-        </figure>
     </section>
 
-    <!-- Bottom left: your development (credibility, TCA, budget, perks). -->
-    <section class="ops-card" aria-labelledby="development-three-title">
-        <h2 class="tool-heading" id="development-three-title">Development</h2>
-        <div class="world-row integrity-row">
-            <span>Credibility</span>
-            <div class="world-track" role="meter" aria-label="Credibility" aria-valuemin="0" aria-valuemax="100"
-                 [attr.aria-valuenow]="v.integrity | number: '1.0-0'">
-                <div class="world-fill integrity-fill" [class.low]="v.integrity < 30" [class.high]="v.integrity > 70"
-                     [style.width.%]="v.integrity"></div>
-            </div>
-            <b>{{ v.integrity | number: '1.1-1' }}%</b>
-        </div>
-        <small class="upgrade-hint">Defamation costs credibility. Your initiatives work as well as people trust you.</small>
-        <div class="live-stats">
-            <div class="live-stat"><span>Actions</span><strong id="utopia-actions">{{ format(state().actions) }}</strong>
-                <small>+{{ format(v.actionsPerSecond) }} per second</small></div>
-            <div class="live-stat"><span>Budget</span><strong id="utopia-budget">{{ format(state().budget) }}</strong>
-                <small>+{{ format(v.budgetPerSecond) }} per second</small></div>
-        </div>
-        <div class="live-stat live-perks">
-            <span>Activated perks</span>
-            @if (v.activePerks.length) {
-                <div class="active-tools">
-                    @for (perk of v.activePerks; track perk.id) {
-                        <span class="tool-icon active-tool" role="img" tabindex="0" [attr.title]="perk.name + ': ' + perk.description"
-                              [attr.aria-label]="perk.name + ': ' + perk.description">{{ perk.icon }}</span>
+    <!-- The battle: the cards of the latest attack fly in and are applied one after another. -->
+    <section class="ops-card battle-card" aria-label="Battle">
+        <div class="battlefield">
+            <div class="stage">
+                @if (v.stagePlayer; as current) {
+                    @for (stage of [current]; track stage.id) {
+                        <div class="stage-side" [class.from-enemy]="!stage.mine" [class.settled]="stage.id !== v.newest"
+                             [attr.aria-label]="(stage.mine ? 'You played ' : stage.by + ' played ') + stage.names">
+                            <span class="stage-label">You</span>
+                            <div class="stage-row">
+                                @for (entry of stage.cards; track entry.card.id; let i = $index) {
+                                    <div class="play-card enemy-play-card stage-card" [attr.data-category]="entry.category" [style.--i]="i"
+                                         [class.wasted]="entry.wasted" [style.--wait]="stage.wait">
+                                        <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
+                                        <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                                        <strong>{{ entry.card.name }}</strong>
+                                        <small>{{ entry.card.description }}</small>
+                                        <span class="play-card-effect">{{ entry.summary }}</span>
+                                        @if (entry.wasted) { <span class="wasted-tag">unused</span> }
+                                    </div>
+                                }
+                            </div>
+                            <div class="stage-results" [style.--n]="stage.cards.length">
+                                @for (chip of stage.results; track chip.kind) {
+                                    <span class="result-chip" [attr.data-kind]="chip.kind">{{ chip.text }}</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                } @else {
+                    <div class="stage-side stage-empty"><span class="stage-label">You</span><p>Pick up to {{ v.maxCards }} cards and attack.</p></div>
+                }
+                <div class="stage-center">
+                    <span class="stage-vs" aria-hidden="true">VS</span>
+                    @if (v.resolving; as result) {
+                        <p class="turn battle-end" [class.lost]="result === 'loss'" role="status">{{ result === 'win' ? 'Victory!' : 'Defeated…' }}</p>
+                    } @else {
+                        <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">{{ v.yourTurn ? 'Your move' : v.enemy.corp?.name + ' strikes back…' }}</p>
                     }
                 </div>
-            } @else {
-                <small>None yet</small>
-            }
-        </div>
-        <h3 class="tool-heading ops-subheading">Perks</h3>
-        @for (entry of v.openPerks; track entry.perk.id) {
-            <div class="tool" [class.available]="entry.unlocked">
-                <span class="tool-icon" aria-hidden="true">{{ entry.perk.icon }}</span>
-                <div class="tool-details">
-                    <strong>{{ entry.perk.name }}</strong>
-                    <small>{{ entry.perk.description }}</small>
-                    <small>Unlock: Reach {{ format(entry.perk.actionsRequired) }} total coding actions</small>
-                    @if (entry.perk.cost) {
-                        <small>Costs {{ format(entry.perk.cost) }} budget</small>
+                @if (v.stageEnemy; as current) {
+                    @for (stage of [current]; track stage.id) {
+                        <div class="stage-side" [class.from-enemy]="!stage.mine" [class.settled]="stage.id !== v.newest"
+                             [attr.aria-label]="(stage.mine ? 'You played ' : stage.by + ' played ') + stage.names">
+                            <span class="stage-label">{{ v.enemy.corp?.name }}</span>
+                            <div class="stage-row">
+                                @for (entry of stage.cards; track entry.card.id; let i = $index) {
+                                    <div class="play-card enemy-play-card stage-card" [attr.data-category]="entry.category" [style.--i]="i"
+                                         [class.wasted]="entry.wasted" [style.--wait]="stage.wait">
+                                        <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
+                                        <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                                        <strong>{{ entry.card.name }}</strong>
+                                        <small>{{ entry.card.description }}</small>
+                                        <span class="play-card-effect">{{ entry.summary }}</span>
+                                        @if (entry.wasted) { <span class="wasted-tag">unused</span> }
+                                    </div>
+                                }
+                            </div>
+                            <div class="stage-results" [style.--n]="stage.cards.length">
+                                @for (chip of stage.results; track chip.kind) {
+                                    <span class="result-chip" [attr.data-kind]="chip.kind">{{ chip.text }}</span>
+                                }
+                            </div>
+                        </div>
                     }
-                    @if (entry.unlocked) {
-                        <button class="tool-button" type="button" [attr.aria-label]="(entry.perk.cost ? 'Buy ' : 'Activate ') + entry.perk.name"
-                                (click)="perkActivated.emit(entry.perk.id)">{{ entry.perk.cost ? 'Buy' : 'Activate' }}</button>
-                    }
-                </div>
+                } @else {
+                    <div class="stage-side stage-empty"><span class="stage-label">{{ v.enemy.corp?.name }}</span><p>No move yet.</p></div>
+                }
             </div>
-        } @empty {
-            <small class="upgrade-hint">All perks activated.</small>
-        }
+        </div>
     </section>
 
-    <!-- Bottom centre: the utopia, opened by its blueprint perk. -->
-    @if (v.utopiaOpen) {
-        <section class="ops-card" aria-labelledby="utopia-title">
-            <h2 class="tool-heading" id="utopia-title">Utopia</h2>
-            @for (metric of v.metrics; track metric.id) {
-                <div class="world-row">
-                    <span>{{ metric.name }}</span>
-                    <div class="world-track" role="progressbar" [attr.aria-label]="metric.name" aria-valuemin="0" aria-valuemax="100"
-                         [attr.aria-valuenow]="metric.value | number: '1.0-0'">
-                        <div class="world-fill" [class]="'utopia-' + metric.id" [style.width.%]="metric.value"></div>
-                    </div>
-                    <b>{{ metric.value | number: '1.1-1' }}%</b>
-                    <small class="world-eta" [class.good]="metric.rate > 0" [class.bad]="metric.rate < 0">{{ rate(metric.rate) }}%/s</small>
+    <!-- Your credibility and your hand: pick cards, then attack. -->
+    <section class="ops-card hand-area" aria-label="Your hand">
+        <div class="fighter-player">
+            <div class="fighter-details">
+                <h2 class="fighter-name">Your AI <span class="fighter-credits" [attr.aria-label]="v.credits + ' credits'"><app-coin-icon /> {{ v.credits }}</span></h2>
+                <div class="world-track" role="meter" aria-label="Credibility" aria-valuemin="0" [attr.aria-valuemax]="rules.maxCredibility" [attr.aria-valuenow]="v.credibility">
+                    <div class="world-fill integrity-fill" [class.low]="v.credibilityPercent < 30" [class.high]="v.credibilityPercent > 70" [style.width.%]="v.credibilityPercent"></div>
                 </div>
-                <small class="upgrade-hint">{{ metric.hint }}</small>
-            }
-            <h3 class="tool-heading ops-subheading">Initiatives</h3>
-            <div class="initiative-columns">
-            <div class="initiative-column" aria-label="Your initiatives">
-            <small class="initiative-column-title">Yours</small>
-            @for (entry of v.initiatives; track entry.initiative.id) {
-                <div class="program" [class.running]="entry.running">
-                    <strong>{{ entry.initiative.name }}</strong>
-                    <small>{{ entry.initiative.description }}</small>
-                    <small class="client-terms">
-                        {{ format(entry.initiative.cost) }} to initialize · −{{ format(entry.upkeep) }} budget/sec ·
-                        <span class="good">{{ entry.metricName }} +{{ entry.rate }}%/sec</span>
-                    </small>
-                    @if (entry.stage === 'new') {
-                        <small>Takes {{ entry.initiative.buildTime }}s to build. Its effect grows with your credibility.</small>
-                        @if (entry.initializeBlocker) { <small class="panel-warning">{{ entry.initializeBlocker }}</small> }
-                        <button class="tool-button" type="button" [disabled]="!!entry.initializeBlocker"
-                                [attr.aria-label]="'Initialize ' + entry.initiative.name + ' for ' + entry.initiative.cost + ' budget'"
-                                (click)="initiativeInitialized.emit(entry.initiative.id)">Initialize</button>
-                    } @else if (entry.stage === 'building') {
-                        <small>Building · {{ entry.buildSeconds }}s / {{ entry.initiative.buildTime }}s</small>
-                        <div class="progress-track"><div class="progress-fill" [style.width.%]="entry.buildProgress"></div></div>
-                    } @else if (entry.running) {
-                        <small [class.panel-warning]="!entry.funded" [class.epic-done]="entry.funded">
-                            {{ entry.funded ? 'Running' : 'Paused: not enough budget for the upkeep' }}
-                        </small>
-                        <button class="tool-button client-end" type="button" [attr.aria-label]="'Stop ' + entry.initiative.name"
-                                (click)="initiativeStopped.emit(entry.initiative.id)">Stop</button>
-                    } @else {
-                        @if (entry.blocker) { <small class="panel-warning">{{ entry.blocker }}</small> }
-                        <button class="tool-button" type="button" [disabled]="!!entry.blocker"
-                                [attr.aria-label]="'Start ' + entry.initiative.name"
-                                (click)="initiativeStarted.emit(entry.initiative.id)">Start</button>
-                    }
-                </div>
-            }
+                <small>Credibility {{ v.credibility }} / {{ rules.maxCredibility }}@if (v.block) { · <span class="shield">🛡 {{ v.block }}% block@if (v.blockAttacks > 1) { × {{ v.blockAttacks }}}</span>}@if (v.regen; as regen) { · <span class="regen">♥ +{{ regen.amount }} × {{ regen.turns }}</span>}@for (name of v.counters; track name) { · <span class="counter-ready">🗨 {{ name }} ready</span>}</small>
             </div>
-            <div class="initiative-column" aria-label="MegaCorp counter initiatives">
-            <small class="initiative-column-title">{{ megaCorpName }}</small>
-            @for (entry of v.counters; track entry.counter.id) {
-                <div class="program counter" [class.running]="entry.power > 0">
-                    <strong>{{ entry.counter.name }}</strong>
-                    <small>{{ entry.counter.description }}</small>
-                    <small class="client-terms">
-                        by {{ entry.corp?.name }}
-                        @if (entry.rate) { · <span class="bad">{{ entry.metricName }} −{{ entry.rate }}%/sec</span> }
-                    </small>
-                    @if (entry.power > 0) {
-                        <small class="panel-warning">Running · {{ entry.corp?.name }} at {{ entry.power }}% power</small>
-                    } @else {
-                        <small class="epic-done">Stopped: {{ entry.corp?.name }} is defeated</small>
-                    }
-                </div>
+        </div>
+        <div class="hand-actions">
+            <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
+                Attack
+            </button>
+            @if (v.maxCards > rules.maxCards) { <small class="extra-cards">Up to {{ v.maxCards }} cards this turn</small> }
+            @if (v.openDeck) { <small class="extra-cards">Your whole deck this turn</small> }
+            <small class="upgrade-hint">Deck: {{ v.deckSize }} cards</small>
+            @if (v.resting.length) {
+                <small class="upgrade-hint">Resting: @for (entry of v.resting; track entry.card.id; let last = $last) {{{ entry.card.name }} ({{ entry.turns }}){{ last ? '' : ', ' }}}</small>
+            }
+            <!-- Right: the card shop (the badge counts the cards you can afford). -->
+            <div class="shop-corner">
+                <button class="shop-button" type="button" (click)="shopOpen.set(true)"
+                        [attr.aria-label]="'Card shop, ' + v.credits + ' credits, ' + v.affordableCount + ' cards you can afford'">
+                    <app-cart-icon />
+                    <span class="shop-label">Shop</span>
+                    @if (v.affordableCount) { <span class="shop-badge" aria-hidden="true">{{ v.affordableCount }}</span> }
+                </button>
+            </div>
+        </div>
+        <div class="hand" [class.open-deck]="v.openDeck">
+            @for (entry of v.hand; track entry.card.id) {
+                <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
+                        [disabled]="!v.yourTurn || entry.locked || (!entry.selected && v.selectedCount >= v.maxCards)" [class.locked]="entry.locked"
+                        (click)="cardToggled.emit(entry.card.id)">
+                    <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
+                    @if (entry.locked) { <span class="locked-tag">🔒 Locked this turn</span> }
+                    <app-card-art [id]="entry.card.id" [category]="entry.category" />
+                    <strong>{{ entry.card.name }}</strong>
+                    <small>{{ entry.card.description }}</small>
+                    <span class="play-card-effect">{{ entry.summary }}</span>
+                    <span class="play-card-rest">{{ entry.card.cooldown ? 'rests ' + entry.card.cooldown + (entry.card.cooldown === 1 ? ' turn' : ' turns') : 'no rest' }}</span>
+                </button>
             } @empty {
-                <small class="upgrade-hint">{{ v.defeated ? megaCorpName + ' is defeated. No more counter initiatives.' : 'No counter initiatives. Yet.' }}</small>
+                <p class="upgrade-hint">All your cards are resting.</p>
             }
-            </div>
-            </div>
-        </section>
-    } @else {
-        <div class="ops-card ops-locked" aria-hidden="true"><span>Locked · {{ v.utopiaPerkName }}</span></div>
-    }
-
-    <!-- Bottom right: MegaCorp. -->
-    @if (v.megacorpOpen) {
-        <section class="ops-card" aria-labelledby="megacorp-title">
-            <h2 class="tool-heading" id="megacorp-title">{{ megaCorpName }}</h2>
-            @for (entry of v.corps; track entry.corp.id) {
-                <div class="corp-row" [class.defeated]="entry.power <= 0">
-                    <span class="corp-icon" aria-hidden="true">{{ entry.corp.icon }}</span>
-                    <div class="corp-details">
-                        <strong>{{ entry.corp.name }}</strong>
-                        <small>{{ entry.corp.description }}</small>
-                        <div class="world-track" role="meter" [attr.aria-label]="entry.corp.name + ' power'" aria-valuemin="0" aria-valuemax="100"
-                             [attr.aria-valuenow]="entry.power">
-                            <div class="world-fill corp-power" [style.width.%]="entry.power"></div>
-                        </div>
-                        <small>{{ entry.power > 0 ? 'Power ' + entry.power + '%' : 'Defeated' }}</small>
-                    </div>
-                </div>
-            }
-        </section>
-    } @else {
-        <div class="ops-card ops-locked" aria-hidden="true"><span>Locked · {{ v.megacorpPerkName }}</span></div>
-    }
-
+        </div>
+    </section>
 </div>

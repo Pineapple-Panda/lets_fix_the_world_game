@@ -22,11 +22,15 @@
                         }
                         <div class="upgrade-row">
                             <span>Programs +{{ panel.boostPercent }}%</span>
-                            <button class="tool-button" type="button" [disabled]="!panel.canUpgrade"
+                            <button class="tool-button" type="button" [disabled]="!!panel.upgradeBlocker"
                                     [attr.aria-label]="'Upgrade ' + card.title + ' for ' + panel.upgradeCost + ' budget'"
                                     (click)="productUpgraded.emit(released.id)">Upgrade version</button>
                         </div>
-                        <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
+                        @if (panel.upgradeBlocker; as blocker) {
+                            <small class="upgrade-hint" [class.panel-warning]="!panel.solved" [class.epic-done]="panel.solved">{{ blocker }}</small>
+                        } @else {
+                            <small class="upgrade-hint">Next version costs {{ format(panel.upgradeCost) }} budget and makes every program 25% stronger.</small>
+                        }
                         @if (panel.lawsuit; as lawsuit) {
                             <div class="lawsuit" role="alert">
                                 <strong>⚖️ Sued by {{ lawsuit.plaintiff }}</strong>
@@ -60,6 +64,9 @@
                             <small class="panel-warning">Integrity below 50%: people distrust you. Protest risk {{ panel.protestRisk }}% per program and second.</small>
                         }
 
+                        @if (panel.solved) {
+                            <small class="epic-done">All problems of {{ panel.productName }} are solved ✓ No programs needed anymore.</small>
+                        }
                         <div class="program-grid">
                         @for (entry of panel.programs; track entry.program.id) {
                             <div class="program" [class.running]="entry.running" [class.protest]="entry.protest">
@@ -218,7 +225,7 @@
             <div class="live-stat">
                 <span>Budget</span><strong id="live-budget">{{ format(s.budget) }}</strong>
                 <small>≈ {{ signedAmount(v.budgetPerSecond) }} per second</small>
-                <small>+{{ v.payoutRate }} per new action in {{ v.nextPayout }}s</small>
+                <small>+{{ v.payoutRate }} per new action</small>
             </div>
         </div>
         @if (v.canPitch) {

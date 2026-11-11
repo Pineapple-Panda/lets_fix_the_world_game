@@ -14,7 +14,6 @@ export const launchCoverage = 100000;
 export const minActionsPerSecond = 50;
 export const maxActionsPerSecond = 300;
 /** Every this many seconds the budget grows by the new actions times `budgetPerAction`. */
-export const budgetInterval = 5;
 export const budgetPerAction = 1;
 
 // ---------- Ids that the logic refers to ----------
@@ -233,11 +232,24 @@ export function budgetBoost(state: LaunchedGame): number {
     : 1 - maxBudgetPenalty * -focus;
 }
 
-/** Moves the focus slider; values are clamped to -100…100. */
+/** Budget the actions since the last payout are worth at the current focus. */
+export function pendingPayout(state: LaunchedGame): number {
+  return Math.round((state.actions - state.budgetActions) * budgetPerAction * budgetBoost(state));
+}
+
+/** Pays the actions since the last payout at the current focus. */
+function settleBudget(state: LaunchedGame): LaunchedGame {
+  return { ...state, budget: cap(state.budget + pendingPayout(state)), budgetActions: state.actions };
+}
+
+/**
+ * Moves the focus slider; values are clamped to -100…100. The actions gathered so far are paid at the old focus
+ * first, so moving the slider does not pay them at the new rate.
+ */
 export function setFocus(state: LaunchedGame, focus: number): LaunchedGame | null {
   if (!Number.isFinite(focus)) return null;
   const next = clampFocus(focus);
-  return next === state.focus ? null : { ...state, focus: next };
+  return next === state.focus ? null : { ...settleBudget(state), focus: next };
 }
 
 /** Actions per second from clients (Mississippi Corp): their actions per slot × your server slots. */
@@ -278,13 +290,15 @@ export function epicDuration(epic: EpicDefinition, dataCenters = false): number 
 
 /**
  * One second in level 2: actions grow by 50–300 per server slot (scaled by the focus slider), running epics advance by one second of server time,
- * and every 5 seconds the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
- * Then clients, finished epics, programs, lawsuits and product releases are applied.
+ * and the budget grows by the actions gained since the last payout (times `budgetPerAction` and the slider).
+ * Then clients, finished epics, programs, lawsuits and product releases are applied. Once the world is fixed, the
+ * level stands still: time, TCA, budget and the stats of the summary stop.
  */
 export function tickLaunched(
   state: LaunchedGame,
   random: () => number = Math.random
 ): LaunchedGame {
+  if (worldFixed(state)) return state;
   const base = minActionsPerSecond + Math.floor(random() * (maxActionsPerSecond - minActionsPerSecond + 1));
   // Every server slot adds a full share of actions per second.
   const gained = Math.round(base * actionBoost(state) * state.serverSlots);
@@ -300,10 +314,8 @@ export function tickLaunched(
       return { ...epic, progress, done: progress >= (definition ? epicDuration(definition, dataCenters) : 0) };
     })
   };
-  if (next.seconds % budgetInterval === 0) {
-    next.budget = cap(next.budget + Math.round((next.actions - next.budgetActions) * budgetPerAction * budgetBoost(next)));
-    next.budgetActions = next.actions;
-  }
+  next.budget = cap(next.budget + pendingPayout(next));
+  next.budgetActions = next.actions;
   // Rented slots pay every second, nudge the solution progress a tiny bit and move integrity.
   next.budget = cap(next.budget + rentalIncome(next));
   // Client actions (Mississippi Corp) count as coding actions but are not paid out as budget again.
@@ -367,9 +379,14 @@ export function shadyDeals(state: LaunchedGame): boolean {
     });
 }
 
-/** Closes the "world fixed" dialog for good. */
+/** Closes the "world fixed" dialog. */
 export function dismissVictory(state: LaunchedGame): LaunchedGame | null {
   return state.victorySeen ? null : { ...state, victorySeen: true };
+}
+
+/** Opens the "world fixed" dialog again (to continue to level 3 or restart after closing it). */
+export function showVictory(state: LaunchedGame): LaunchedGame | null {
+  return worldFixed(state) && state.victorySeen ? { ...state, victorySeen: false } : null;
 }
 
 export function product(state: LaunchedGame, id: string): LaunchedProduct | undefined {
@@ -817,11 +834,21 @@ export function upgradeCost(state: LaunchedGame, productId: string): number {
   return upgradeCostStep * (steps + 1);
 }
 
+/** Why a product cannot be upgraded right now, or null when it can. */
+export function upgradeBlocker(state: LaunchedGame, productId: string): string | null {
+  const released = product(state, productId);
+  if (!released?.active) return 'Activate the application first';
+  if (productSolved(state, productId)) return 'Every problem of this application is solved: no new versions needed.';
+  if (integrityBlocked(state)) return 'Integrity is 0%: nobody works on new versions. Raise integrity first (Tegridy, fewer shady deals).';
+  if (state.budget < upgradeCost(state, productId)) return `Not enough budget: the next version costs ${upgradeCost(state, productId).toLocaleString('en-US')}.`;
+  return null;
+}
+
 /** Raises an active product's version by 0.1; at v1.9 the next step is v2.0. */
 export function upgradeProduct(state: LaunchedGame, productId: string): LaunchedGame | null {
   const released = product(state, productId);
   const cost = upgradeCost(state, productId);
-  if (!released?.active || integrityBlocked(state) || state.budget < cost) return null;
+  if (!released || upgradeBlocker(state, productId)) return null;
   const minor = released.minor === 9 ? 0 : released.minor + 1;
   const major = released.minor === 9 ? released.major + 1 : released.major;
   return {
@@ -1011,9 +1038,10 @@ export const decentLawyerPerk = 'decent-lawyer';
 /** Perk: +20 percentage points in court. */
 export const goodLawyerPerk = 'good-lawyer';
 export const goodLawyerBonus = 0.2;
-/** Perk: court cases are won with a fixed 95%. */
+/** Perk: court cases are won with a fixed 95% and take half the time. */
 export const chewbaccaPerk = 'chewbacca-defense';
 export const chewbaccaChance = 0.95;
+export const chewbaccaDurationFactor = 0.5;
 
 /** Chance to win the current court case: 65%, 85% with a good lawyer, a fixed 95% with the Chewbacca defense. */
 export function winChance(state: LaunchedGame): number {
@@ -1045,9 +1073,10 @@ export function settlementCost(state: LaunchedGame): number {
   return Math.round(baseSettlementCost * escalation(state) * (lawsuitCase(state)?.costFactor ?? 1));
 }
 
-/** Seconds in court for the current lawsuit. */
+/** Seconds in court for the current lawsuit: 90, 20% more for every recent lawsuit, half with the Chewbacca defense. */
 export function courtDuration(state: LaunchedGame): number {
-  return Math.round(baseCourtDuration * escalation(state));
+  const factor = state.perks.includes(chewbaccaPerk) ? chewbaccaDurationFactor : 1;
+  return Math.round(baseCourtDuration * escalation(state) * factor);
 }
 
 /** Damages for losing the current lawsuit in court: twice the settlement. */
