@@ -39,9 +39,6 @@ export class LevelThreeComponent {
     const stage = currentStage(state);
     const corp = corporation(state.enemy.corpId);
     const strength = stage ? enemyStrength(stage, state.battle) : 1;
-    // The cards of its latest attack in this battle (the log is newest first).
-    const lastAttack = state.log.find(entry => entry.by === 'enemy' && entry.corpId === state.enemy.corpId);
-    const playedLast = lastAttack && state.log.indexOf(lastAttack) <= 1 ? lastAttack.cards : [];
     return {
       enemy: {
         corp,
@@ -61,7 +58,6 @@ export class LevelThreeComponent {
         // Its cards, with the turns they still rest.
         deck: enemyDeck(state.enemy.corpId).map(card => ({
           card, category: cardCategory(card), summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0,
-          played: playedLast.includes(card.id),
           // Instant cards it took over from an earlier corporation.
           from: inheritedCards(state.enemy.corpId).find(entry => entry.card.id === card.id)?.from.name ?? null
         }))

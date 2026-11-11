@@ -1681,7 +1681,7 @@ footer {
 
 .battle-card {
     display: flex;
-    min-height: 230px;
+    min-height: 0;
     background: radial-gradient(ellipse at center, color-mix(in srgb, var(--surface) 85%, var(--green)) 0%, var(--surface) 70%);
 }
 
@@ -1700,6 +1700,14 @@ footer {
 
 .fighter-enemy .fighter-details {
     flex: none;
+}
+
+/* Name and description in one line. */
+.enemy-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
 }
 
 .fighter-details {
@@ -1813,19 +1821,9 @@ footer {
     color: var(--yellow);
 }
 
-/* The cards of its latest attack: outlined, never faded. */
-.mini-card.played {
-    box-shadow: 0 0 0 2px var(--cat, var(--ink));
-}
-
 .mini-card .from-tag {
     color: var(--faint);
     font-style: italic;
-}
-
-.mini-card .played-tag {
-    color: var(--ink);
-    font-weight: 600;
 }
 
 /* The battle in the middle: whose move it is and the latest attacks. */
@@ -1864,29 +1862,38 @@ footer {
 /* The stage in the battle card: the cards of the latest attack fly in (yours from below, theirs from above) and light
    up one after another as they are applied; then the results pop up. */
 .stage {
-    display: flex;
+    display: grid;
     flex: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    align-content: center;
+    gap: 6px 16px;
     min-width: 0;
     --step: 380ms;
 }
 
+.stage > .turn {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+
+.stage > .stage-vs {
+    align-self: center;
+}
+
 /* One side of the battle card: the corporation's latest attack, or yours. */
 .stage-side {
-    display: grid;
-    grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    width: 100%;
+    gap: 6px;
+    min-width: 0;
 }
 
 .stage-label {
     color: var(--muted);
     font: 600 12px var(--sans);
-    text-align: right;
+    text-align: center;
 }
 
 .stage-side:not(.from-enemy) .stage-label {
@@ -1910,25 +1917,14 @@ footer {
     gap: 8px;
 }
 
-/* Smaller cards in the middle, same 2:3 shape. */
-.stage-card {
-    flex-basis: 78px;
-    width: 78px;
-    padding: 5px 6px;
-}
-
-.stage-card .card-art {
-    height: 22px;
-}
 
 /* The attack before the newest one stands still. */
-.settled .stage-card,
 .settled .result-chip {
     animation: none;
 }
 
 /* A counter card the opponent's answer did not need: it greys out once the answering cards are applied. */
-.stage-side .stage-card.wasted {
+.stage-side .stage-row > .stage-card.play-card.wasted {
     position: relative;
     animation: stage-wasted .5s ease-out forwards calc(var(--wait) * var(--step) + 200ms);
 }
@@ -1957,20 +1953,26 @@ footer {
     to { opacity: 1; }
 }
 
-.stage-card {
+/* The selectors are specific enough to win over the shine of instant and special cards while they fly in. */
+.stage-row > .stage-card.play-card {
     animation:
         stage-in-up .45s cubic-bezier(.2, .8, .3, 1.2) both calc(var(--i) * var(--step)),
         stage-apply .35s ease-in-out calc(var(--i) * var(--step) + 450ms);
 }
 
-.from-enemy .stage-card {
+.from-enemy .stage-row > .stage-card.play-card {
     animation-name: stage-in-down, stage-apply;
+}
+
+/* The attack before the newest one stands still. */
+.settled .stage-row > .stage-card.play-card:not(.wasted) {
+    animation: none;
 }
 
 .stage-results {
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 8px;
 }
 
@@ -1994,13 +1996,8 @@ footer {
 }
 
 @media (max-width: 760px) {
-    .stage-side {
+    .stage {
         grid-template-columns: 1fr;
-        justify-items: center;
-    }
-
-    .stage-label {
-        text-align: center;
     }
 }
 
@@ -2024,11 +2021,11 @@ footer {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .stage-card, .result-chip {
+    .stage-row > .stage-card.play-card, .from-enemy .stage-row > .stage-card.play-card, .result-chip {
         animation: none;
     }
 
-    .stage-side .stage-card.wasted {
+    .stage-side .stage-row > .stage-card.play-card.wasted {
         animation: none;
         filter: grayscale(1);
         opacity: .45;
@@ -2058,7 +2055,7 @@ footer {
 /* Every card has the same 2:3 shape; the cards of a hand share one width. */
 .play-card {
     display: flex;
-    flex: 0 1 160px;
+    flex: 0 1 140px;
     flex-direction: column;
     gap: 5px;
     min-width: 118px;
@@ -2110,6 +2107,24 @@ footer {
     overflow: hidden;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+/* Chip, art, name and the bottom lines keep their size; the description gives way when a card runs short of space. */
+.play-card > .card-chip,
+.play-card > app-card-art,
+.play-card > strong,
+.play-card > .play-card-effect,
+.play-card > .play-card-rest {
+    flex-shrink: 0;
+}
+
+.play-card > small {
+    flex: 0 1 auto;
+    min-height: 0;
+}
+
+.hand .play-card .card-art {
+    height: 50px;
 }
 
 /* The effect line sits at the bottom of every card. */
@@ -2401,8 +2416,8 @@ footer {
 
 /* The corporation's cards: your card design, smaller, without the effect line. */
 .enemy-play-card {
-    flex: 0 0 112px;
-    width: 112px;
+    flex: 0 0 92px;
+    width: 92px;
     min-width: 0;
     gap: 3px;
     padding: 7px;
@@ -2415,7 +2430,20 @@ footer {
 }
 
 .enemy-play-card .card-art {
-    height: 36px;
+    height: 28px;
+}
+
+/* In the corporation's deck the cards carry their tags too: a little more room. */
+.enemy-deck .enemy-play-card {
+    flex-basis: 100px;
+    width: 100px;
+}
+
+/* On the battle card the effect is shown too (the move is out in the open). */
+.enemy-play-card .play-card-effect {
+    flex-shrink: 0;
+    font-size: 10px;
+    line-height: 1.2;
 }
 
 /* Chip, art, name and tags keep their size; the description gives way (fewer lines) when space runs short. */
@@ -2439,6 +2467,7 @@ footer {
 .enemy-play-card small {
     font-size: 10px;
     line-height: 1.3;
+    -webkit-line-clamp: 2;
 }
 
 .enemy-play-card .card-chip {
@@ -2449,14 +2478,11 @@ footer {
     opacity: .45;
 }
 
-.enemy-play-card.played {
-    box-shadow: 0 0 0 2px var(--cat, var(--ink));
-}
-
 .enemy-card-tags {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    flex-wrap: wrap;
+    gap: 0 4px;
+    line-height: 1.2;
     margin-top: auto;
     font-size: 9px;
 }
@@ -2464,11 +2490,6 @@ footer {
 .enemy-card-tags .from-tag {
     color: var(--faint);
     font-style: italic;
-}
-
-.enemy-card-tags .played-tag {
-    color: var(--ink);
-    font-weight: 600;
 }
 
 .enemy-card-tags .rest {
