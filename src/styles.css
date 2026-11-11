@@ -1692,6 +1692,16 @@ footer {
     gap: 14px;
 }
 
+/* The corporation: name and power on top, its cards below. */
+.fighter-enemy {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.fighter-enemy .fighter-details {
+    flex: none;
+}
+
 .fighter-details {
     display: flex;
     flex: 1 1 220px;
@@ -1753,7 +1763,7 @@ footer {
 .enemy-deck {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -2387,6 +2397,82 @@ footer {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
     margin-bottom: 14px;
+}
+
+/* The corporation's cards: your card design, smaller, without the effect line. */
+.enemy-play-card {
+    flex: 0 0 112px;
+    width: 112px;
+    min-width: 0;
+    gap: 3px;
+    padding: 7px;
+    border-radius: 8px;
+    cursor: default;
+}
+
+.enemy-play-card:hover:not(:disabled) {
+    transform: none;
+}
+
+.enemy-play-card .card-art {
+    height: 36px;
+}
+
+/* Chip, art, name and tags keep their size; the description gives way (fewer lines) when space runs short. */
+.enemy-play-card > .card-chip,
+.enemy-play-card > app-card-art,
+.enemy-play-card > strong,
+.enemy-play-card > .enemy-card-tags {
+    flex-shrink: 0;
+}
+
+.enemy-play-card > small {
+    flex: 0 1 auto;
+    min-height: 0;
+}
+
+.enemy-play-card strong {
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.enemy-play-card small {
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.enemy-play-card .card-chip {
+    font-size: 8px;
+}
+
+.enemy-play-card.resting {
+    opacity: .45;
+}
+
+.enemy-play-card.played {
+    box-shadow: 0 0 0 2px var(--cat, var(--ink));
+}
+
+.enemy-card-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: auto;
+    font-size: 9px;
+}
+
+.enemy-card-tags .from-tag {
+    color: var(--faint);
+    font-style: italic;
+}
+
+.enemy-card-tags .played-tag {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.enemy-card-tags .rest {
+    color: var(--yellow);
 }
 
 /* In the shop the cards also carry a buy button: the grid gives them one height per row instead of the 2:3 shape. */
