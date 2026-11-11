@@ -92,7 +92,7 @@ export class CardShopComponent extends ModalDialog {
   private static readonly order: Record<CardCategory, number> = { block: 0, counter: 0, damage: 1, heal: 2, combo: 3, instant: 4, special: 5 };
   protected readonly filters: { id: CardCategory | 'all' | 'affordable'; label: string }[] = [
     { id: 'all', label: 'All' }, { id: 'block', label: 'Block' }, { id: 'damage', label: 'Damage' }, { id: 'heal', label: 'Heal' },
-    { id: 'combo', label: 'Combo' }, { id: 'instant', label: 'Instant battle' }, { id: 'special', label: 'Special' },
+    { id: 'combo', label: 'Combo' }, { id: 'instant', label: 'Instant' }, { id: 'special', label: 'Special' },
     { id: 'affordable', label: 'Affordable' }
   ];
   protected readonly filter = signal<CardCategory | 'all' | 'affordable'>('all');
@@ -108,5 +108,5 @@ export class CardShopComponent extends ModalDialog {
   readonly learnable = input<LearnEntry[]>([]);
   readonly bought = output<string>();
   readonly closed = output<void>();
-  protected readonly labels: Record<CardCategory, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo', special: 'Special' };
+  protected readonly labels: Record<CardCategory, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant', counter: 'Counter', combo: 'Combo', special: 'Special' };
 }

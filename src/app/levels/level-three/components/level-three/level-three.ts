@@ -59,7 +59,7 @@ export class LevelThreeComponent {
     ...(battleRules.credits.loss ? [`+${battleRules.credits.loss} per lost battle`] : [])
   ].join(', ');
   /** Label of each colour scheme. */
-  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo', special: 'Special' };
+  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant', counter: 'Counter', combo: 'Combo', special: 'Special' };
   protected readonly megaCorpName = megaCorpName;
 
   protected readonly view = computed(() => {
