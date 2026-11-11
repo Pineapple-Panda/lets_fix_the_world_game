@@ -29,12 +29,13 @@ export const battleRules = {
 
 /**
  * The campaign, in order. More corporations or a final boss are just more entries (with `boss: true` for the last
- * one); a corporation needs an entry in `corporations` below.
+ * one); a corporation needs an entry in `corporations` below. Every corporation has 100 power, like your 100
+ * credibility; later battles get harder through `damage` (or `powerStep`, for more power per battle).
  */
 export const campaign: Stage[] = [
-  { corpId: 'bananas', battles: 2, power: 60, powerStep: 15, damage: 1, damageStep: 0.1 },
-  { corpId: 'mississippi', battles: 4, power: 90, powerStep: 15, damage: 1.2, damageStep: 0.1 },
-  { corpId: 'edison', battles: 6, power: 120, powerStep: 15, damage: 1.4, damageStep: 0.1 }
+  { corpId: 'bananas', battles: 2, power: 100, powerStep: 0, damage: 1, damageStep: 0.1 },
+  { corpId: 'mississippi', battles: 4, power: 100, powerStep: 0, damage: 1.2, damageStep: 0.1 },
+  { corpId: 'edison', battles: 6, power: 100, powerStep: 0, damage: 1.4, damageStep: 0.1 }
 ];
 
 /** Cards every corporation plays, on top of its own. */

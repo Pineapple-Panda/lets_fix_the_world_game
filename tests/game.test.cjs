@@ -1802,7 +1802,7 @@ test('level 3 is a card game campaign: Bananas Inc. twice, Mississippi Corp four
   const state = fresh();
   assert.equal(state.credibility, 100);
   assert.equal(state.enemy.corpId, 'bananas');
-  assert.equal(state.enemy.power, 60);
+  assert.equal(state.enemy.power, 100, 'every corporation has 100 power');
   assert.equal(state.turn, 'player');
   assert.equal(state.hand.length, 5, 'a hand of five');
   assert.deepEqual([...state.hand].sort(), utopia.unlockedCards(state).map(card => card.id).sort(), 'the five starter cards');
@@ -1815,7 +1815,7 @@ test('level 3: pick up to three cards and attack; played cards rest', () => {
   assert.equal(utopia.toggleCard(state, 'leak'), null, 'not in the hand');
   assert.equal(utopia.attack(fresh()), null, 'needs a card');
   const after = utopia.attack(state, () => 0);
-  assert.equal(after.enemy.power, 60 - 12 - 8);
+  assert.equal(after.enemy.power, 100 - 12 - 8);
   assert.equal(after.block, 50, 'your block waits for their next attack');
   assert.equal(after.turn, 'enemy');
   assert.deepEqual(after.cooldowns, { antitrust: 1, firewall: 2 });
@@ -1854,7 +1854,7 @@ test('level 3: the corporation answers on the next tick; blockers absorb attacks
   // Their blockers absorb your attack.
   const shielded = { ...fresh(), enemy: { ...fresh().enemy, block: 40 } };
   const hit = utopia.attack(picked(shielded, 'antitrust'), () => 0);
-  assert.equal(hit.enemy.power, 60 - 7, '12 damage, 5 blocked');
+  assert.equal(hit.enemy.power, 100 - 7, '12 damage, 5 blocked');
   assert.equal(hit.enemy.block, 0);
   // Up to three cards; later battles hit harder.
   const many = utopia.enemyAttack({ ...fresh(), turn: 'enemy' }, () => 0.99);
@@ -1868,11 +1868,11 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   const won = utopia.attack(picked(nearly, 'antitrust'), () => 0);
   assert.equal(won.wins, 1);
   assert.equal(won.credibility, 60 + 25, 'heals after a win');
-  assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [0, 1, 'bananas', 75], 'second battle, 15 more power');
+  assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [0, 1, 'bananas', 100], 'second battle, back at full power');
   assert.equal(won.turn, 'player');
   assert.deepEqual(won.cooldowns, {});
   const next = utopia.attack(picked({ ...won, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
-  assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [1, 0, 'mississippi', 90]);
+  assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [1, 0, 'mississippi', 100]);
   const last = { ...fresh(), stage: 2, battle: 5, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, cooldowns: {} } };
   const victory = utopia.attack(picked(last, last.hand[0]), () => 0);
   assert.equal(victory.outcome, 'won');
@@ -2021,7 +2021,7 @@ test('smoothing: level 1 and level 3 glide their headline numbers', () => {
   const next = { ...world, credibility: 80, enemy: { ...world.enemy, power: 40 } };
   const glide = smoothing.blend(utopia.utopiaSmoothing, utopia.utopiaSmoothing.read(world), next, 0.25);
   assert.equal(glide.credibility, 95);
-  assert.equal(glide.enemy.power, 55);
+  assert.equal(glide.enemy.power, 85);
   assert.deepEqual(glide.hand, next.hand);
 });
 
