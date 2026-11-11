@@ -216,6 +216,61 @@ import type { CardCategory } from '../../models/utopia.model';
           <circle cx="32" cy="27" r="6" stroke-width="2.5" />
           <path d="M20 56 H44 M24 60 H40" stroke-width="2.5" />
         }
+        @case ('free-shipping') {
+          <!-- a parcel with an asterisk -->
+          <path class="art-fill" d="M8 22 L28 12 L48 22 V46 L28 56 L8 46 Z" />
+          <path d="M8 22 L28 32 L48 22 M28 32 V56" stroke-width="2.5" />
+          <path d="M54 8 V20 M48 11 L60 17 M60 11 L48 17" stroke-width="2.5" />
+        }
+        @case ('coupon-spam') {
+          <!-- a stack of coupons -->
+          <path class="art-fill" d="M8 20 H56 V30 A4 4 0 0 0 56 38 V48 H8 V38 A4 4 0 0 0 8 30 Z" />
+          <path d="M24 20 V48" stroke-dasharray="3 3" stroke-width="2" />
+          <path d="M34 28 L46 40 M46 28 L34 40" stroke-width="2.5" />
+          <path d="M12 14 H52" stroke-width="2" />
+        }
+        @case ('mystery-box') {
+          <!-- a box with a question mark -->
+          <rect class="art-fill" x="10" y="20" width="44" height="36" rx="3" />
+          <path d="M10 30 H54 M32 20 V56" stroke-width="2" />
+          <path d="M24 14 C24 6 40 6 40 13 C40 18 34 18 34 22" stroke-width="2.5" />
+        }
+        @case ('sponsored-result') {
+          <!-- a search bar with a dollar sign -->
+          <rect class="art-fill" x="6" y="22" width="52" height="16" rx="8" />
+          <circle cx="16" cy="30" r="4" stroke-width="2.5" />
+          <path d="M19 33 L22 36" stroke-width="2.5" />
+          <path d="M40 24 V36 M44 26 C44 24 36 24 36 27 C36 30 44 30 44 33 C44 36 36 36 36 34" stroke-width="2" />
+          <path d="M12 46 H52 M12 52 H40" stroke-width="2" />
+        }
+        @case ('cookie-banner') {
+          <!-- a cookie with a bite missing -->
+          <path class="art-fill" d="M50 22 A20 20 0 1 1 42 12 A6 6 0 0 0 50 22 Z" />
+          <circle cx="24" cy="28" r="2.5" stroke-width="2.5" />
+          <circle cx="34" cy="40" r="2.5" stroke-width="2.5" />
+          <circle cx="22" cy="44" r="2.5" stroke-width="2.5" />
+          <circle cx="40" cy="28" r="2" stroke-width="2.5" />
+        }
+        @case ('ad-auction') {
+          <!-- a bidding paddle -->
+          <circle class="art-fill" cx="30" cy="24" r="16" />
+          <path d="M30 40 V58" stroke-width="5" />
+          <path d="M24 24 H36 M30 18 V30" stroke-width="2.5" />
+          <path d="M48 14 L54 10 M50 24 H58" stroke-width="2.5" />
+        }
+        @case ('give-us-your-data') {
+          <!-- a search bar that autocompletes -->
+          <rect class="art-fill" x="6" y="12" width="52" height="16" rx="8" />
+          <circle cx="16" cy="20" r="4" stroke-width="2.5" />
+          <path d="M26 20 H48" stroke-width="2.5" />
+          <path d="M10 36 H54 V56 H10 Z" stroke-width="2" />
+          <path d="M16 42 H44 M16 48 H38" stroke-width="2" />
+        }
+        @case ('did-you-mean-no') {
+          <!-- a speech bubble that says no -->
+          <path class="art-fill" d="M8 12 H56 V42 H26 L14 54 V42 H8 Z" />
+          <path d="M18 34 V20 L28 34 V20 M36 27 A6 7 0 1 0 48 27 A6 7 0 1 0 36 27" stroke-width="2.5" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />

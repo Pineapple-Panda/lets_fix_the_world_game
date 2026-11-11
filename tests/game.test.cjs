@@ -1793,7 +1793,11 @@ test('application versions', () => {
 
 const utopia = require('../src/app/levels/level-three/game/utopia.ts');
 const utopiaContent = require('../src/app/levels/level-three/game/utopia-content.ts');
-const fresh = () => utopia.newUtopia([], () => 0);
+/** A fresh first battle against Bananas Inc. (the third station), where most checks take place. */
+const fresh = () => {
+  const start = utopia.newUtopia([], () => 0);
+  return { ...start, stage: 2, enemy: { ...start.enemy, corpId: 'bananas' } };
+};
 /** A state with the given cards picked. */
 const picked = (state, ...ids) => ids.reduce((current, id) => utopia.toggleCard(current, id), state);
 /** Ticks until the corporation has answered your attack (it waits `enemyDelay` ticks, time for the animation). */
@@ -1803,8 +1807,12 @@ const answer = (state, random) => {
   return next;
 };
 
-test('level 3 is a card game campaign: Bananas Inc. twice, Mississippi Corp four times, EdisonX six times', () => {
-  assert.deepEqual(utopiaContent.campaign.map(stage => [stage.corpId, stage.battles]), [['bananas', 2], ['mississippi', 4], ['edison', 6]]);
+test('level 3 is a card game campaign: CoffCow once, Numbaz twice, then Bananas Inc., Mississippi Corp and EdisonX', () => {
+  assert.deepEqual(utopiaContent.campaign.map(stage => [stage.corpId, stage.battles]),
+    [['coffcow', 1], ['numbaz', 2], ['bananas', 3], ['mississippi', 4], ['edison', 5]]);
+  assert.deepEqual(utopiaContent.campaign.map(stage => stage.damage), [0.6, 0.8, 1, 1.2, 1.4], 'they get stronger');
+  assert.equal(utopia.newUtopia([], () => 0).enemy.corpId, 'coffcow', 'CoffCow comes first');
+  assert.ok(!utopia.enemyDeck('coffcow').some(card => utopia.cardCategory(card) === 'instant'), 'no instant cards in the tutorial');
   const state = fresh();
   assert.equal(state.credibility, 100);
   assert.equal(state.enemy.corpId, 'bananas');
@@ -1878,14 +1886,14 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   assert.equal(won.credits, 2, 'one credit per win, one more for winning with more than 50 credibility');
   assert.deepEqual(won.lastReward.reasons, ['win', 'credibility above 50']);
   assert.equal(won.credibility, 60 + 25, 'heals after a win');
-  assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [0, 1, 'bananas', 100], 'second battle, back at full power');
+  assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [2, 1, 'bananas', 100], 'second battle, back at full power');
   assert.equal(won.turn, 'player');
   assert.deepEqual(won.cooldowns, {});
-  const next = utopia.attack(picked({ ...won, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
-  assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [1, 0, 'mississippi', 100]);
+  const next = utopia.attack(picked({ ...won, battle: 2, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0);
+  assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [3, 0, 'mississippi', 100]);
   assert.equal(next.credits, won.credits + 1 + 2, 'a win (no bonus at 40 credibility) and the corporation beaten for good');
   assert.deepEqual(next.lastReward.reasons, ['win', 'corporation beaten']);
-  const last = { ...fresh(), stage: 2, battle: 5, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, counters: [], cooldowns: {} } };
+  const last = { ...fresh(), stage: 4, battle: 4, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, counters: [], cooldowns: {} } };
   const victory = utopia.attack(picked(last, last.hand[0]), () => 0);
   assert.equal(victory.outcome, 'won');
   assert.equal(utopia.tickUtopia(victory), victory, 'the game stands still');
@@ -1893,7 +1901,7 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
 });
 
 test('level 3: credibility carries over; at 0 the battle is lost and level 3 starts from scratch', () => {
-  const weak = { ...fresh(), stage: 1, battle: 2, credibility: 3, wins: 4, credits: 2, owned: ['leak', 'not-monoculture'], seconds: 300, turn: 'enemy' };
+  const weak = { ...fresh(), stage: 3, battle: 2, credibility: 3, wins: 4, credits: 2, owned: ['leak', 'not-monoculture'], seconds: 300, turn: 'enemy' };
   const lost = utopia.tickUtopia(weak, () => 0);
   assert.equal(lost.credibility, 0);
   assert.equal(lost.outcome, 'lost');
@@ -1901,7 +1909,7 @@ test('level 3: credibility carries over; at 0 the battle is lost and level 3 sta
   assert.equal(utopia.tickUtopia(lost), lost);
   assert.equal(utopia.retry(fresh()), null, 'only after a loss');
   const again = utopia.retry(lost, () => 0);
-  assert.deepEqual([again.stage, again.battle, again.enemy.corpId, again.credibility, again.outcome, again.wins], [0, 0, 'bananas', 100, null, 0],
+  assert.deepEqual([again.stage, again.battle, again.enemy.corpId, again.credibility, again.outcome, again.wins], [0, 0, 'coffcow', 100, null, 0],
     'the campaign starts again with full credibility and no wins');
   assert.deepEqual([again.credits, again.owned], [0, []], 'credits, bought and learned cards are gone');
   assert.equal(again.losses, 0, 'the losses start again too');
@@ -2046,7 +2054,7 @@ test('level 3: new cards remove blocks, cost you, grow with wins, block twice, h
 test('level 3: the corporations can lock your cards and shuffle your hand', () => {
   const locking = utopia.corporation('mississippi').cards.find(card => card.id === 'prime-lockdown');
   assert.equal(utopia.cardCategory(locking), 'damage');
-  const at = (corpId, id) => ({ ...fresh(), turn: 'enemy', stage: corpId === 'bananas' ? 0 : corpId === 'mississippi' ? 1 : 2,
+  const at = (corpId, id) => ({ ...fresh(), turn: 'enemy', stage: utopiaContent.campaign.findIndex(stage => stage.corpId === corpId),
     enemy: { ...fresh().enemy, corpId, cooldowns: Object.fromEntries(utopia.enemyDeck(corpId).filter(card => card.id !== id).map(card => [card.id, 5])) } });
   const locked = utopia.enemyAttack(at('mississippi', 'prime-lockdown'), () => 0);
   assert.equal(locked.locked.length, 1);
@@ -2078,13 +2086,14 @@ test('level 3: a special card lets you play two more cards in your next turn', (
 
 test('level 3: instant cards pass on to the next corporations', () => {
   const instants = corpId => utopia.enemyDeck(corpId).filter(card => utopia.cardCategory(card) === 'instant').map(card => card.id);
-  assert.deepEqual(instants('bananas'), ['plan-is-bananas']);
-  assert.deepEqual(instants('mississippi'), ['also-bought-robots', 'plan-is-bananas']);
-  assert.deepEqual(instants('edison'), ['bigger-rocket', 'plan-is-bananas', 'also-bought-robots']);
-  assert.deepEqual(utopia.inheritedCards('mississippi').map(entry => entry.from.id), ['bananas']);
+  assert.deepEqual(instants('numbaz'), ['give-us-your-data']);
+  assert.deepEqual(instants('bananas'), ['plan-is-bananas', 'give-us-your-data']);
+  assert.deepEqual(instants('mississippi'), ['also-bought-robots', 'give-us-your-data', 'plan-is-bananas']);
+  assert.deepEqual(instants('edison'), ['bigger-rocket', 'give-us-your-data', 'plan-is-bananas', 'also-bought-robots']);
+  assert.deepEqual(utopia.inheritedCards('mississippi').map(entry => entry.from.id), ['numbaz', 'bananas']);
   assert.ok(utopia.enemyCard('mississippi', 'plan-is-bananas'), 'Mississippi Corp can play it');
   // Hit by the inherited card, you still learn its answer.
-  const only = { ...fresh(), turn: 'enemy', stage: 1,
+  const only = { ...fresh(), turn: 'enemy', stage: 3,
     enemy: { ...fresh().enemy, corpId: 'mississippi', cooldowns: Object.fromEntries(utopia.enemyDeck('mississippi').filter(card => card.id !== 'plan-is-bananas').map(card => [card.id, 5])) } };
   const hit = utopia.enemyAttack(only, () => 0);
   assert.deepEqual(hit.log[0].cards, ['plan-is-bananas']);

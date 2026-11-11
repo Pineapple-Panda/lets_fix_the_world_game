@@ -35,8 +35,8 @@ Play it on GitHub Pages: <https://pineapple-panda.github.io/lets_fix_the_world_g
 
 ### Level 3 · Building utopia
 
-A card game against the corporations, one after another: Bananas Inc. twice, Mississippi Corp four times, EdisonX six
-times.
+A card game against the corporations, one after another: CoffCow once, Numbaz twice, Bananas Inc. three times,
+Mississippi Corp four times and EdisonX five times. Each corporation passes its instant battle cards on to the next.
 
 - **Your turn:** pick up to three cards from your hand of five and press *Attack*. Damage cards lower the
   corporation's power, blockers soften its next attack, healing restores credibility. Played cards rest for a few turns.

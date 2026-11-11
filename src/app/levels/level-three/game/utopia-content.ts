@@ -35,9 +35,11 @@ export const battleRules = {
  * credibility; later battles get harder through `damage` (or `powerStep`, for more power per battle).
  */
 export const campaign: Stage[] = [
-  { corpId: 'bananas', battles: 2, power: 100, powerStep: 0, damage: 1, damageStep: 0.1 },
+  { corpId: 'coffcow', battles: 1, power: 100, powerStep: 0, damage: 0.6, damageStep: 0.1 },
+  { corpId: 'numbaz', battles: 2, power: 100, powerStep: 0, damage: 0.8, damageStep: 0.1 },
+  { corpId: 'bananas', battles: 3, power: 100, powerStep: 0, damage: 1, damageStep: 0.1 },
   { corpId: 'mississippi', battles: 4, power: 100, powerStep: 0, damage: 1.2, damageStep: 0.1 },
-  { corpId: 'edison', battles: 6, power: 100, powerStep: 0, damage: 1.4, damageStep: 0.1 }
+  { corpId: 'edison', battles: 5, power: 100, powerStep: 0, damage: 1.4, damageStep: 0.1 }
 ];
 
 /** Cards every corporation plays, on top of its own. */
@@ -57,6 +59,36 @@ export const megacorpCards: BattleCard[] = [
 
 /** The corporations with their own cards. */
 export const corporations: Corporation[] = [
+  {
+    id: 'coffcow',
+    name: 'CoffCow',
+    description: 'Ships you a thousand things you never ordered. All of them broken.',
+    icon: '🐮',
+    cards: [
+      { id: 'free-shipping', name: 'Free Shipping*', description: '*Delivery in 3 to 30 weeks. Probably.',
+        effects: [{ kind: 'damage', amount: 4 }], cooldown: 0 },
+      { id: 'coupon-spam', name: 'Coupon Spam', description: 'Spin the wheel! Spin it again! Your plans are buried under coupons.',
+        effects: [{ kind: 'lock', count: 1 }], cooldown: 3 },
+      { id: 'mystery-box', name: 'Mystery Box', description: 'Nobody knows what is inside. Not even CoffCow.',
+        effects: [{ kind: 'heal', amount: 5 }], cooldown: 2 }
+    ]
+  },
+  {
+    id: 'numbaz',
+    name: 'Numbaz',
+    description: 'Turned the whole alphabet into numbers. Yours included.',
+    icon: '🔢',
+    cards: [
+      { id: 'sponsored-result', name: 'Sponsored Result', description: 'The first ten results are ads for Numbaz.',
+        effects: [{ kind: 'damage', amount: 6 }], cooldown: 0 },
+      { id: 'cookie-banner', name: 'Cookie Banner', description: 'Accept all, or click through 47 settings.',
+        effects: [{ kind: 'block', percent: 40 }], cooldown: 3 },
+      { id: 'ad-auction', name: 'Ad Auction', description: 'Your attention, sold to the highest bidder.',
+        effects: [{ kind: 'damage', amount: 8 }], cooldown: 2 },
+      { id: 'give-us-your-data', name: 'Did you mean: give us your data?', description: 'Autocomplete knows what you want.',
+        effects: [{ kind: 'instant', amount: 6, counter: 'did-you-mean-no' }], cooldown: 2 }
+    ]
+  },
   {
     id: 'bananas',
     name: 'Bananas Inc.',
@@ -163,5 +195,7 @@ export const playerCards: PlayerCard[] = [
   { id: 'return-robot', name: 'I’d like to return that robot', description: 'Learned the hard way from Mississippi Corp.',
     effects: [{ kind: 'counter', of: 'also-bought-robots' }], cooldown: 2, price: 0, learned: true },
   { id: 'compensating', name: 'Compensating for something?', description: 'Learned the hard way from EdisonX.',
-    effects: [{ kind: 'counter', of: 'bigger-rocket' }], cooldown: 2, price: 0, learned: true }
+    effects: [{ kind: 'counter', of: 'bigger-rocket' }], cooldown: 2, price: 0, learned: true },
+  { id: 'did-you-mean-no', name: 'Did you mean: no?', description: 'Learned the hard way from Numbaz.',
+    effects: [{ kind: 'counter', of: 'give-us-your-data' }], cooldown: 2, price: 0, learned: true }
 ];
