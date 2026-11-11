@@ -28,6 +28,7 @@
                         <app-card-art [id]="entry.card.id" [category]="entry.category" />
                         <strong>{{ entry.card.name }}</strong>
                         <small>{{ entry.summary }}</small>
+                        @if (entry.from) { <small class="from-tag">from {{ entry.from }}</small> }
                         @if (entry.played) { <small class="played-tag">played last turn</small> }
                         @if (entry.resting > 0) { <small class="rest">rests {{ entry.resting }}</small> }
                     </li>

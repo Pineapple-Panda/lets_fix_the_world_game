@@ -13,9 +13,22 @@ export function playerCard(id: string): PlayerCard | undefined {
   return playerCards.find(card => card.id === id);
 }
 
-/** A corporation's deck: its own cards plus the shared MegaCorp cards. */
+/**
+ * A corporation's deck: its own cards, the shared MegaCorp cards, and the instant battle cards of every corporation
+ * before it in the campaign (they pass them on: Mississippi Corp also plays the Bananas Inc. instant card).
+ */
 export function enemyDeck(corpId: string): BattleCard[] {
-  return [...(corporation(corpId)?.cards ?? []), ...megacorpCards];
+  return [...(corporation(corpId)?.cards ?? []), ...megacorpCards, ...inheritedCards(corpId).map(entry => entry.card)];
+}
+
+/** The instant battle cards a corporation took over from the corporations before it, with where they come from. */
+export function inheritedCards(corpId: string): { card: BattleCard; from: Corporation }[] {
+  const index = campaign.findIndex(stage => stage.corpId === corpId);
+  const earlier = [...new Set(campaign.slice(0, Math.max(0, index)).map(stage => stage.corpId))].filter(id => id !== corpId);
+  return earlier.flatMap(id => {
+    const from = corporation(id);
+    return from ? from.cards.filter(card => card.effects.some(effect => effect.kind === 'instant')).map(card => ({ card, from })) : [];
+  });
 }
 
 export function enemyCard(corpId: string, id: string): BattleCard | undefined {

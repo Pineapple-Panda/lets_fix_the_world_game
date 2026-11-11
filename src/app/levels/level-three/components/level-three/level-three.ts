@@ -2,7 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  buyBlocker, cardCategory, cardLimit, cardSummary, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, corporations, megaCorpName } from '../../game/utopia-content';
 import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/utopia.model';
@@ -61,7 +61,9 @@ export class LevelThreeComponent {
         // Its cards, with the turns they still rest.
         deck: enemyDeck(state.enemy.corpId).map(card => ({
           card, category: cardCategory(card), summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0,
-          played: playedLast.includes(card.id)
+          played: playedLast.includes(card.id),
+          // Instant cards it took over from an earlier corporation.
+          from: inheritedCards(state.enemy.corpId).find(entry => entry.card.id === card.id)?.from.name ?? null
         }))
       },
       credibility: Math.round(state.credibility),

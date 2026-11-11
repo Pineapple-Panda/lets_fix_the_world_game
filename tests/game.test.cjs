@@ -2076,6 +2076,21 @@ test('level 3: a special card lets you play two more cards in your next turn', (
   assert.equal(utopia.cardLimit(after), 3, 'only for one turn');
 });
 
+test('level 3: instant cards pass on to the next corporations', () => {
+  const instants = corpId => utopia.enemyDeck(corpId).filter(card => utopia.cardCategory(card) === 'instant').map(card => card.id);
+  assert.deepEqual(instants('bananas'), ['plan-is-bananas']);
+  assert.deepEqual(instants('mississippi'), ['also-bought-robots', 'plan-is-bananas']);
+  assert.deepEqual(instants('edison'), ['bigger-rocket', 'plan-is-bananas', 'also-bought-robots']);
+  assert.deepEqual(utopia.inheritedCards('mississippi').map(entry => entry.from.id), ['bananas']);
+  assert.ok(utopia.enemyCard('mississippi', 'plan-is-bananas'), 'Mississippi Corp can play it');
+  // Hit by the inherited card, you still learn its answer.
+  const only = { ...fresh(), turn: 'enemy', stage: 1,
+    enemy: { ...fresh().enemy, corpId: 'mississippi', cooldowns: Object.fromEntries(utopia.enemyDeck('mississippi').filter(card => card.id !== 'plan-is-bananas').map(card => [card.id, 5])) } };
+  const hit = utopia.enemyAttack(only, () => 0);
+  assert.deepEqual(hit.log[0].cards, ['plan-is-bananas']);
+  assert.ok(hit.owned.includes('not-monoculture'));
+});
+
 test('winning level 3 shows a summary of all three levels', () => {
   const level1 = { level: 1, title: 'Level 1 · Building the platform', facts: [{ label: 'Time', value: '12 min' }] };
   const level2 = { level: 2, title: 'Level 2 · Fixing the world', facts: [{ label: 'Lawsuits', value: '3' }] };

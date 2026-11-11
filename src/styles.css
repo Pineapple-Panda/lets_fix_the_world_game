@@ -1808,6 +1808,11 @@ footer {
     box-shadow: 0 0 0 2px var(--cat, var(--ink));
 }
 
+.mini-card .from-tag {
+    color: var(--faint);
+    font-style: italic;
+}
+
 .mini-card .played-tag {
     color: var(--ink);
     font-weight: 600;
