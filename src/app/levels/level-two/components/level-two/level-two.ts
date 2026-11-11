@@ -9,7 +9,8 @@ import {
   resistanceGrowth, robotPerk, robotPower, robotsOnSite, clickPower, clientIncome, suedProducts, programSlotsNeeded, programSlots, usedSlots, averageActionsPerSecond, averageBudgetPerSecond, mediatorsTrained, pitchValue, canPitch, mediationPower, maxResistance, secondsToSolve, problemSolved, runningEpics, serverLoad, serverOnline, settlementCost,
   tegridyActive, tegridyBagCost, tegridyPerk, upgradeCost
 } from '../../game/launched';
-import { launchedPerks, products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
+import { levelTwoPerks } from '../../../../shared/content/perks';
+import { products, programs, rentalClients, worldGoals, worldProblems } from '../../game/launched-content';
 import type { EpicDefinition, LaunchedGame, LaunchedPerk, ProgramDefinition, WorldProblem } from '../../models/launched.model';
 
 /** Rounds tiny per-second rates for display (5 decimals). */
@@ -99,7 +100,7 @@ export class LevelTwoComponent {
       canBuyTegridy: canBuyTegridy(state),
       tegridyBagCost,
       activePerks: <(LaunchedPerk & { badge?: number })[]>[
-        ...launchedPerks.filter(perk => state.perks.includes(perk.id)),
+        ...levelTwoPerks.filter(perk => state.perks.includes(perk.id)),
         ...(tegridyActive(state) ? [tegridyPerk] : []),
         ...(state.perks.includes(robotPerk.id)
           ? [{ ...robotPerk, description: robotPerk.description + (robotsOnSite(state) ? ' On site.' : ' Idle: EdisonX is not a client.') }]

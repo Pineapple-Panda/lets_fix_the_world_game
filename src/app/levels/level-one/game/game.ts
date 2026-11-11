@@ -1,7 +1,8 @@
+import type { Smoothing } from '../../../shared/game/smoothing.ts';
 import type { BoardColumn } from '../models/board.model.ts';
 import type { Game } from '../models/game.model.ts';
 import type { Item } from '../models/item.model.ts';
-import { perks } from '../models/perk.model.ts';
+import { levelOnePerks as perks } from '../../../shared/content/perks.ts';
 import type { Perk } from '../models/perk.model.ts';
 import {
   blueprint, bugTemplates, maintenanceTasks, maxReleaseTasks, minReleaseTasks, roadmap, taskId
@@ -9,7 +10,7 @@ import {
 import type { RoadmapTask } from './content.ts';
 import { nextVersion, versionForDeployments } from '../models/version.model.ts';
 
-export { perks } from '../models/perk.model.ts';
+export { levelOnePerks as perks } from '../../../shared/content/perks.ts';
 export type { Game } from '../models/game.model.ts';
 export type { Item } from '../models/item.model.ts';
 export type { Perk, PerkId } from '../models/perk.model.ts';
@@ -596,3 +597,9 @@ export function addBug(game: Game): Item | null {
   game.selected = bug.id;
   return bug;
 }
+
+/** Numbers that glide between ticks in level 1: actions and budget. */
+export const gameSmoothing: Smoothing<Game> = {
+  read: state => ({ actions: state.actions, budget: state.budget }),
+  write: (state, values) => ({ ...state, actions: Math.round(values['actions'] ?? state.actions), budget: Math.round(values['budget'] ?? state.budget) })
+};

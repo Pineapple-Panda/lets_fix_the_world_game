@@ -1323,6 +1323,22 @@ footer {
     cursor: pointer;
 }
 
+.github-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    color: var(--muted);
+}
+
+.github-link:hover,
+.github-link:focus-visible {
+    color: var(--ink);
+    background: var(--line);
+}
+
 .reset:hover {
     color: var(--red);
 }

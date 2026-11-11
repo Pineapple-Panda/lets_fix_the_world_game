@@ -5,6 +5,7 @@ const content = require('../src/app/levels/level-one/game/content.ts');
 const storage = require('../src/app/shared/game/storage.ts');
 const launched = require('../src/app/levels/level-two/game/launched.ts');
 const version = require('../src/app/levels/level-one/models/version.model.ts');
+const allPerks = require('../src/app/shared/content/perks.ts');
 
 const {
   newGame, perks, perkUnlocked, openPerks, activePerks, activatePerk, isAvailable, boardItems, boardColumns,
@@ -1543,7 +1544,7 @@ test('shady deals are counted every second', () => {
 test('protests take at most 50 clicks, mediators calm them faster and peacefully', () => {
   const protest = overrides => greenWorldActive({ integrity: 25, programs: [{ id: 'reforestation-network', resistance: 20, milestone: 0 }], ...overrides });
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  const perk = content.launchedPerks.find(entry => entry.id === 'mediation-academy');
+  const perk = allPerks.levelTwoPerks.find(entry => entry.id === 'mediation-academy');
   assert.equal(perk.actionsRequired, 45000000);
   assert.deepEqual(perk.requiresProducts, ['green-world']);
   assert.ok(!launched.openLaunchedPerks(liveState()).some(entry => entry.id === 'mediation-academy'), 'hidden without Green World');
@@ -1586,7 +1587,7 @@ test('Peace & Integrity has three corruption programs', () => {
 
 test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens assembly', () => {
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  const perk = id => content.launchedPerks.find(entry => entry.id === id);
+  const perk = id => allPerks.levelTwoPerks.find(entry => entry.id === id);
   assert.deepEqual(['grant-proposals', 'decent-lawyer', 'good-lawyer', 'chewbacca-defense', 'citizens-assembly'].map(id => perk(id).actionsRequired),
     [25000000, 100000000, 150000000, 200000000, 300000000]);
   const lawyers = ['decent-lawyer', 'good-lawyer', 'chewbacca-defense'];
@@ -1628,7 +1629,7 @@ test('late perks: grant proposals, lawyers, the Chewbacca defense and a citizens
 
 test('Premium Hosting Contracts make clients pay ten times the rent', () => {
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  assert.equal(content.launchedPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
+  assert.equal(allPerks.levelTwoPerks.find(entry => entry.id === 'premium-hosting').actionsRequired, 30000000);
   const online = { perks: ['workflow-abstraction', 'network-financing'], rentals: ['blue-helmets'] };
   assert.equal(launched.rentalIncome(liveState(online)), 500);
   const premium = liveState({ ...online, perks: [...online.perks, 'premium-hosting'] });
@@ -1722,7 +1723,7 @@ test('after the world is fixed, a new run starts with a head start', () => {
 test('pitching to investors adds budget per click and grows with the income', () => {
   assert.equal(launched.pitch(liveState()), null, 'needs the Pitch Deck Generator');
   const content = require('../src/app/levels/level-two/game/launched-content.ts');
-  assert.equal(content.launchedPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
+  assert.equal(allPerks.levelTwoPerks.find(entry => entry.id === 'pitch-deck').actionsRequired, 100000);
   const start = liveState({ budget: 1000, perks: ['pitch-deck'] });
   assert.equal(launched.pitchValue(start), 100, 'at least 100: 175 actions per second only make 35');
   const pitched = launched.pitch(start);
@@ -1898,8 +1899,8 @@ test('initiatives cost budget', () => {
 });
 
 test('level 3 perks: card unlocks and action unlocks; the effect kinds still work for new perks', () => {
-  assert.deepEqual(utopiaContent.utopiaPerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'prefab-factory', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
-  assert.ok(utopiaContent.utopiaPerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
+  assert.deepEqual(allPerks.levelThreePerks.map(perk => perk.id), ['utopia-blueprint', 'opposition-research', 'hyper-scaling', 'prefab-factory', 'rapid-response', 'rally-network', 'housing-policy', 'kitchen-network', 'investigative-desk']);
+  assert.ok(allPerks.levelThreePerks.filter(perk => perk.effect.kind === 'unlock').every(perk => perk.cost === 0), 'the card unlocks are free');
   // Try every effect kind with temporary perks, as a new perk in the config would.
   const extra = [
     { id: 't-gain', name: '', description: '', icon: '', actionsRequired: 0, cost: 1000, effect: { kind: 'initiativeGain', value: 2 } },
@@ -1907,7 +1908,7 @@ test('level 3 perks: card unlocks and action unlocks; the effect kinds still wor
     { id: 't-drift', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'driftShield', value: 0.5 } },
     { id: 't-upkeep', name: '', description: '', icon: '', actionsRequired: 0, cost: 0, effect: { kind: 'upkeep', value: 0.5 } }
   ];
-  utopiaContent.utopiaPerks.push(...extra);
+  allPerks.levelThreePerks.push(...extra);
   try {
     let state = opened();
     assert.ok(utopia.openUtopiaPerks(state).length <= 5, 'at most five shown');
@@ -1919,7 +1920,7 @@ test('level 3 perks: card unlocks and action unlocks; the effect kinds still wor
     const counter = utopiaContent.counterInitiatives[0];
     assert.ok(Math.abs(utopia.counterRate({ ...state, megacorpSeconds: 999 }, counter) - 0.075) < 1e-12, 'counter initiatives hit half as hard');
   } finally {
-    utopiaContent.utopiaPerks.splice(-extra.length);
+    allPerks.levelThreePerks.splice(-extra.length);
   }
 });
 
@@ -2110,6 +2111,74 @@ test('level 3 saves and loads', () => {
   storage.saveUtopia(store, state);
   assert.deepEqual(storage.loadUtopia(store), state);
   assert.equal(storage.loadLaunched(store), null, 'not a level 2 save');
+});
+
+test('a solved application can no longer be sued', () => {
+  const content = require('../src/app/levels/level-two/game/launched-content.ts');
+  const solvedWorld = { ...liveState().worldProgress, climate: 100 };
+  const solved = greenWorldActive({ integrity: 90, worldProgress: solvedWorld });
+  assert.equal(launched.productSolved(solved, 'green-world'), true);
+  assert.equal(launched.lawsuitRisk(solved, 'green-world'), false, 'no random lawsuits');
+  assert.equal(launched.lawsuitRisk(greenWorldActive({ integrity: 90, worldProgress: { ...solvedWorld, climate: 99.9 } }), 'green-world'), true);
+  assert.equal(launched.productSolved(liveState({ worldProgress: { ...liveState().worldProgress, hunger: 100, poverty: 99 } }), 'fair-share'), false,
+    'Fair Share needs hunger and poverty');
+
+  // A case that is already open collapses once the application is solved.
+  const caseId = content.lawsuits.findIndex(entry => !entry.special && !entry.program && entry.product === 'green-world');
+  assert.ok(caseId >= 0);
+  const pending = launched.tickLaunched({ ...solved, lawsuit: { caseId, courtSeconds: 40 } }, () => 0.99);
+  assert.equal(pending.lawsuit, null);
+  assert.equal(pending.verdict.won, true);
+  assert.equal(pending.verdict.damages, 0);
+
+  // Turning down the EdisonX donation only sues while one of the three applications is unsolved.
+  const allSolved = liveState({ products: allApps, pendingEvent: 'edisonx-donation', worldProgress: { climate: 100, war: 100, hunger: 100, poverty: 100, corruption: 100 } });
+  assert.equal(launched.answerEvent(allSolved, false).lawsuit, null);
+  const oneOpen = { ...allSolved, worldProgress: { ...allSolved.worldProgress, corruption: 50 } };
+  assert.notEqual(launched.answerEvent(oneOpen, false).lawsuit, null);
+});
+
+// ---------- smoothing ----------
+
+const smoothing = require('../src/app/shared/game/smoothing.ts');
+
+test('smoothing: shown values glide from the last tick to the new state', () => {
+  const before = liveState({ actions: 1000, budget: 500, integrity: 50 });
+  const after = { ...before, actions: 2000, budget: 300, integrity: 60, worldProgress: { ...before.worldProgress, climate: 10 } };
+  const from = launched.launchedSmoothing.read(before);
+  const half = smoothing.blend(launched.launchedSmoothing, from, after, 0.5);
+  assert.equal(half.actions, 1500);
+  assert.equal(half.budget, 400);
+  assert.equal(half.integrity, 55);
+  assert.equal(half.worldProgress.climate, (before.worldProgress.climate + 10) / 2);
+  assert.equal(half.seconds, after.seconds, 'everything else is the new state');
+  assert.equal(smoothing.blend(launched.launchedSmoothing, from, after, 1), after, 'at the next tick the real state shows');
+  assert.equal(smoothing.blend(launched.launchedSmoothing, null, after, 0.2), after, 'nothing to glide from');
+  assert.equal(smoothing.blend(launched.launchedSmoothing, from, after, 0).actions, 1000);
+});
+
+test('smoothing: a player action shows at once and keeps gliding', () => {
+  const before = liveState({ actions: 1000, budget: 5000 });
+  const from = { ...launched.launchedSmoothing.read(before), budget: 4000 };
+  const bought = { ...before, budget: 3000 };
+  const shifted = smoothing.shifted(launched.launchedSmoothing, from, before, bought);
+  assert.equal(shifted.budget, 2000, 'the shown start value drops by the price too');
+  assert.equal(shifted.actions, 1000);
+  assert.equal(smoothing.shifted(launched.launchedSmoothing, null, before, bought), null);
+});
+
+test('smoothing: level 1 and level 3 glide their headline numbers', () => {
+  const start = game.newGame();
+  const later = { ...start, actions: start.actions + 10, budget: start.budget + 20 };
+  const shown = smoothing.blend(game.gameSmoothing, game.gameSmoothing.read(start), later, 0.5);
+  assert.equal(shown.actions, start.actions + 5);
+  assert.equal(shown.budget, start.budget + 10);
+
+  const world = utopia.newUtopia();
+  const next = { ...world, metrics: { ...world.metrics, housing: world.metrics.housing + 2 } };
+  const glide = smoothing.blend(utopia.utopiaSmoothing, utopia.utopiaSmoothing.read(world), next, 0.25);
+  assert.equal(glide.metrics.housing, world.metrics.housing + 0.5);
+  assert.deepEqual(glide.corpPower, next.corpPower);
 });
 
 // ---------- report ----------

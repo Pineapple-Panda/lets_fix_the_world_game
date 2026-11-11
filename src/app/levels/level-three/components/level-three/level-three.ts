@@ -4,7 +4,8 @@ import {
   actionCard, actionsGained, canCancelEffect, megacorpDefeated, megacorpPower, actionsPerSecond, budgetPerSecond, canDuel, cardBlocker, cardSummary, ownedCards, cardUnlocked, corporation, counterRate, initializeBlocker, initiativeBlocker, initiativeFunded, initiativeRate,
   initiativeStage, initiativeUpkeep, launchedCounters, metricRate, openUtopiaPerks, unlockPerk, utopiaPerkAvailable
 } from '../../game/utopia';
-import { corporations, initiatives, megaCorpName, metrics, utopiaPerks } from '../../game/utopia-content';
+import { corporations, initiatives, megaCorpName, metrics } from '../../game/utopia-content';
+import { levelThreePerks } from '../../../../shared/content/perks';
 import type { UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: you and MegaCorp face each other on top; development, the utopia and MegaCorp's corporations below. */
@@ -60,7 +61,7 @@ export class LevelThreeComponent {
       utopiaPerkName: unlockPerk('utopia')?.name ?? '',
       megacorpPerkName: unlockPerk('megacorp')?.name ?? '',
       actionsGained: actionsGained(state),
-      activePerks: utopiaPerks.filter(perk => state.perks.includes(perk.id)),
+      activePerks: levelThreePerks.filter(perk => state.perks.includes(perk.id)),
       openPerks: openUtopiaPerks(state).map(perk => ({ perk, unlocked: utopiaPerkAvailable(state, perk) })),
       nextAttack: state.nextAttack,
       canDuel: canDuel(state),

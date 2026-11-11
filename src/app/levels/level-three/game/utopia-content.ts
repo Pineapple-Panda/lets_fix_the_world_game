@@ -1,8 +1,8 @@
 /**
  * Level 3 content and balance. Everything you might want to tune lives here: start values, bars, corporations,
- * action cards, counter initiatives, initiatives and perks.
+ * action cards, counter initiatives and initiatives. The perks are in shared/content/perks.ts.
  */
-import type { ActionCard, Corporation, CounterInitiative, Initiative, MetricDefinition, UtopiaMetric, UtopiaPerk } from '../models/utopia.model.ts';
+import type { ActionCard, Corporation, CounterInitiative, Initiative, MetricDefinition, UtopiaMetric } from '../models/utopia.model.ts';
 
 /** Working title of the alliance of EdisonX, Mississippi Corp and Bananas Inc. */
 export const megaCorpName = 'MegaCorp';
@@ -21,32 +21,6 @@ export const metrics: MetricDefinition[] = [
   { id: 'employment', name: 'Employment', hint: 'The AI does the work. Humans need new jobs worth doing.', start: 65, drift: 0 },
   { id: 'housing', name: 'Housing', hint: 'People per home. Everyone stays alive now, so the world keeps getting fuller.', start: 70, drift: 0 },
   { id: 'food', name: 'Food', hint: 'Meals per person. More people, same fields.', start: 75, drift: 0 }
-];
-
-/**
- * Level 3 perks: two open the Utopia and MegaCorp cards, one each unlocks a locked action card. More perks can use
- * the other effect kinds (initiativeGain, attackShield, driftShield, upkeep). `actionsRequired` is total TCA, as in level 2.
- */
-export const utopiaPerks: UtopiaPerk[] = [
-  { id: 'utopia-blueprint', name: 'Blueprint for Utopia', description: 'Your AI drafts a plan for a world where everyone has a job, a home and a full plate. Opens the Utopia card.', icon: 'BU',
-    actionsRequired: 250000000, cost: 0, effect: { kind: 'unlock', card: 'utopia' } },
-  { id: 'opposition-research', name: 'Opposition Research', description: 'Somebody is buying up farmland, warehouses and influencers. Find out who. Opens the MegaCorp card, and MegaCorp starts fighting back.', icon: 'OR',
-    actionsRequired: 260000000, cost: 0, effect: { kind: 'unlock', card: 'megacorp' } },
-  { id: 'hyper-scaling', name: 'Hyper-Scaling', description: 'Every server, every process, every intern at full throttle. TCA and budget per second ×10.', icon: 'HS',
-    actionsRequired: 310000000, cost: 5000000, effect: { kind: 'rateBoost', value: 10 } },
-  // One perk per locked action card.
-  { id: 'prefab-factory', name: 'Prefab Factory', description: 'Unlocks the move "Pop-Up Homes": Housing +3%/s for 5s.', icon: 'PF',
-    actionsRequired: 0, cost: 5000000, effect: { kind: 'unlockAction', action: 'pop-up-homes' } },
-  { id: 'rapid-response', name: 'Rapid Response Team', description: 'Unlocks the move "Shut It Down": stops a running MegaCorp move of your choice, every 120s.', icon: 'RR',
-    actionsRequired: 0, cost: 10000000, effect: { kind: 'unlockAction', action: 'shut-it-down' } },
-  { id: 'rally-network', name: 'Rally Network', description: 'Unlocks the move "Battle Cry": in a battle, each push moves the bar by 2% for 15s.', icon: 'RN',
-    actionsRequired: 0, cost: 10000000, effect: { kind: 'unlockAction', action: 'battle-cry' } },
-  { id: 'housing-policy', name: 'Housing Policy Desk', description: 'Unlocks the move "Cut Rent Taxes": Housing +0.1%/s and Credibility +0.5/s for 15s.', icon: 'HP',
-    actionsRequired: 285000000, cost: 2000000, effect: { kind: 'unlockAction', action: 'rent-tax-cut' } },
-  { id: 'kitchen-network', name: 'Kitchen Network', description: 'Unlocks the move "Community Kitchens": Food +3 at once.', icon: 'KN',
-    actionsRequired: 300000000, cost: 3000000, effect: { kind: 'unlockAction', action: 'community-kitchens' } },
-  { id: 'investigative-desk', name: 'Investigative Desk', description: 'Unlocks the move "Leak the Emails": −3% power for every corporation and Credibility +2.', icon: 'ID',
-    actionsRequired: 320000000, cost: 5000000, effect: { kind: 'unlockAction', action: 'leak' } }
 ];
 
 /**

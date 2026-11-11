@@ -1,3 +1,4 @@
+import { prefixed, unprefixed, type Smoothing } from '../../../shared/game/smoothing.ts';
 import type { Game } from '../../level-one/models/game.model.ts';
 import { formatVersion } from '../../level-one/models/version.model.ts';
 import type {
@@ -5,7 +6,8 @@ import type {
   SpecialEvent,
   RentalClient, WorldProblem
 } from '../models/launched.model.ts';
-import { epics, launchedPerks, lawsuits, products, programs, rentalClients, specialEvents, worldGoals, worldProblems } from './launched-content.ts';
+import { levelTwoPerks } from '../../../shared/content/perks.ts';
+import { epics, lawsuits, products, programs, rentalClients, specialEvents, worldGoals, worldProblems } from './launched-content.ts';
 
 /** Coverage units (1/1000 percentage point) required before the application can launch: 100%. */
 export const launchCoverage = 100000;
@@ -430,7 +432,7 @@ export function openLaunchedPerks(state: LaunchedGame): LaunchedPerk[] {
   return [
     // Some perks wait until one of their products is activated (the Mediation Academy needs Green World,
     // the lawyers any product card).
-    ...launchedPerks.filter(perk => !state.perks.includes(perk.id) &&
+    ...levelTwoPerks.filter(perk => !state.perks.includes(perk.id) &&
       (!perk.requiresProducts || perk.requiresProducts.some(id => productActive(state, id)))),
     addServerPerk(state),
     // The Tegridy deal is offered once Network & Financing is open.
@@ -958,7 +960,7 @@ export function epicRevealed(state: LaunchedGame, id: string): boolean {
 export function epicPerkMissing(state: LaunchedGame, id: string): string | null {
   const perk = epicDefinition(id)?.requiresPerk;
   if (!perk || state.perks.includes(perk)) return null;
-  return launchedPerks.find(entry => entry.id === perk)?.name ?? perk;
+  return levelTwoPerks.find(entry => entry.id === perk)?.name ?? perk;
 }
 
 /** Special epics outside the world goal chains (e.g. infrastructure) that are visible right now. */
@@ -1058,13 +1060,18 @@ export function productProblems(productId: string): WorldProblem[] {
   return [...new Set(programs.filter(program => program.product === productId).map(program => program.problem))];
 }
 
+/** A product whose world problems are all solved: its work is done and it can no longer be sued. */
+export function productSolved(state: LaunchedGame, productId: string): boolean {
+  return productProblems(productId).every(problem => problemSolved(state, problem));
+}
+
 /**
- * Whether companies feel threatened enough to sue a product: it is active, one of its problems is solved to 30%
- * or more and integrity is above 80%. Without a product: whether any product is at risk.
+ * Whether companies feel threatened enough to sue a product: it is active and not solved yet, one of its problems
+ * is solved to 30% or more and integrity is above 80%. Without a product: whether any product is at risk.
  */
 export function lawsuitRisk(state: LaunchedGame, productId?: string): boolean {
   if (productId === undefined) return products.some(definition => lawsuitRisk(state, definition.id));
-  return productActive(state, productId) && state.integrity > lawsuitIntegrity &&
+  return productActive(state, productId) && !productSolved(state, productId) && state.integrity > lawsuitIntegrity &&
     productProblems(productId).some(problem => state.worldProgress[problem] >= lawsuitProgress);
 }
 
@@ -1078,6 +1085,13 @@ export function currentLawsuitChance(state: LaunchedGame): number {
  * verdict comes, the case is won with 65%; a loss costs damages (the budget does not drop below 0).
  */
 function runLawsuit(next: LaunchedGame, random: () => number): void {
+  // A case against applications that are all solved collapses: there is nothing left to sue.
+  if (next.lawsuit && suedProducts(next).every(id => productSolved(next, id))) {
+    const sued = lawsuitCase(next);
+    next.verdict = { product: sued?.products ? 'all' : sued?.product ?? '', plaintiff: sued?.plaintiff ?? '', won: true, damages: 0 };
+    next.lawsuit = null;
+    return;
+  }
   if (next.lawsuit) {
     if (next.lawsuit.courtSeconds === null) {
       if (lawyerOnCase(next)) next.lawsuit = { ...next.lawsuit, courtSeconds: courtDuration(next) };
@@ -1102,7 +1116,7 @@ function runLawsuit(next: LaunchedGame, random: () => number): void {
   // Only one lawsuit at a time; the case is drawn from those against the products at risk. Cases tied to a
   // program are filed while that program runs.
   const open = lawsuits.map((entry, caseId) => ({ entry, caseId })).filter(({ entry }) => entry.special ? false : entry.program
-    ? next.programs.some(running => running.id === entry.program) && productActive(next, entry.product)
+    ? next.programs.some(running => running.id === entry.program) && productActive(next, entry.product) && !productSolved(next, entry.product)
     : lawsuitRisk(next, entry.product));
   if (open.length && random() < currentLawsuitChance(next)) {
     next.lawsuit = { caseId: open[Math.min(open.length - 1, Math.floor(random() * open.length))]!.caseId, courtSeconds: null };
@@ -1120,6 +1134,13 @@ export function lawsuitCase(state: LaunchedGame): LawsuitCase | undefined {
 export function suedProducts(state: LaunchedGame): string[] {
   const sued = lawsuitCase(state);
   return sued ? sued.products ?? [sued.product] : [];
+}
+
+/** Turning down the EdisonX donation: a lawsuit against all three applications, unless they are all solved already. */
+function suedForDonation(state: LaunchedGame): LaunchedGame {
+  const caseId = lawsuits.findIndex(entry => entry.special);
+  const sued = lawsuits[caseId]?.products ?? [];
+  return sued.every(id => productSolved(state, id)) ? state : fileLawsuit(state, caseId);
 }
 
 /** Files a lawsuit right away (used by special events). */
@@ -1198,7 +1219,7 @@ export function answerEvent(state: LaunchedGame, accept: boolean): LaunchedGame 
     case 'edisonx-donation':
       return accept
         ? { ...closed, budget: cap(closed.budget + donationBudget), integrity: percent(closed.integrity - donationIntegrity) }
-        : fileLawsuit(closed, lawsuits.findIndex(entry => entry.special));
+        : suedForDonation(closed);
     case 'nsa-leak':
       return accept
         ? { ...closed, budget: closed.budget - leakPayment }
@@ -1256,3 +1277,22 @@ export function victorySummary(state: LaunchedGame): { facts: Fact[]; verdict: s
         : 'The world is fixed. Your conscience is still in the backlog.';
   return { facts, verdict };
 }
+
+/** Numbers that glide between ticks: actions, budget, integrity, the world problems and the program milestones. */
+export const launchedSmoothing: Smoothing<LaunchedGame> = {
+  read: state => ({
+    actions: state.actions,
+    budget: state.budget,
+    integrity: state.integrity,
+    ...prefixed('world', state.worldProgress),
+    ...Object.fromEntries(state.programs.map(entry => [`milestone.${entry.id}`, entry.milestone]))
+  }),
+  write: (state, values) => ({
+    ...state,
+    actions: Math.round(values['actions'] ?? state.actions),
+    budget: Math.round(values['budget'] ?? state.budget),
+    integrity: values['integrity'] ?? state.integrity,
+    worldProgress: unprefixed('world', values, state.worldProgress),
+    programs: state.programs.map(entry => ({ ...entry, milestone: values[`milestone.${entry.id}`] ?? entry.milestone }))
+  })
+};
