@@ -1,5 +1,6 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
 import { Smoother, TickClock } from './shared/game/smoother';
+import { GithubLinkComponent } from './shared/components/github-link';
 import { frameMs, tickMs } from './shared/game/smoothing';
 import { ActionBaseComponent } from './levels/level-one/components/action-base/action-base';
 import { BoardComponent } from './levels/level-one/components/board/board';
@@ -43,7 +44,7 @@ import { gameConfig } from './game.config';
 
 @Component({
   selector: 'app-root',
-  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent, DuelDialogComponent, GameOverComponent, UtopiaWonComponent],
+  imports: [ActionBaseComponent, BoardComponent, EarlComponent, IntroComponent, LaunchComponent, LevelTwoComponent, PerksComponent, StatsComponent, VictoryComponent, EventDialogComponent, LevelThreeComponent, DuelDialogComponent, GameOverComponent, UtopiaWonComponent, GithubLinkComponent],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKeydown($event)' }
 })
