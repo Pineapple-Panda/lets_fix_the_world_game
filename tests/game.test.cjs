@@ -1797,7 +1797,11 @@ const fresh = () => utopia.newUtopia([], () => 0);
 /** A state with the given cards picked. */
 const picked = (state, ...ids) => ids.reduce((current, id) => utopia.toggleCard(current, id), state);
 /** Ticks until the corporation has answered your attack (it waits `enemyDelay` ticks, time for the animation). */
-const answer = (state, random) => utopia.tickUtopia(utopia.tickUtopia(state, random), random);
+const answer = (state, random) => {
+  let next = state;
+  for (let tick = 0; tick < 10 && next.turn === 'enemy' && next.outcome === null; tick++) next = utopia.tickUtopia(next, random);
+  return next;
+};
 
 test('level 3 is a card game campaign: Bananas Inc. twice, Mississippi Corp four times, EdisonX six times', () => {
   assert.deepEqual(utopiaContent.campaign.map(stage => [stage.corpId, stage.battles]), [['bananas', 2], ['mississippi', 4], ['edison', 6]]);
@@ -1841,14 +1845,14 @@ test('level 3: cards rest for their number of own turns', () => {
   assert.ok(state.hand.includes('firewall'), 'back in the hand');
 });
 
-test('level 3: the corporation answers two ticks after your attack; blockers absorb attacks', () => {
+test('level 3: the corporation answers a few ticks after your attack; blockers absorb attacks', () => {
   const blocked = utopia.attack(picked(fresh(), 'firewall'), () => 0);
-  assert.equal(blocked.enemyWait, 2);
+  assert.equal(blocked.enemyWait, utopiaContent.battleRules.enemyDelay);
   assert.equal(utopia.tickUtopia(blocked, () => 0).turn, 'enemy', 'it waits a moment: your cards are shown');
   // Random 0: one card, the first of its deck: Banana Blockade, 12 damage.
   const answered = answer(blocked, () => 0);
   assert.equal(answered.turn, 'player');
-  assert.equal(answered.seconds, blocked.seconds + 2);
+  assert.equal(answered.seconds, blocked.seconds + utopiaContent.battleRules.enemyDelay);
   assert.equal(answered.credibility, 100 - 6, '12 damage, half of it blocked');
   assert.equal(answered.block, 0, 'the block is used up');
   assert.equal(answered.enemy.cooldowns['banana-blockade'], 2);

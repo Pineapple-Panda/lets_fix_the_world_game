@@ -25,8 +25,8 @@ export const battleRules = {
   maxBlock: 80,
   /** Attacks kept in the log. */
   logLength: 6,
-  /** Ticks (seconds) between your attack and the corporation's answer, so your cards can be shown. */
-  enemyDelay: 2
+  /** Ticks (seconds) between your attack and the corporation's answer, so your cards (and its unused counters) can be shown. */
+  enemyDelay: 3
 };
 
 /**

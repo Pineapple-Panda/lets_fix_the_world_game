@@ -1915,7 +1915,7 @@ footer {
 /* A counter card the opponent's answer did not need: it greys out once the answering cards are applied. */
 .stage-side .stage-card.wasted {
     position: relative;
-    animation: stage-wasted .6s ease-out forwards calc(var(--wait) * var(--step) + 500ms);
+    animation: stage-wasted .5s ease-out forwards calc(var(--wait) * var(--step) + 200ms);
 }
 
 .stage-card .wasted-tag {
@@ -1931,7 +1931,7 @@ footer {
     text-transform: uppercase;
     transform: translate(-50%, -50%) rotate(-12deg);
     opacity: 0;
-    animation: wasted-tag .4s ease-out forwards calc(var(--wait) * var(--step) + 900ms);
+    animation: wasted-tag .3s ease-out forwards calc(var(--wait) * var(--step) + 500ms);
 }
 
 @keyframes stage-wasted {
