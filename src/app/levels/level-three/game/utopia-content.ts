@@ -18,6 +18,8 @@ export const battleRules = {
   healAfterWin: 25,
   /** Credits for the card shop per won battle. */
   creditsPerWin: 1,
+  /** Share of an instant battle card that strikes back when the opponent has the counter. */
+  recoilShare: 0.5,
   /** Blocks stack up to this many percent. */
   maxBlock: 80,
   /** Attacks kept in the log. */
@@ -47,7 +49,10 @@ export const megacorpCards: BattleCard[] = [
   { id: 'lobbyists', name: 'Army of Lobbyists', description: 'Lawmakers suddenly find your plans “unrealistic”.',
     effects: [{ kind: 'block', percent: 40 }], cooldown: 2 },
   { id: 'insider-trading', name: 'Insider Trading', description: 'A little trading between friends refills the war chest.',
-    effects: [{ kind: 'heal', amount: 10 }], cooldown: 3 }
+    effects: [{ kind: 'heal', amount: 10 }], cooldown: 3 },
+  // Counter cards are never played; they answer an instant battle card while they are not resting.
+  { id: 'like-a-cow', name: 'How appropriate. You fight like a cow.', description: 'The comeback. Your insult bounces right back.',
+    effects: [{ kind: 'counter', of: 'dairy-farmer' }], cooldown: 3 }
 ];
 
 /** The corporations with their own cards. */
@@ -115,5 +120,7 @@ export const playerCards: PlayerCard[] = [
   { id: 'investigative-desk', name: 'Investigative Desk', description: 'A year of research, one devastating article.',
     effects: [{ kind: 'damage', amount: 25 }], cooldown: 3, price: 4 },
   { id: 'pop-up-homes', name: 'Pop-Up Homes', description: 'Prefab homes in every empty lot. Hard to argue with.',
-    effects: [{ kind: 'heal', amount: 10 }, { kind: 'block', percent: 20 }], cooldown: 2, price: 3 }
+    effects: [{ kind: 'heal', amount: 10 }, { kind: 'block', percent: 20 }], cooldown: 2, price: 3 },
+  { id: 'dairy-farmer', name: 'You fight like a dairy farmer', description: 'An insult so sharp it cuts. Unless they know the comeback.',
+    effects: [{ kind: 'instant', amount: 10, counter: 'like-a-cow' }], cooldown: 1, price: 2 }
 ];

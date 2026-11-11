@@ -52,5 +52,5 @@ export class CardShopComponent extends ModalDialog {
   readonly creditsPerWin = input(1);
   readonly bought = output<string>();
   readonly closed = output<void>();
-  protected readonly labels: Record<CardCategory, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', combo: 'Combo' };
+  protected readonly labels: Record<CardCategory, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo' };
 }

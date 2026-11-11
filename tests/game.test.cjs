@@ -1899,7 +1899,7 @@ test('level 3: credibility carries over; at 0 the battle is lost and you try aga
 test('level 3: one credit per win buys cards in the card shop', () => {
   assert.equal(utopia.ownedCards(fresh()).length, 5, 'the starter cards');
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
-    [['leak', 2], ['community-kitchens', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['investigative-desk', 4]]);
+    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['investigative-desk', 4]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -1923,6 +1923,36 @@ test('level 3: one credit per win buys cards in the card shop', () => {
   const category = id => utopia.cardCategory(utopia.playerCard(id));
   assert.deepEqual(['antitrust', 'firewall', 'press-conference', 'protest-march', 'leak'].map(category), ['damage', 'block', 'heal', 'combo', 'combo'],
     'one colour scheme per kind of effect, combo for cards with more than one');
+});
+
+test('level 3: instant battle hits unless the opponent has the counter; then half of it strikes back', () => {
+  assert.equal(utopia.cardCategory(utopia.playerCard('dairy-farmer')), 'instant');
+  assert.equal(utopia.cardSummary(utopia.playerCard('dairy-farmer')), '10 instant damage');
+  const cow = utopiaContent.megacorpCards.find(card => card.id === 'like-a-cow');
+  assert.equal(utopia.cardCategory(cow), 'counter');
+  assert.equal(utopia.cardSummary(cow), 'counters “You fight like a dairy farmer”');
+  const armed = { ...fresh(), owned: ['dairy-farmer'], hand: ['dairy-farmer', 'antitrust'], credibility: 80 };
+  // The corporation has the comeback ready: half of the insult strikes back, the comeback goes to rest.
+  const countered = utopia.attack(picked(armed, 'dairy-farmer'), () => 0);
+  assert.equal(countered.enemy.power, 100, 'no damage');
+  assert.equal(countered.credibility, 80 - 5, 'half of 10 strikes back');
+  assert.equal(countered.enemy.cooldowns['like-a-cow'], 3);
+  assert.deepEqual([countered.log[0].recoil, countered.log[0].counteredBy], [5, 'like-a-cow']);
+  // While the comeback rests, the insult hits in full, and no block helps.
+  const resting = { ...armed, enemy: { ...armed.enemy, block: 50, cooldowns: { 'like-a-cow': 2 } } };
+  const hit = utopia.attack(picked(resting, 'dairy-farmer'), () => 0);
+  assert.equal(hit.enemy.power, 90, '10 damage, the block does not help');
+  assert.equal(hit.enemy.block, 50, 'and it is not used up');
+  assert.equal(hit.credibility, 80);
+  // Recoil can lose the battle.
+  assert.equal(utopia.attack(picked({ ...armed, credibility: 4 }, 'dairy-farmer'), () => 0).outcome, 'lost');
+  // Counter cards are passive: never played by the corporation, not playable from your hand.
+  for (let i = 0; i < 20; i++) {
+    const answer = utopia.enemyAttack({ ...fresh(), turn: 'enemy' }, () => i / 20);
+    assert.ok(!answer.log[0].cards.includes('like-a-cow'));
+  }
+  assert.ok(utopia.passiveCard(cow));
+  assert.ok(!utopia.passiveCard(utopia.playerCard('dairy-farmer')));
 });
 
 test('winning level 3 shows a summary of all three levels', () => {

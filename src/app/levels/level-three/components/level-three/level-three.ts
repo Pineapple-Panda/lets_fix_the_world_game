@@ -2,7 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  buyBlocker, cardCategory, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardSummary, passiveCard, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, megaCorpName } from '../../game/utopia-content';
 import type { Attack, UtopiaGame } from '../../models/utopia.model';
@@ -23,7 +23,7 @@ export class LevelThreeComponent {
 
   protected readonly rules = battleRules;
   /** Label of each colour scheme. */
-  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', combo: 'Combo' };
+  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', instant: 'Instant battle', counter: 'Counter', combo: 'Combo' };
   protected readonly megaCorpName = megaCorpName;
 
   protected readonly view = computed(() => {
@@ -54,7 +54,7 @@ export class LevelThreeComponent {
       block: state.block,
       yourTurn: playerTurn(state),
       hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
-        card, category: cardCategory(card), summary: cardSummary(card), selected: state.selected.includes(card.id)
+        card, category: cardCategory(card), summary: cardSummary(card), selected: state.selected.includes(card.id), passive: passiveCard(card)
       })),
       selectedCount: state.selected.length,
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
@@ -76,7 +76,8 @@ export class LevelThreeComponent {
     const parts = [
       entry.damage || entry.blocked ? `${entry.damage} damage${entry.blocked ? ` (${entry.blocked} blocked)` : ''}` : '',
       entry.healed ? `+${entry.healed} ${entry.by === 'player' ? 'credibility' : 'power'}` : '',
-      entry.shield ? `block ${entry.shield}%` : ''
+      entry.shield ? `block ${entry.shield}%` : '',
+      entry.recoil ? `countered by “${(entry.by === 'player' ? enemyCard(entry.corpId, entry.counteredBy ?? '') : playerCard(entry.counteredBy ?? ''))?.name ?? 'a counter'}”, ${entry.recoil} back` : ''
     ].filter(part => part);
     return { id: entry.id, mine: entry.by === 'player', by: corporation(entry.corpId)?.name ?? entry.corpId, cards: names.join(' + '), result: parts.join(' · ') || 'no effect' };
   }

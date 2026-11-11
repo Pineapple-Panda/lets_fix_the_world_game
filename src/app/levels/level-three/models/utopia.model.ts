@@ -71,6 +71,9 @@ export interface Attack {
   healed: number;
   /** Block the attacker built up for the next incoming attack, in percent. */
   shield: number;
+  /** Instant battle: damage that struck back at the attacker, and the counter card that did it. */
+  recoil?: number;
+  counteredBy?: string | null;
 }
 
 export interface UtopiaStats {
@@ -80,11 +83,17 @@ export interface UtopiaStats {
   attempts: number;
 }
 
-/** What a card does. Damage hits the opponent (minus its block); block and heal help the one who plays it. */
+/**
+ * What a card does. Damage hits the opponent (minus its block); block and heal help the one who plays it.
+ * Instant battle: `amount` hits the opponent (no block helps) unless it has the `counter` card available; then half
+ * of it strikes back at you. A counter card is passive: it is never played, it answers the instant card `of`.
+ */
 export type CardEffect =
   | { kind: 'damage'; amount: number }
   | { kind: 'block'; percent: number }
-  | { kind: 'heal'; amount: number };
+  | { kind: 'heal'; amount: number }
+  | { kind: 'instant'; amount: number; counter: string }
+  | { kind: 'counter'; of: string };
 
 /** The colour scheme of a card: what it does, or 'combo' for cards with more than one kind of effect. */
 export type CardCategory = CardEffect['kind'] | 'combo';

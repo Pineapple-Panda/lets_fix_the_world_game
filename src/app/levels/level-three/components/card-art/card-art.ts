@@ -75,6 +75,21 @@ import type { CardCategory } from '../../models/utopia.model';
           <path d="M50 8 V18 M45 13 H55" stroke-width="2.5" />
         }
 
+        @case ('dairy-farmer') {
+          <!-- two crossed swords and a sharp tongue -->
+          <path d="M12 12 L42 42 M52 12 L22 42" stroke-width="4" />
+          <path class="art-fill" d="M38 46 L46 38 L52 44 L44 52 Z M26 46 L18 38 L12 44 L20 52 Z" />
+          <path d="M8 8 L14 10 L10 14 Z M56 8 L50 10 L54 14 Z" stroke-width="2" />
+          <path d="M24 56 Q32 62 40 56" stroke-width="2.5" />
+        }
+        @case ('like-a-cow') {
+          <!-- a speech bubble with horns: the comeback -->
+          <path class="art-fill" d="M10 18 H54 V44 H30 L20 54 V44 H10 Z" />
+          <path d="M16 18 C10 10 14 6 20 8 M48 18 C54 10 50 6 44 8" />
+          <circle cx="24" cy="31" r="2.5" stroke-width="2" />
+          <circle cx="40" cy="31" r="2.5" stroke-width="2" />
+          <path d="M28 37 Q32 40 36 37" stroke-width="2" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />
@@ -157,6 +172,8 @@ import type { CardCategory } from '../../models/utopia.model';
             @case ('damage') { <path class="art-fill" d="M36 6 L14 36 H30 L26 58 L50 26 H34 Z" /> }
             @case ('block') { <path class="art-fill" d="M32 7 L53 15 V31 C53 45 43 54 32 58 C21 54 11 45 11 31 V15 Z" /> }
             @case ('heal') { <path class="art-fill" d="M32 54 C10 38 8 24 16 16 C22 10 30 12 32 18 C34 12 42 10 48 16 C56 24 54 38 32 54 Z" /> }
+            @case ('instant') { <path d="M12 12 L52 52 M52 12 L12 52" stroke-width="5" /> }
+            @case ('counter') { <path class="art-fill" d="M44 14 A20 20 0 1 0 52 34 M44 6 V16 H34" /> }
             @default { <path class="art-fill" d="M32 6 L39 24 L58 25 L43 37 L48 56 L32 45 L16 56 L21 37 L6 25 L25 24 Z" /> }
           }
         }

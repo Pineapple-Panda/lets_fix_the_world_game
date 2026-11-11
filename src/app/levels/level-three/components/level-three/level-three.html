@@ -85,7 +85,7 @@
         <div class="hand">
             @for (entry of v.hand; track entry.card.id) {
                 <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
-                        [disabled]="!v.yourTurn || (!entry.selected && v.selectedCount >= rules.maxCards)"
+                        [disabled]="!v.yourTurn || entry.passive || (!entry.selected && v.selectedCount >= rules.maxCards)"
                         (click)="cardToggled.emit(entry.card.id)">
                     <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
                     <app-card-art [id]="entry.card.id" [category]="entry.category" />

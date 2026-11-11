@@ -1947,6 +1947,8 @@ footer {
 [data-category="block"] { --cat: #5aa9ff; --cat-deep: #2a62c4; }
 [data-category="heal"] { --cat: #4cd38a; --cat-deep: #1d8f55; }
 [data-category="combo"] { --cat: #f5c451; --cat-deep: #9b59d9; }
+[data-category="instant"] { --cat: #d77bff; --cat-deep: #7b2fbe; }
+[data-category="counter"] { --cat: #ff9f43; --cat-deep: #c0611b; }
 
 @property --combo-angle {
     syntax: '<angle>';
