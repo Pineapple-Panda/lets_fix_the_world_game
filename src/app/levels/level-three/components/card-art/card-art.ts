@@ -146,6 +146,70 @@ import type { CardCategory } from '../../models/utopia.model';
           <circle cx="44" cy="24" r="2.5" stroke-width="2.5" />
           <path d="M40 14 L48 16" />
         }
+        @case ('whistleblower') {
+          <!-- a whistle with sound waves -->
+          <path class="art-fill" d="M8 30 H34 A12 12 0 1 1 22 42 H8 Z" />
+          <circle cx="34" cy="42" r="4" stroke-width="2.5" />
+          <path d="M42 18 L48 10 M50 24 L58 20 M36 14 L38 6" stroke-width="2.5" />
+        }
+        @case ('open-source') {
+          <!-- code brackets around a heart -->
+          <path d="M20 16 L8 32 L20 48 M44 16 L56 32 L44 48" stroke-width="4" />
+          <path class="art-fill" d="M32 44 C22 37 22 29 27 28 C30 27.5 32 30 32 31 C32 30 34 27.5 37 28 C42 29 42 37 32 44 Z" stroke-width="2.5" />
+        }
+        @case ('viral-petition') {
+          <!-- a clipboard full of signatures -->
+          <rect class="art-fill" x="12" y="10" width="40" height="48" rx="3" />
+          <rect x="24" y="6" width="16" height="8" rx="2" stroke-width="2.5" />
+          <path d="M18 24 C22 20 24 28 28 24 M18 34 C22 30 24 38 28 34 M18 44 C22 40 24 48 28 44" stroke-width="2" />
+          <path d="M34 24 H46 M34 34 H46 M34 44 H46" stroke-width="2" />
+        }
+        @case ('general-strike') {
+          <!-- a raised fist -->
+          <path class="art-fill" d="M20 30 V18 A4 4 0 0 1 28 18 V14 A4 4 0 0 1 36 14 V16 A4 4 0 0 1 44 18 V40 C44 50 38 54 32 54 H28 C22 54 18 48 18 42 V34 A4 4 0 0 1 20 30 Z" />
+          <path d="M28 18 V28 M36 16 V28 M20 30 C24 30 28 32 28 36" stroke-width="2.5" />
+          <path d="M24 60 H40" />
+        }
+        @case ('fact-check-marathon') {
+          <!-- a stopwatch with a check mark -->
+          <circle class="art-fill" cx="32" cy="36" r="20" />
+          <path d="M26 6 H38 M32 6 V16 M48 18 L52 14" />
+          <path d="M23 36 L30 43 L42 29" />
+        }
+        @case ('union-contract') {
+          <!-- a contract with a seal -->
+          <path class="art-fill" d="M12 6 H42 L52 16 V58 H12 Z" />
+          <path d="M42 6 V16 H52 M20 22 H40 M20 30 H44 M20 38 H32" stroke-width="2.5" />
+          <circle cx="42" cy="46" r="7" stroke-width="2.5" />
+          <path d="M38 52 L36 60 L42 57 L48 60 L46 52" stroke-width="2" />
+        }
+        @case ('tax-audit') {
+          <!-- a calculator with a percent sign -->
+          <rect class="art-fill" x="14" y="6" width="36" height="52" rx="4" />
+          <rect x="20" y="12" width="24" height="12" rx="2" stroke-width="2.5" />
+          <path d="M24 48 L40 32" stroke-width="2.5" />
+          <circle cx="25" cy="33" r="3" stroke-width="2.5" />
+          <circle cx="39" cy="47" r="3" stroke-width="2.5" />
+        }
+        @case ('banana-republic') {
+          <!-- a flag with a banana -->
+          <line x1="12" y1="6" x2="12" y2="60" />
+          <path class="art-fill" d="M12 8 H54 L46 20 L54 32 H12 Z" />
+          <path d="M22 14 C22 26 34 30 42 26 C35 26 28 22 27 13 Z" stroke-width="2" />
+        }
+        @case ('prime-lockdown') {
+          <!-- a padlock on a parcel -->
+          <path class="art-fill" d="M10 30 H54 V58 H10 Z" />
+          <path d="M20 30 V20 A12 12 0 0 1 44 20 V30" />
+          <circle cx="32" cy="42" r="4" stroke-width="2.5" />
+          <path d="M32 46 V52" stroke-width="2.5" />
+        }
+        @case ('algorithm-change') {
+          <!-- shuffle arrows -->
+          <path d="M6 18 H20 C34 18 30 46 44 46 H56 M50 40 L56 46 L50 52" />
+          <path d="M6 46 H20 C26 46 28 40 30 34 M36 24 C38 20 40 18 44 18 H56 M50 12 L56 18 L50 24" />
+          <circle class="art-fill" cx="32" cy="32" r="5" stroke-width="2" />
+        }
         @case ('propaganda') {
           <!-- a megaphone -->
           <path class="art-fill" d="M13 25 L41 13 V51 L13 39 Z" />

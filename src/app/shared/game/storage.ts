@@ -97,6 +97,11 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
   // Log entries from before they named their corporation belong to the current one.
   if (isObject(enemy) && Array.isArray(game.log)) for (const entry of game.log) if (isObject(entry) && entry.corpId === undefined) entry.corpId = enemy.corpId;
   const isIdList = (value: unknown) => Array.isArray(value) && value.every(id => typeof id === 'string');
+  // Saves from before blocks over several attacks, healing over time and locked cards.
+  if (game.blockAttacks === undefined) game.blockAttacks = typeof game.block === 'number' && game.block > 0 ? 1 : 0;
+  if (isObject(game.enemy) && game.enemy.blockAttacks === undefined) game.enemy.blockAttacks = typeof game.enemy.block === 'number' && game.enemy.block > 0 ? 1 : 0;
+  if (game.regen === undefined) game.regen = [];
+  if (game.locked === undefined) game.locked = [];
   // Saves from before counter cards were played: none waiting.
   if (game.counters === undefined) game.counters = [];
   if (isObject(game.enemy) && game.enemy.counters === undefined) game.enemy.counters = [];
@@ -107,6 +112,8 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !isCount(game.seconds) || !isCount(game.credibility) || !isCount(game.stage) || !isCount(game.battle) ||
     !isObject(enemy) || typeof enemy.corpId !== 'string' || !isCount(enemy.power) || !isCount(enemy.maxPower) ||
     !isPercent(enemy.block) || !isCountRecord(enemy.cooldowns) || !isIdList(enemy.counters) || !isIdList(game.counters) ||
+    !isCount(game.blockAttacks) || !isCount(enemy.blockAttacks) || !isIdList(game.locked) ||
+    !Array.isArray(game.regen) || !game.regen.every(entry => isObject(entry) && isCount(entry.amount) && isCount(entry.turns)) ||
     !isIdList(game.hand) || !isIdList(game.selected) || !isCountRecord(game.cooldowns) || !isPercent(game.block) ||
     (game.turn !== 'player' && game.turn !== 'enemy') || !Array.isArray(game.log) ||
     !game.log.every(entry => isObject(entry) && isCount(entry.id) && (entry.by === 'player' || entry.by === 'enemy') && typeof entry.corpId === 'string' && isIdList(entry.cards)) ||

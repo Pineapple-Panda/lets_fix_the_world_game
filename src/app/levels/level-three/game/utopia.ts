@@ -66,18 +66,34 @@ export function enemyStrength(stage: Stage, battle: number): number {
   return stage.damage + stage.damageStep * battle;
 }
 
+/** The colour scheme each effect belongs to. Removing a block, locking and shuffling hurt (damage); delaying the
+ * opponent's cards protects (block); healing over time heals. What a card costs you does not change its colour. */
+const effectCategory: Record<CardEffect['kind'], CardCategory | null> = {
+  damage: 'damage', strip: 'damage', lock: 'damage', shuffle: 'damage',
+  block: 'block', delay: 'block', heal: 'heal', regen: 'heal', instant: 'instant', counter: 'counter', selfDamage: null
+};
+
 /** A card's colour scheme: damage, block, heal, instant battle or counter, or combo when it does more than one of them. */
 export function cardCategory(card: BattleCard): CardCategory {
-  const kinds = [...new Set(card.effects.map(effect => effect.kind))];
-  return kinds.length === 1 ? kinds[0]! : 'combo';
+  const kinds = [...new Set(card.effects.map(effect => effectCategory[effect.kind]).filter((kind): kind is CardCategory => !!kind))];
+  return kinds.length === 1 ? kinds[0]! : kinds.length ? 'combo' : 'damage';
 }
 
-/** What a card does in a few words, e.g. "12 damage · block 50%". `factor` scales damage and healing (corporations). */
-export function cardSummary(card: BattleCard, factor = 1): string {
+/**
+ * What a card does in a few words, e.g. "12 damage · block 50%". `factor` scales damage and healing (corporations);
+ * `wins` adds the per-win bonus of your cards.
+ */
+export function cardSummary(card: BattleCard, factor = 1, wins = 0): string {
   return card.effects.map(effect => {
     switch (effect.kind) {
-      case 'damage': return `${Math.round(effect.amount * factor)} damage`;
-      case 'block': return `block ${effect.percent}%`;
+      case 'damage': return `${Math.round((effect.amount + (effect.perWin ?? 0) * wins) * factor)} damage${effect.perWin ? ` (+${effect.perWin} per win)` : ''}`;
+      case 'block': return `block ${effect.percent}%${(effect.attacks ?? 1) > 1 ? ` × ${effect.attacks} attacks` : ''}`;
+      case 'strip': return 'removes their block';
+      case 'selfDamage': return `costs you ${effect.amount}`;
+      case 'regen': return `+${Math.round(effect.amount * factor)} heal × ${effect.turns} turns`;
+      case 'delay': return `their strongest card rests +${effect.turns}`;
+      case 'lock': return `locks ${effect.count} of your ${effect.count === 1 ? 'cards' : 'cards'}`;
+      case 'shuffle': return 'shuffles your hand';
       case 'heal': return `+${Math.round(effect.amount * factor)} heal`;
       case 'instant': return `${Math.round(effect.amount * factor)} instant damage`;
       case 'counter': return `counters “${playerCard(effect.of)?.name ?? enemyCardById(effect.of)?.name ?? effect.of}”`;
@@ -127,7 +143,7 @@ function instantBattle(played: BattleCard[], factor: number, armed: BattleCard[]
 function newOpponent(stageIndex: number, battle: number): Opponent {
   const stage = campaign[stageIndex]!;
   const maxPower = stage.power + stage.powerStep * battle;
-  return { corpId: stage.corpId, power: maxPower, maxPower, block: 0, counters: [], cooldowns: {} };
+  return { corpId: stage.corpId, power: maxPower, maxPower, block: 0, blockAttacks: 0, counters: [], cooldowns: {} };
 }
 
 /** Fills the hand with random cards you own that are neither in the hand nor resting. */
@@ -143,7 +159,8 @@ function drawHand(state: UtopiaGame, random: () => number): string[] {
 /** A battle against the corporation of the given station: fresh opponent, fresh hand, no blocks or cooldowns. */
 function startBattle(state: UtopiaGame, stage: number, battle: number, random: () => number): UtopiaGame {
   const next: UtopiaGame = {
-    ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, counters: [], turn: 'player'
+    ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, blockAttacks: 0,
+    counters: [], regen: [], locked: [], turn: 'player'
   };
   return { ...next, hand: drawHand(next, random) };
 }
@@ -160,7 +177,10 @@ export function newUtopia(history: LevelSummary[] = [], random: () => number = M
     selected: [],
     cooldowns: {},
     block: 0,
+    blockAttacks: 0,
     counters: [],
+    regen: [],
+    locked: [],
     turn: 'player',
     log: [],
     wins: 0,
@@ -184,22 +204,55 @@ export function playerTurn(state: UtopiaGame): boolean {
 
 /** Picks a card of your hand for the next attack, or puts it back. At most `maxCards` at once. */
 export function toggleCard(state: UtopiaGame, id: string): UtopiaGame | null {
-  if (!playerTurn(state) || !state.hand.includes(id)) return null;
+  if (!playerTurn(state) || !state.hand.includes(id) || state.locked.includes(id)) return null;
   if (state.selected.includes(id)) return { ...state, selected: state.selected.filter(entry => entry !== id) };
   if (state.selected.length >= battleRules.maxCards) return null;
   return { ...state, selected: [...state.selected, id] };
 }
 
-interface Resolution { damage: number; blocked: number; healed: number; shield: number }
+interface Resolution {
+  damage: number; blocked: number; healed: number; shield: number;
+  /** For how many attacks the new block lasts, what playing the cards cost, and whether they removed the block. */
+  shieldAttacks: number; selfDamage: number; strip: boolean;
+}
 
-/** Adds up a set of cards: damage (scaled, minus the defender's block), healing (scaled) and block. */
-function resolve(effects: CardEffect[], factor: number, defenderBlock: number): Resolution {
-  const value = (effect: CardEffect) => effect.kind === 'block' ? effect.percent : effect.kind === 'counter' ? 0 : effect.amount;
-  // Instant battle cards are settled on their own (see instantBattle).
-  const sum = (kind: 'damage' | 'block' | 'heal') => effects.reduce((total, effect) => total + (effect.kind === kind ? value(effect) : 0), 0);
-  const raw = Math.round(sum('damage') * factor);
-  const blocked = Math.round(raw * defenderBlock / 100);
-  return { damage: raw - blocked, blocked, healed: Math.round(sum('heal') * factor), shield: sum('block') };
+/**
+ * Adds up a set of cards: damage (scaled, plus the per-win bonus, minus the defender's block unless a card removes
+ * it), healing (scaled), block and what the cards cost. Instant battle cards are settled on their own (instantBattle).
+ */
+function resolve(effects: CardEffect[], factor: number, defenderBlock: number, wins = 0): Resolution {
+  let damage = 0, heal = 0, shield = 0, shieldAttacks = 0, selfDamage = 0, strip = false;
+  for (const effect of effects) {
+    if (effect.kind === 'damage') damage += effect.amount + (effect.perWin ?? 0) * wins;
+    if (effect.kind === 'heal') heal += effect.amount;
+    if (effect.kind === 'block') { shield += effect.percent; shieldAttacks = Math.max(shieldAttacks, effect.attacks ?? 1); }
+    if (effect.kind === 'selfDamage') selfDamage += effect.amount;
+    if (effect.kind === 'strip') strip = true;
+  }
+  const raw = Math.round(damage * factor);
+  const blocked = strip ? 0 : Math.round(raw * defenderBlock / 100);
+  return { damage: raw - blocked, blocked, healed: Math.round(heal * factor), shield, shieldAttacks, selfDamage, strip };
+}
+
+/** A block after an attack: one attack less if the attack did damage; gone when it has none left. */
+function afterHit(block: number, attacks: number, hit: boolean): { block: number; blockAttacks: number } {
+  if (!hit || block <= 0) return { block, blockAttacks: attacks };
+  return attacks > 1 ? { block, blockAttacks: attacks - 1 } : { block: 0, blockAttacks: 0 };
+}
+
+/** A block with new blockers on top: the percents add up (to `maxBlock`), it lasts as long as the longest of them. */
+function addBlock(current: { block: number; blockAttacks: number }, shield: number, attacks: number): { block: number; blockAttacks: number } {
+  if (shield <= 0) return current;
+  return { block: Math.min(battleRules.maxBlock, current.block + shield), blockAttacks: Math.max(current.blockAttacks, attacks) };
+}
+
+/** Delay: the corporation's strongest resting card (most damage) rests longer; if none rests, its strongest card starts resting. */
+function delayCards(corpId: string, cooldowns: Record<string, number>, turns: number): { cooldowns: Record<string, number>; card?: BattleCard } {
+  const strength = (card: BattleCard) => card.effects.reduce((total, effect) =>
+    total + (effect.kind === 'damage' || effect.kind === 'instant' ? effect.amount : 0), 0);
+  const deck = [...enemyDeck(corpId)].sort((a, b) => strength(b) - strength(a));
+  const card = deck.find(entry => (cooldowns[entry.id] ?? 0) > 0) ?? deck[0];
+  return card ? { cooldowns: { ...cooldowns, [card.id]: (cooldowns[card.id] ?? 0) + turns }, card } : { cooldowns };
 }
 
 /** Cooldowns after a turn: all resting cards rest one turn less, the cards just played start resting. */
@@ -219,35 +272,54 @@ function logAttack(state: UtopiaGame, attack: Omit<Attack, 'id'>): Attack[] {
 export function attack(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
   if (!playerTurn(state) || !state.selected.length) return null;
   const played = state.selected.map(playerCard).filter((card): card is PlayerCard => !!card);
-  const result = resolve(played.flatMap(card => card.effects), 1, state.enemy.block);
+  const effects = played.flatMap(card => card.effects);
+  const result = resolve(effects, 1, state.enemy.block, state.wins);
   const armed = state.enemy.counters.map(id => enemyCard(state.enemy.corpId, id)).filter((card): card is BattleCard => !!card);
   const instant = instantBattle(played, 1, armed);
   const damage = result.damage + instant.dealt;
   const power = Math.max(0, state.enemy.power - damage);
-  const credibility = Math.max(0, Math.min(battleRules.maxCredibility, state.credibility + result.healed) - instant.recoil);
+  const credibility = Math.max(0, Math.min(battleRules.maxCredibility, state.credibility + result.healed) - instant.recoil - result.selfDamage);
+  const notes: string[] = [];
+  if (result.strip && state.enemy.block) notes.push('removed their block');
+  if (result.selfDamage) notes.push(`cost you ${result.selfDamage}`);
+  // Delay: its strongest card rests longer.
+  let enemyCooldowns = state.enemy.cooldowns;
+  for (const effect of effects) {
+    if (effect.kind !== 'delay') continue;
+    const delayed = delayCards(state.enemy.corpId, enemyCooldowns, effect.turns);
+    enemyCooldowns = delayed.cooldowns;
+    if (delayed.card) notes.push(`“${delayed.card.name}” rests ${effect.turns} longer`);
+  }
+  // Healing over time starts now and heals after each of its next attacks.
+  const regen = [...state.regen, ...effects.flatMap(effect => effect.kind === 'regen' ? [{ amount: effect.amount, turns: effect.turns }] : [])];
+  const hit = result.damage + result.blocked > 0;
   const next: UtopiaGame = {
     ...state,
     credibility,
-    // A blocker is used up by the next attack that does damage.
+    // A blocker counts down with every attack that does damage (removed at once by a strip card).
     // Its counters answered this attack (or not): they are gone. Yours now wait for its next attack.
     enemy: {
       ...state.enemy, power,
-      block: result.damage + result.blocked > 0 ? 0 : state.enemy.block,
+      ...(result.strip ? { block: 0, blockAttacks: 0 } : afterHit(state.enemy.block, state.enemy.blockAttacks, hit)),
+      cooldowns: enemyCooldowns,
       counters: []
     },
-    block: Math.min(battleRules.maxBlock, state.block + result.shield),
+    ...addBlock({ block: state.block, blockAttacks: state.blockAttacks }, result.shield, result.shieldAttacks),
     counters: countersOf(played),
+    regen,
+    locked: [],
     cooldowns: restCards(state.cooldowns, played),
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],
     turn: 'enemy',
     log: logAttack(state, {
-      by: 'player', corpId: state.enemy.corpId, cards: played.map(card => card.id), ...result, damage,
-      recoil: instant.recoil, counteredBy: instant.counteredBy
+      by: 'player', corpId: state.enemy.corpId, cards: played.map(card => card.id),
+      damage, blocked: result.blocked, healed: result.healed, shield: result.shield,
+      recoil: instant.recoil, counteredBy: instant.counteredBy, notes
     }),
     stats: {
       ...state.stats, cardsPlayed: state.stats.cardsPlayed + played.length,
-      damageDealt: state.stats.damageDealt + damage, damageTaken: state.stats.damageTaken + instant.recoil
+      damageDealt: state.stats.damageDealt + damage, damageTaken: state.stats.damageTaken + instant.recoil + result.selfDamage
     }
   };
   next.hand = drawHand(next, random);
@@ -302,19 +374,28 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
   const played: BattleCard[] = [];
   while (played.length < count) played.push(pool.splice(Math.min(pool.length - 1, Math.floor(random() * pool.length)), 1)[0]!);
   const factor = enemyStrength(stage, state.battle);
-  const result = resolve(played.flatMap(card => card.effects), factor, state.block);
+  const effects = played.flatMap(card => card.effects);
+  const result = resolve(effects, factor, state.block);
   // The counter cards you played last turn answer.
   const instant = instantBattle(played, factor, state.counters.map(playerCard).filter((card): card is PlayerCard => !!card));
   const damage = result.damage + instant.dealt;
-  const credibility = Math.max(0, state.credibility - damage);
-  const power = Math.max(0, Math.min(state.enemy.maxPower, state.enemy.power + result.healed) - instant.recoil);
+  // Your healing over time works after each of its attacks.
+  const healing = state.regen.reduce((total, entry) => total + entry.amount, 0);
+  const afterDamage = Math.max(0, state.credibility - damage);
+  const credibility = afterDamage > 0 ? Math.min(battleRules.maxCredibility, afterDamage + healing) : 0;
+  const regen = state.regen.map(entry => ({ ...entry, turns: entry.turns - 1 })).filter(entry => entry.turns > 0);
+  const power = Math.max(0, Math.min(state.enemy.maxPower, state.enemy.power + result.healed) - instant.recoil - result.selfDamage);
+  const notes: string[] = [];
+  if (result.strip && state.block) notes.push('removed your block');
+  if (healing && afterDamage > 0) notes.push(`you heal ${healing}`);
   // An instant card that hits teaches you its answer.
   const learned = instant.hits.map(effect => effect.kind === 'instant' ? effect.counter : '')
     .filter(id => playerCard(id)?.learned && !state.owned.includes(id));
   const next: UtopiaGame = {
     ...state,
     credibility,
-    block: result.damage + result.blocked > 0 ? 0 : state.block,
+    ...(result.strip ? { block: 0, blockAttacks: 0 } : afterHit(state.block, state.blockAttacks, result.damage + result.blocked > 0)),
+    regen,
     counters: [],
     owned: learned.length ? [...state.owned, ...learned] : state.owned,
     credits: state.credits + instant.usedCounters.length * battleRules.credits.counter,
@@ -322,17 +403,31 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
       ...state.enemy,
       power,
       counters: countersOf(played),
-      block: Math.min(battleRules.maxBlock, state.enemy.block + result.shield),
+      ...addBlock({ block: state.enemy.block, blockAttacks: state.enemy.blockAttacks }, result.shield, result.shieldAttacks),
       cooldowns: restCards(state.enemy.cooldowns, played)
     },
     turn: 'player',
     log: logAttack(state, {
-      by: 'enemy', corpId: state.enemy.corpId, cards: played.map(card => card.id), ...result, damage,
-      recoil: instant.recoil, counteredBy: instant.counteredBy, learned
+      by: 'enemy', corpId: state.enemy.corpId, cards: played.map(card => card.id),
+      damage, blocked: result.blocked, healed: result.healed, shield: result.shield,
+      recoil: instant.recoil, counteredBy: instant.counteredBy, learned, notes
     }),
     stats: { ...state.stats, damageTaken: state.stats.damageTaken + damage, damageDealt: state.stats.damageDealt + instant.recoil }
   };
   if (credibility <= 0) return lose(next);
+  // Shuffle: your hand is drawn afresh; lock: random cards of your hand cannot be picked next turn.
+  if (effects.some(effect => effect.kind === 'shuffle')) {
+    next.hand = drawHand({ ...next, hand: [] }, random);
+    notes.push('shuffled your hand');
+  }
+  const lockCount = effects.reduce((total, effect) => total + (effect.kind === 'lock' ? effect.count : 0), 0);
+  if (lockCount) {
+    const pool = [...next.hand];
+    const locked: string[] = [];
+    while (locked.length < lockCount && pool.length) locked.push(pool.splice(Math.min(pool.length - 1, Math.floor(random() * pool.length)), 1)[0]!);
+    next.locked = locked;
+    if (locked.length) notes.push(`locked ${locked.map(id => `“${playerCard(id)?.name ?? id}”`).join(', ')}`);
+  }
   return power <= 0 ? winBattle(next, random) : next;
 }
 
@@ -345,16 +440,19 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
 
 // ---------- The end ----------
 
-/** Credibility ran out: try again with full credibility, from the current station (or from the start). Credits and cards stay. */
+/**
+ * Game over: level 3 starts again from scratch. The campaign, wins, credits, bought and learned cards are gone; only
+ * the time played, the losses and the counters of the final summary carry on.
+ */
 export function retry(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
   if (state.outcome !== 'lost') return null;
-  const stage = battleRules.retryFrom === 'campaign' ? 0 : state.stage;
-  return startBattle({
-    ...state,
-    credibility: battleRules.maxCredibility,
-    outcome: null,
+  const fresh = newUtopia(state.history, random);
+  return {
+    ...fresh,
+    seconds: state.seconds,
+    losses: state.losses,
     stats: { ...state.stats, attempts: state.stats.attempts + 1 }
-  }, stage, 0, random);
+  };
 }
 
 /** Closes the "utopia achieved" dialog. */

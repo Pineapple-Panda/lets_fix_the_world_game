@@ -1726,6 +1726,23 @@ footer {
     color: #ff9f43;
 }
 
+.regen {
+    color: var(--green);
+}
+
+/* A card the corporation locked for this turn. */
+.play-card.locked {
+    filter: grayscale(.8);
+}
+
+.locked-tag {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    color: var(--ink);
+}
+
 .corp-power {
     background: var(--red);
 }

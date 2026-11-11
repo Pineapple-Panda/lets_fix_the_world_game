@@ -24,12 +24,7 @@ export const battleRules = {
   /** Blocks stack up to this many percent. */
   maxBlock: 80,
   /** Attacks kept in the log. */
-  logLength: 6,
-  /**
-   * When credibility runs out: start the current station again ('stage') or the whole campaign ('campaign'), with
-   * full credibility. Wins, losses and unlocked cards stay.
-   */
-  retryFrom: 'stage' as 'stage' | 'campaign'
+  logLength: 6
 };
 
 /**
@@ -70,6 +65,8 @@ export const corporations: Corporation[] = [
         effects: [{ kind: 'damage', amount: 12 }], cooldown: 2 },
       { id: 'banana-influencers', name: 'Influencer Campaign', description: 'Influencers call your utopia “a banana-free dictatorship”.',
         effects: [{ kind: 'damage', amount: 6 }], cooldown: 0 },
+      { id: 'banana-republic', name: 'Banana Republic', description: 'Buys a government. The receipt is in bananas.',
+        effects: [{ kind: 'heal', amount: 20 }], cooldown: 4 },
       { id: 'plan-is-bananas', name: 'Your plan is bananas', description: 'And we would know. We own all of them.',
         effects: [{ kind: 'instant', amount: 8, counter: 'not-monoculture' }], cooldown: 2 }
     ]
@@ -86,6 +83,8 @@ export const corporations: Corporation[] = [
         effects: [{ kind: 'damage', amount: 7 }], cooldown: 0 },
       { id: 'warehouse-fortress', name: 'Warehouse Fortress', description: 'Hides behind a billion square feet of concrete.',
         effects: [{ kind: 'block', percent: 50 }], cooldown: 3 },
+      { id: 'prime-lockdown', name: 'Prime Lockdown', description: 'One of your plans is stuck in a warehouse. Delivery: tomorrow, maybe.',
+        effects: [{ kind: 'lock', count: 1 }], cooldown: 3 },
       { id: 'also-bought-robots', name: 'Customers who liked you also bought our robots', description: 'A recommendation you cannot refuse.',
         effects: [{ kind: 'instant', amount: 10, counter: 'return-robot' }], cooldown: 2 }
     ]
@@ -102,6 +101,8 @@ export const corporations: Corporation[] = [
         effects: [{ kind: 'damage', amount: 20 }], cooldown: 3 },
       { id: 'rocket-pr', name: 'Rocket Launch PR', description: 'A rocket launch nobody can look away from.',
         effects: [{ kind: 'heal', amount: 15 }], cooldown: 3 },
+      { id: 'algorithm-change', name: 'Algorithm Change', description: 'Your feed is different now. So is your hand.',
+        effects: [{ kind: 'shuffle' }], cooldown: 3 },
       { id: 'bigger-rocket', name: 'My rocket is bigger than your utopia', description: 'Posted at 3 a.m., in all caps.',
         effects: [{ kind: 'instant', amount: 12, counter: 'compensating' }], cooldown: 2 }
     ]
@@ -137,6 +138,20 @@ export const playerCards: PlayerCard[] = [
     effects: [{ kind: 'instant', amount: 10, counter: 'like-a-cow' }], cooldown: 1, price: 2 },
   { id: 'leather-jackets', name: 'I sell those fine leather jackets', description: 'A sales pitch so smooth it hurts. Unless they hate snakes.',
     effects: [{ kind: 'instant', amount: 10, counter: 'i-hate-snakes' }], cooldown: 1, price: 2 },
+  { id: 'whistleblower', name: 'Whistleblower Hotline', description: 'Somebody inside talks. Their defences crumble.',
+    effects: [{ kind: 'strip' }, { kind: 'damage', amount: 6 }], cooldown: 2, price: 2 },
+  { id: 'open-source', name: 'Open Source Release', description: 'You give the code away. Everybody wins, except them.',
+    effects: [{ kind: 'damage', amount: 5 }, { kind: 'heal', amount: 5 }], cooldown: 1, price: 2 },
+  { id: 'viral-petition', name: 'Viral Petition', description: 'Every win brings more signatures.',
+    effects: [{ kind: 'damage', amount: 4, perWin: 1 }], cooldown: 2, price: 3 },
+  { id: 'general-strike', name: 'General Strike', description: 'Everything stops. It hurts them a lot. It hurts you a bit.',
+    effects: [{ kind: 'damage', amount: 25 }, { kind: 'selfDamage', amount: 10 }], cooldown: 3, price: 3 },
+  { id: 'fact-check-marathon', name: 'Fact Check Marathon', description: 'A team that checks everything they say, for days.',
+    effects: [{ kind: 'block', percent: 30, attacks: 2 }], cooldown: 3, price: 2 },
+  { id: 'union-contract', name: 'Union Contract', description: 'Fair pay, every week. Things get better slowly.',
+    effects: [{ kind: 'regen', amount: 4, turns: 3 }], cooldown: 4, price: 3 },
+  { id: 'tax-audit', name: 'Tax Audit', description: 'Their best move is stuck in paperwork.',
+    effects: [{ kind: 'delay', turns: 2 }], cooldown: 3, price: 2 },
   // Learned: the answers to the corporations' instant cards.
   { id: 'not-monoculture', name: 'At least it’s not a monoculture', description: 'Learned the hard way from Bananas Inc.',
     effects: [{ kind: 'counter', of: 'plan-is-bananas' }], cooldown: 2, price: 0, learned: true },

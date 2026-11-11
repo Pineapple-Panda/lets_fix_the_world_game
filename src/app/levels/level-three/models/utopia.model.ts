@@ -21,10 +21,15 @@ export interface UtopiaGame {
   selected: string[];
   /** Your turns until each card can be drawn again. */
   cooldowns: Record<string, number>;
-  /** Percent of the next enemy attack your blockers absorb. */
+  /** Percent of the corporation's attacks your blockers absorb, and for how many more of its attacks. */
   block: number;
+  blockAttacks: number;
   /** Counter cards you played last turn: they answer the corporation's next attack. */
   counters: string[];
+  /** Healing over time: credibility you get back after each of the corporation's attacks, for `turns` more attacks. */
+  regen: { amount: number; turns: number }[];
+  /** Cards of your hand the corporation locked: they cannot be picked this turn. */
+  locked: string[];
   /** Whose move it is. The corporation moves one second after you. */
   turn: 'player' | 'enemy';
   /** The latest attacks, newest first. */
@@ -53,8 +58,9 @@ export interface Opponent {
   corpId: string;
   power: number;
   maxPower: number;
-  /** Percent of your next attack its blockers absorb. */
+  /** Percent of your attacks its blockers absorb, and for how many more of your attacks. */
   block: number;
+  blockAttacks: number;
   /** Counter cards it played last turn: they answer your next attack. */
   counters: string[];
   /** Its turns until each of its cards can be played again. */
@@ -88,6 +94,8 @@ export interface Attack {
   counteredBy?: string | null;
   /** Counter cards you learned because this attack's instant cards hit you. */
   learned?: string[];
+  /** Anything else that happened, in a few words (a block removed, a card locked, …). */
+  notes?: string[];
 }
 
 export interface UtopiaStats {
@@ -104,14 +112,28 @@ export interface UtopiaStats {
  * block) and answers the instant card `of`.
  */
 export type CardEffect =
-  | { kind: 'damage'; amount: number }
-  | { kind: 'block'; percent: number }
+  /** `perWin`: more damage for every battle you have won (your cards). */
+  | { kind: 'damage'; amount: number; perWin?: number }
+  /** `attacks`: the block lasts for this many of the opponent's attacks (default 1). */
+  | { kind: 'block'; percent: number; attacks?: number }
   | { kind: 'heal'; amount: number }
+  /** Removes the opponent's block before the damage. */
+  | { kind: 'strip' }
+  /** Costs the one who plays it. */
+  | { kind: 'selfDamage'; amount: number }
+  /** Heals `amount` after each of the opponent's next `turns` attacks (your cards). */
+  | { kind: 'regen'; amount: number; turns: number }
+  /** The opponent's strongest resting card (or strongest card) rests `turns` longer (your cards). */
+  | { kind: 'delay'; turns: number }
+  /** Locks `count` random cards of your hand for your next turn (the corporations' cards). */
+  | { kind: 'lock'; count: number }
+  /** Draws your hand afresh (the corporations' cards). */
+  | { kind: 'shuffle' }
   | { kind: 'instant'; amount: number; counter: string }
   | { kind: 'counter'; of: string };
 
 /** The colour scheme of a card: what it does, or 'combo' for cards with more than one kind of effect. */
-export type CardCategory = CardEffect['kind'] | 'combo';
+export type CardCategory = 'damage' | 'block' | 'heal' | 'instant' | 'counter' | 'combo';
 
 /** A card in your deck or a corporation's deck. */
 export interface BattleCard extends Described {

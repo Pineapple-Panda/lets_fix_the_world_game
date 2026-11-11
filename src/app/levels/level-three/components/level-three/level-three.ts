@@ -55,6 +55,7 @@ export class LevelThreeComponent {
         maxPower: state.enemy.maxPower,
         percent: state.enemy.power / state.enemy.maxPower * 100,
         block: state.enemy.block,
+        blockAttacks: state.enemy.blockAttacks,
         // Counter cards it played last turn, waiting for your next attack.
         counters: state.enemy.counters.map(id => enemyCard(state.enemy.corpId, id)?.name ?? id),
         // Its cards, with the turns they still rest.
@@ -66,10 +67,14 @@ export class LevelThreeComponent {
       credibility: Math.round(state.credibility),
       credibilityPercent: state.credibility / battleRules.maxCredibility * 100,
       block: state.block,
+      blockAttacks: state.blockAttacks,
+      // Healing over time: per attack, and for how many more of its attacks.
+      regen: state.regen.length ? { amount: state.regen.reduce((total, entry) => total + entry.amount, 0), turns: Math.max(...state.regen.map(entry => entry.turns)) } : null,
       counters: state.counters.map(id => playerCard(id)?.name ?? id),
       yourTurn: playerTurn(state),
       hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
-        card, category: cardCategory(card), summary: cardSummary(card), selected: state.selected.includes(card.id)
+        card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), selected: state.selected.includes(card.id),
+        locked: state.locked.includes(card.id)
       })),
       selectedCount: state.selected.length,
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
@@ -87,7 +92,7 @@ export class LevelThreeComponent {
           hint: source ? `Get hit by “${source.card!.name}” (${source.corp.name}) to learn it.` : 'Learned from a corporation.'
         };
       }),
-      shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
+      shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
       // Something in the shop you can afford: the shop button shows a dot.
       affordable: shopCards().some(card => !buyBlocker(state, card.id)),
       log: state.log.map(entry => this.describe(entry))
@@ -101,6 +106,7 @@ export class LevelThreeComponent {
       entry.damage || entry.blocked ? `${entry.damage} damage${entry.blocked ? ` (${entry.blocked} blocked)` : ''}` : '',
       entry.healed ? `+${entry.healed} ${entry.by === 'player' ? 'credibility' : 'power'}` : '',
       entry.shield ? `block ${entry.shield}%` : '',
+      ...(entry.notes ?? []),
       entry.learned?.length ? `you learned ${entry.learned.map(id => `“${playerCard(id)?.name ?? id}”`).join(', ')}` : '',
       entry.recoil ? `countered by “${(entry.by === 'player' ? enemyCard(entry.corpId, entry.counteredBy ?? '') : playerCard(entry.counteredBy ?? ''))?.name ?? 'a counter'}”, ${entry.recoil} back` : ''
     ].filter(part => part);

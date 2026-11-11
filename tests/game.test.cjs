@@ -1884,8 +1884,8 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   assert.equal(utopia.dismissOutcome(victory).outcomeSeen, true);
 });
 
-test('level 3: credibility carries over; at 0 the battle is lost and you try again', () => {
-  const weak = { ...fresh(), stage: 1, battle: 2, credibility: 3, wins: 4, credits: 2, owned: ['leak'], turn: 'enemy' };
+test('level 3: credibility carries over; at 0 the battle is lost and level 3 starts from scratch', () => {
+  const weak = { ...fresh(), stage: 1, battle: 2, credibility: 3, wins: 4, credits: 2, owned: ['leak', 'not-monoculture'], seconds: 300, turn: 'enemy' };
   const lost = utopia.tickUtopia(weak, () => 0);
   assert.equal(lost.credibility, 0);
   assert.equal(lost.outcome, 'lost');
@@ -1893,16 +1893,18 @@ test('level 3: credibility carries over; at 0 the battle is lost and you try aga
   assert.equal(utopia.tickUtopia(lost), lost);
   assert.equal(utopia.retry(fresh()), null, 'only after a loss');
   const again = utopia.retry(lost, () => 0);
-  assert.deepEqual([again.stage, again.battle, again.credibility, again.outcome, again.wins, again.losses], [1, 0, 100, null, 4, 1],
-    'the current corporation from its first battle, full credibility, wins and losses kept');
-  assert.equal(again.stats.attempts, 2);
-  assert.deepEqual([again.credits, again.owned], [2, ['leak']], 'credits and bought cards stay');
+  assert.deepEqual([again.stage, again.battle, again.enemy.corpId, again.credibility, again.outcome, again.wins], [0, 0, 'bananas', 100, null, 0],
+    'the campaign starts again with full credibility and no wins');
+  assert.deepEqual([again.credits, again.owned], [0, []], 'credits, bought and learned cards are gone');
+  assert.deepEqual([again.losses, again.stats.attempts, again.seconds], [1, 2, lost.seconds], 'losses, attempts and time count on for the summary');
 });
 
 test('level 3: one credit per win buys cards in the card shop', () => {
   assert.equal(utopia.ownedCards(fresh()).length, 5, 'the starter cards');
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
-    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['investigative-desk', 4]]);
+    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['whistleblower', 2], ['open-source', 2],
+      ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['viral-petition', 3], ['general-strike', 3],
+      ['union-contract', 3], ['investigative-desk', 4]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -1993,6 +1995,60 @@ test('level 3: the corporations\' instant cards teach you their counter; counter
   assert.equal(countered.credits, 1, 'a credit for the counter');
   assert.deepEqual(countered.log[0].learned, [], 'nothing new to learn');
   assert.deepEqual(utopia.battleReward(80, true), { credits: 4, reasons: ['win', 'credibility above 50', 'corporation beaten'] });
+});
+
+test('level 3: new cards remove blocks, cost you, grow with wins, block twice, heal over time and delay', () => {
+  const own = (...ids) => ({ ...fresh(), owned: ids, hand: ids, credibility: 50 });
+  // Whistleblower Hotline: the block is gone before the damage.
+  const walled = { ...own('whistleblower'), enemy: { ...fresh().enemy, block: 80, blockAttacks: 2 } };
+  const leaked = utopia.attack(picked(walled, 'whistleblower'), () => 0);
+  assert.deepEqual([leaked.enemy.power, leaked.enemy.block, leaked.enemy.blockAttacks], [94, 0, 0]);
+  assert.ok(leaked.log[0].notes.includes('removed their block'));
+  // Open Source Release: damage and healing (combo).
+  const opened = utopia.attack(picked(own('open-source'), 'open-source'), () => 0);
+  assert.deepEqual([opened.enemy.power, opened.credibility], [95, 55]);
+  assert.equal(utopia.cardCategory(utopia.playerCard('open-source')), 'combo');
+  // Viral Petition: +1 damage per win.
+  assert.equal(utopia.attack(picked({ ...own('viral-petition'), wins: 6 }, 'viral-petition'), () => 0).enemy.power, 100 - 10);
+  assert.equal(utopia.cardSummary(utopia.playerCard('viral-petition'), 1, 6), '10 damage (+1 per win)');
+  // General Strike: 25 damage, 10 credibility, still a damage card.
+  const strike = utopia.attack(picked(own('general-strike'), 'general-strike'), () => 0);
+  assert.deepEqual([strike.enemy.power, strike.credibility], [75, 40]);
+  assert.equal(utopia.cardCategory(utopia.playerCard('general-strike')), 'damage');
+  // Fact Check Marathon: 30% for two of its attacks.
+  let marathon = utopia.attack(picked(own('fact-check-marathon'), 'fact-check-marathon'), () => 0);
+  assert.deepEqual([marathon.block, marathon.blockAttacks], [30, 2]);
+  marathon = utopia.tickUtopia(marathon, () => 0);
+  assert.deepEqual([marathon.block, marathon.blockAttacks], [30, 1], 'still there after the first attack');
+  assert.equal(marathon.credibility, 50 - Math.round(12 * 0.7), 'Banana Blockade, 30% blocked');
+  // Union Contract: +4 after each of its next three attacks.
+  let union = utopia.attack(picked({ ...own('union-contract'), credibility: 90 }, 'union-contract'), () => 0);
+  assert.deepEqual(union.regen, [{ amount: 4, turns: 3 }]);
+  union = utopia.tickUtopia(union, () => 0);
+  assert.equal(union.credibility, 90 - 12 + 4);
+  assert.deepEqual(union.regen, [{ amount: 4, turns: 2 }]);
+  // Tax Audit: its strongest card rests two turns longer (here: none rests, so its strongest starts resting).
+  const audited = utopia.attack(picked(own('tax-audit'), 'tax-audit'), () => 0);
+  assert.equal(audited.enemy.cooldowns['banana-blockade'], 2, 'Banana Blockade (12) is its strongest card');
+  const busy = { ...own('tax-audit'), enemy: { ...fresh().enemy, cooldowns: { 'banana-influencers': 1 } } };
+  assert.equal(utopia.attack(picked(busy, 'tax-audit'), () => 0).enemy.cooldowns['banana-influencers'], 3, 'a resting card rests longer');
+});
+
+test('level 3: the corporations can lock your cards and shuffle your hand', () => {
+  const locking = utopia.corporation('mississippi').cards.find(card => card.id === 'prime-lockdown');
+  assert.equal(utopia.cardCategory(locking), 'damage');
+  const at = (corpId, id) => ({ ...fresh(), turn: 'enemy', stage: corpId === 'bananas' ? 0 : corpId === 'mississippi' ? 1 : 2,
+    enemy: { ...fresh().enemy, corpId, cooldowns: Object.fromEntries(utopia.enemyDeck(corpId).filter(card => card.id !== id).map(card => [card.id, 5])) } });
+  const locked = utopia.enemyAttack(at('mississippi', 'prime-lockdown'), () => 0);
+  assert.equal(locked.locked.length, 1);
+  assert.equal(utopia.toggleCard(locked, locked.locked[0]), null, 'a locked card cannot be picked');
+  const free = locked.hand.find(id => !locked.locked.includes(id));
+  const after = utopia.attack(utopia.toggleCard(locked, free), () => 0);
+  assert.deepEqual(after.locked, [], 'only for one turn');
+  const shuffled = utopia.enemyAttack({ ...at('edison', 'algorithm-change'), hand: ['antitrust'] }, () => 0);
+  assert.equal(shuffled.hand.length, 5, 'drawn afresh');
+  assert.ok(shuffled.log[0].notes.includes('shuffled your hand'));
+  assert.equal(utopia.corporation('bananas').cards.find(card => card.id === 'banana-republic').cooldown, 4);
 });
 
 test('winning level 3 shows a summary of all three levels', () => {
