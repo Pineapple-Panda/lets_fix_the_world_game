@@ -24,10 +24,11 @@
             </div>
             <ul class="enemy-deck" aria-label="Their cards">
                 @for (entry of v.enemy.deck; track entry.card.id) {
-                    <li class="mini-card" [class.resting]="entry.resting > 0" [attr.data-category]="entry.category" [attr.title]="entry.card.description">
+                    <li class="mini-card" [class.resting]="entry.resting > 0 && !entry.played" [class.played]="entry.played" [attr.data-category]="entry.category" [attr.title]="entry.card.description">
                         <app-card-art [id]="entry.card.id" [category]="entry.category" />
                         <strong>{{ entry.card.name }}</strong>
                         <small>{{ entry.summary }}</small>
+                        @if (entry.played) { <small class="played-tag">played last turn</small> }
                         @if (entry.resting > 0) { <small class="rest">rests {{ entry.resting }}</small> }
                     </li>
                 }

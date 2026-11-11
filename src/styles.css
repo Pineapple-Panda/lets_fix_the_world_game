@@ -1768,6 +1768,16 @@ footer {
     color: var(--yellow);
 }
 
+/* The cards of its latest attack: outlined, never faded. */
+.mini-card.played {
+    box-shadow: 0 0 0 2px var(--cat, var(--ink));
+}
+
+.mini-card .played-tag {
+    color: var(--ink);
+    font-weight: 600;
+}
+
 /* The battle in the middle: whose move it is and the latest attacks. */
 .battlefield {
     display: flex;
