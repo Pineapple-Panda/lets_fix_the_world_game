@@ -1911,9 +1911,13 @@ test('level 3: one credit per win buys cards in the card shop', () => {
   assert.equal(utopia.buyBlocker(bought, 'leak'), 'Owned');
   assert.equal(utopia.buyBlocker(bought, 'shut-it-down'), 'Needs 2 more credits');
   assert.equal(utopia.buyBlocker(bought, 'community-kitchens'), 'Needs 1 more credit');
-  // A bought card can be drawn from the next draw on.
-  const drawn = utopia.attack(picked(bought, 'fact-check'), () => 0.99);
-  assert.ok(drawn.hand.includes('leak'));
+  // The hand is drawn afresh with the new card in it; resting cards stay out, the picks are put back.
+  assert.equal(bought.hand[0], 'leak');
+  assert.equal(bought.hand.length, 5);
+  const busy = picked({ ...rich, cooldowns: { firewall: 2 }, hand: rich.hand.filter(id => id !== 'firewall') }, 'antitrust');
+  const refreshed = utopia.buyCard(busy, 'leak', () => 0);
+  assert.ok(refreshed.hand.includes('leak') && !refreshed.hand.includes('firewall'));
+  assert.deepEqual(refreshed.selected, []);
   assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'protest-march')), '6 damage · block 20%');
   assert.equal(utopia.cardSummary(utopiaContent.megacorpCards[2], 1.5), '+15 heal');
 });

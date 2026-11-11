@@ -45,11 +45,15 @@ export function buyBlocker(state: UtopiaGame, id: string): string | null {
   return null;
 }
 
-/** Buys a card in the shop: it joins your deck and can be drawn from the next draw on. */
-export function buyCard(state: UtopiaGame, id: string): UtopiaGame | null {
+/**
+ * Buys a card in the shop: it joins your deck, and the hand is drawn afresh from the whole deck with the new card in
+ * it (resting cards stay out; the picked cards are put back).
+ */
+export function buyCard(state: UtopiaGame, id: string, random: () => number = Math.random): UtopiaGame | null {
   const card = playerCard(id);
   if (!card || buyBlocker(state, id)) return null;
-  return { ...state, credits: state.credits - card.price, owned: [...state.owned, id] };
+  const bought: UtopiaGame = { ...state, credits: state.credits - card.price, owned: [...state.owned, id], hand: [id], selected: [] };
+  return { ...bought, hand: drawHand(bought, random) };
 }
 
 /** Multiplier for a corporation's damage and healing in the given battle of a station. */
