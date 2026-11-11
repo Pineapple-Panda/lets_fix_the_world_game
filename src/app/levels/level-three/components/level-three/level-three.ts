@@ -1,6 +1,7 @@
 import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
+import { CartIconComponent, CoinIconComponent } from '../icons/icons';
 import {
   buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
@@ -10,7 +11,7 @@ import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/
 /** Level 3: a card game against the corporations, one after another. */
 @Component({
   selector: 'app-level-three',
-  imports: [CardArtComponent, CardShopComponent],
+  imports: [CardArtComponent, CardShopComponent, CartIconComponent, CoinIconComponent],
   templateUrl: './level-three.html'
 })
 export class LevelThreeComponent {
@@ -126,7 +127,8 @@ export class LevelThreeComponent {
       }),
       shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
       // Something in the shop you can afford: the shop button shows a dot.
-      affordable: shopCards().some(card => !buyBlocker(state, card.id)),
+      // Cards in the shop you can afford right now: the number on the shop button.
+      affordableCount: shopCards().filter(card => !buyBlocker(state, card.id)).length,
       log: state.log.map(entry => this.describe(entry)),
       // The battle card: the corporation's latest attack in this battle on top, yours below.
       stageEnemy: this.stage(state, state.log.find(entry => entry.by === 'enemy' && entry.corpId === state.enemy.corpId)),

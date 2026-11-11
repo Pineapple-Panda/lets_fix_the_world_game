@@ -128,23 +128,24 @@
         </div>
         <div class="hand-actions">
             <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
-                ⚔️ Attack@if (v.selectedCount) { ({{ v.selectedCount }})}
+                Attack@if (v.selectedCount) { ({{ v.selectedCount }})}
             </button>
             @if (v.maxCards > rules.maxCards) { <small class="extra-cards">👑 Up to {{ v.maxCards }} cards this turn</small> }
             <small class="upgrade-hint">Deck: {{ v.deckSize }} cards</small>
             @if (v.resting.length) {
                 <small class="upgrade-hint">Resting: @for (entry of v.resting; track entry.card.id; let last = $last) {{{ entry.card.name }} ({{ entry.turns }}){{ last ? '' : ', ' }}}</small>
             }
-            <!-- Right: the card shop and what the last win paid. -->
+            <!-- Right: what the last win paid, and the card shop (the badge counts the cards you can afford). -->
             <div class="shop-corner">
-                <button class="intro-button shop-button" type="button" (click)="shopOpen.set(true)"
-                        [attr.aria-label]="'Card shop, ' + v.credits + ' credits'">
-                    🛒 Card shop <span class="shop-button-credits">🪙 {{ v.credits }}</span>
-                    @if (v.affordable) { <span class="shop-badge" aria-hidden="true"></span> }
-                </button>
                 @if (v.lastReward; as reward) {
-                    <small class="last-reward">Last win: +{{ reward.credits }} 🪙 · {{ reward.reasons.join(', ') }}</small>
+                    <small class="last-reward">Last win: +{{ reward.credits }} <app-coin-icon /><br>{{ reward.reasons.join(', ') }}</small>
                 }
+                <button class="shop-button" type="button" (click)="shopOpen.set(true)"
+                        [attr.aria-label]="'Card shop, ' + v.credits + ' credits, ' + v.affordableCount + ' cards you can afford'">
+                    <app-cart-icon />
+                    <span class="shop-label">Shop</span>
+                    @if (v.affordableCount) { <span class="shop-badge" aria-hidden="true">{{ v.affordableCount }}</span> }
+                </button>
             </div>
         </div>
         <div class="hand">

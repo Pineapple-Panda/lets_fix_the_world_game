@@ -1652,15 +1652,10 @@ footer {
 }
 
 /* The card shop on the right of your card's action row. */
-.shop-corner .shop-button {
-    padding: 5px 12px;
-}
-
 .shop-corner {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
+    align-items: center;
+    gap: 12px;
     margin-left: auto;
     text-align: right;
 }
@@ -2146,19 +2141,25 @@ footer {
     gap: 6px 14px;
 }
 
+/* Attack: an outline button in red, uppercase. */
 .attack-button {
     min-width: 180px;
-    padding: 12px 20px;
-    background: var(--red);
-    font-size: 16px;
+    padding: 11px 20px;
+    border: 2px solid var(--red);
+    background: transparent;
+    color: var(--red);
+    font: 700 15px var(--sans);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 .attack-button:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--red) 85%, #fff);
+    background: color-mix(in srgb, var(--red) 16%, transparent);
 }
 
 .attack-button:disabled {
-    background: var(--surface-2);
+    border-color: var(--line-strong);
+    background: transparent;
     color: var(--faint);
     cursor: not-allowed;
 }
@@ -2352,35 +2353,69 @@ footer {
 }
 
 /* The card shop: a button in the campaign bar and a dialog with cards for credits. */
+/* Shop: an outline button with a cart and the label below. */
 .shop-button {
     position: relative;
     display: inline-flex;
-    white-space: nowrap;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    background: var(--purple);
+    gap: 1px;
+    padding: 4px 14px 3px;
+    border: 2px solid var(--purple);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--purple);
+    cursor: pointer;
 }
 
 .shop-button:hover {
-    background: color-mix(in srgb, var(--purple) 85%, #fff);
+    background: color-mix(in srgb, var(--purple) 16%, transparent);
 }
 
-.shop-button-credits {
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, .25);
-    font: 600 12px var(--mono);
+.shop-button .cart-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
 }
 
-/* Something in the shop you can afford. */
+.shop-button .cart-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.shop-label {
+    font: 700 10px var(--sans);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+/* How many cards in the shop you can afford. */
 .shop-badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
+    top: -8px;
+    right: -8px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
     background: var(--yellow);
+    color: #1e1f22;
+    font: 700 11px/18px var(--mono);
+    text-align: center;
+}
+
+/* The flat coin: one text line high. */
+.coin-icon {
+    display: inline-block;
+    width: 1.05em;
+    height: 1.05em;
+    vertical-align: -0.18em;
+}
+
+.coin-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 .shop-dialog {

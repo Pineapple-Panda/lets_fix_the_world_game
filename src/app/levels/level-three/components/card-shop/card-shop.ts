@@ -2,6 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { ModalDialog } from '../../../../shared/components/modal-dialog';
 import type { CardCategory, PlayerCard } from '../../models/utopia.model';
 import { CardArtComponent } from '../card-art/card-art';
+import { CoinIconComponent } from '../icons/icons';
 
 /** One card in the shop: what it does, its price, and why it cannot be bought (or null). */
 export interface ShopEntry {
@@ -24,12 +25,12 @@ export interface LearnEntry {
 /** The card shop: cards for credits (one credit per won battle). */
 @Component({
   selector: 'app-card-shop',
-  imports: [CardArtComponent],
+  imports: [CardArtComponent, CoinIconComponent],
   template: `
     <dialog #dialog class="intro-dialog shop-dialog" aria-labelledby="shop-title" (close)="closed.emit()">
       <header class="shop-header">
         <h1 id="shop-title">Card shop</h1>
-        <span class="shop-credits" aria-live="polite">🪙 {{ credits() }} {{ credits() === 1 ? 'credit' : 'credits' }}</span>
+        <span class="shop-credits" aria-live="polite"><app-coin-icon /> {{ credits() }} {{ credits() === 1 ? 'credit' : 'credits' }}</span>
       </header>
       <p>Credits: {{ earnRules() }}. Bought cards join your deck for good.</p>
       <div class="shop-filters" role="group" aria-label="Filter the cards">
@@ -51,7 +52,7 @@ export interface LearnEntry {
               <span class="shop-owned">✓ In your deck</span>
             } @else {
               <button class="intro-button shop-buy" type="button" [disabled]="!!entry.blocker" [attr.aria-label]="'Buy ' + entry.card.name + ' for ' + entry.card.price + ' credits'"
-                      (click)="bought.emit(entry.card.id)">🪙 {{ entry.card.price }} · Buy</button>
+                      (click)="bought.emit(entry.card.id)"><app-coin-icon /> {{ entry.card.price }} · Buy</button>
               @if (entry.blocker) { <small class="shop-blocker">{{ entry.blocker }}</small> }
             }
           </article>
