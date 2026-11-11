@@ -1617,49 +1617,9 @@ footer {
 
 .cardgame {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 10px;
     min-height: 100%;
-}
-
-/* The campaign: stations with one pip per battle, wins and losses. */
-.campaign {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.stations {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.station {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.station.current {
-    border-color: var(--yellow);
-    color: var(--ink);
-    background: color-mix(in srgb, var(--surface) 88%, var(--yellow));
-}
-
-.station.boss .station-name {
-    color: var(--red);
-    font-weight: 600;
 }
 
 .pips {
@@ -1679,11 +1639,27 @@ footer {
     background: var(--green);
 }
 
-.record {
+.pip.current {
+    border-color: var(--yellow);
+}
+
+/* Under the corporation's name: how often it has to be beaten. */
+.beat-count {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 12px;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Left of the battle log: wins, losses and the card shop. */
+.record {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+    width: max-content;
     font-size: 13px;
 }
 
@@ -1822,12 +1798,32 @@ footer {
 /* The battle in the middle: whose move it is and the latest attacks. */
 .battlefield {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 16px;
     min-height: 0;
     padding: 10px 0;
     border-top: 1px dashed var(--line);
     border-bottom: 1px dashed var(--line);
+}
+
+@media (max-width: 640px) {
+    .battlefield {
+        flex-direction: column;
+    }
+
+    .record {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        width: auto;
+    }
+}
+
+.battle-feed {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
 }
 
 .turn {
@@ -1883,14 +1879,12 @@ footer {
 /* Your hand: big cards you pick, then attack. */
 .hand-area {
     display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
-    gap: 14px;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .hand {
     display: flex;
-    flex: 1 1 520px;
     flex-wrap: wrap;
     align-items: flex-end;
     padding-top: 10px;
@@ -1954,16 +1948,17 @@ footer {
     letter-spacing: .4px;
 }
 
+/* Above the hand: the attack button, then the deck and the resting cards. */
 .hand-actions {
     display: flex;
-    flex: 0 1 200px;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
 }
 
 .attack-button {
-    padding: 14px 16px;
+    min-width: 180px;
+    padding: 12px 20px;
     background: var(--red);
     font-size: 16px;
 }
@@ -2114,6 +2109,7 @@ footer {
 .shop-button {
     position: relative;
     display: inline-flex;
+    white-space: nowrap;
     align-items: center;
     gap: 8px;
     background: var(--purple);

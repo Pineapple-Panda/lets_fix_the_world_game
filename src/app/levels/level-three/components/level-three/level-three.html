@@ -1,28 +1,5 @@
 @let v = view();
 <div class="cardgame">
-    <!-- The campaign: one station per corporation, one pip per battle. -->
-    <header class="ops-card campaign" aria-label="Campaign">
-        <ol class="stations">
-            @for (station of v.stations; track $index) {
-                <li class="station" [class.current]="station.current" [class.boss]="station.boss">
-                    <span class="station-name">{{ station.corp?.icon }} {{ station.corp?.name }}@if (station.boss) { · Boss}</span>
-                    <span class="pips" [attr.aria-label]="station.beaten + ' of ' + station.pips.length + ' beaten'">
-                        @for (done of station.pips; track $index) { <i class="pip" [class.done]="done"></i> }
-                    </span>
-                </li>
-            }
-        </ol>
-        <div class="record">
-            <span><b class="good">{{ v.wins }}</b> wins</span>
-            <span><b class="bad">{{ v.losses }}</b> losses</span>
-            <button class="intro-button shop-button" type="button" (click)="shopOpen.set(true)"
-                    [attr.aria-label]="'Card shop, ' + v.credits + ' credits'">
-                🛒 Card shop <span class="shop-button-credits">🪙 {{ v.credits }}</span>
-                @if (v.affordable) { <span class="shop-badge" aria-hidden="true"></span> }
-            </button>
-        </div>
-    </header>
-
     @if (shopOpen()) {
         <app-card-shop [entries]="v.shop" [credits]="v.credits" [creditsPerWin]="rules.creditsPerWin"
                        (bought)="cardBought.emit($event)" (closed)="shopOpen.set(false)" />
@@ -34,7 +11,13 @@
             <div class="fighter-avatar" aria-hidden="true">{{ v.enemy.corp?.icon }}</div>
             <div class="fighter-details">
                 <h2 class="fighter-name">{{ v.enemy.corp?.name }}@if (v.enemy.boss) { <span class="boss-tag">Boss</span>}</h2>
-                <small>Battle {{ v.enemy.battle }} of {{ v.enemy.battles }} · {{ v.enemy.corp?.description }}</small>
+                <div class="beat-count">
+                    <span class="pips" [attr.aria-label]="v.enemy.beaten + ' of ' + v.enemy.battles + ' beaten'">
+                        @for (done of v.enemy.pips; track $index) { <i class="pip" [class.done]="done" [class.current]="$index === v.enemy.beaten"></i> }
+                    </span>
+                    <small>Beat them {{ v.enemy.battles }}× · battle {{ v.enemy.battle }} of {{ v.enemy.battles }}</small>
+                </div>
+                <small>{{ v.enemy.corp?.description }}</small>
                 <div class="world-track" role="meter" [attr.aria-label]="v.enemy.corp?.name + ' power'" aria-valuemin="0" [attr.aria-valuemax]="v.enemy.maxPower" [attr.aria-valuenow]="v.enemy.power">
                     <div class="world-fill corp-power" [style.width.%]="v.enemy.percent"></div>
                 </div>
@@ -53,6 +36,17 @@
         </div>
 
         <div class="battlefield">
+            <!-- Left: your record and the shop. -->
+            <div class="record">
+                <span><b class="good">{{ v.wins }}</b> wins</span>
+                <span><b class="bad">{{ v.losses }}</b> losses</span>
+                <button class="intro-button shop-button" type="button" (click)="shopOpen.set(true)"
+                        [attr.aria-label]="'Card shop, ' + v.credits + ' credits'">
+                    🛒 Card shop <span class="shop-button-credits">🪙 {{ v.credits }}</span>
+                    @if (v.affordable) { <span class="shop-badge" aria-hidden="true"></span> }
+                </button>
+            </div>
+            <div class="battle-feed">
             <p class="turn" [class.enemy-turn]="!v.yourTurn" role="status">
                 {{ v.yourTurn ? 'Your move: pick up to ' + rules.maxCards + ' cards and attack.' : v.enemy.corp?.name + ' strikes back…' }}
             </p>
@@ -65,6 +59,7 @@
                     <li class="empty">The battle begins. {{ megaCorpName }} is watching.</li>
                 }
             </ol>
+            </div>
         </div>
 
         <div class="fighter fighter-player">
@@ -94,6 +89,15 @@
 
     <!-- Your hand: pick cards, then attack. -->
     <section class="ops-card hand-area" aria-label="Your hand">
+        <div class="hand-actions">
+            <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
+                ⚔️ Attack@if (v.selectedCount) { ({{ v.selectedCount }})}
+            </button>
+            <small class="upgrade-hint">Deck: {{ v.deckSize }} cards</small>
+            @if (v.resting.length) {
+                <small class="upgrade-hint">Resting: @for (entry of v.resting; track entry.card.id; let last = $last) {{{ entry.card.name }} ({{ entry.turns }}){{ last ? '' : ', ' }}}</small>
+            }
+        </div>
         <div class="hand">
             @for (entry of v.hand; track entry.card.id) {
                 <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
@@ -108,15 +112,6 @@
                 </button>
             } @empty {
                 <p class="upgrade-hint">All your cards are resting.</p>
-            }
-        </div>
-        <div class="hand-actions">
-            <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
-                ⚔️ Attack@if (v.selectedCount) { ({{ v.selectedCount }})}
-            </button>
-            <small class="upgrade-hint">Deck: {{ v.deckSize }} cards</small>
-            @if (v.resting.length) {
-                <small class="upgrade-hint">Resting: @for (entry of v.resting; track entry.card.id; let last = $last) {{{ entry.card.name }} ({{ entry.turns }}){{ last ? '' : ', ' }}}</small>
             }
         </div>
     </section>

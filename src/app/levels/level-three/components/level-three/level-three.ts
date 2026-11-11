@@ -4,7 +4,7 @@ import { CardShopComponent } from '../card-shop/card-shop';
 import {
   buyBlocker, cardCategory, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
-import { battleRules, campaign, megaCorpName } from '../../game/utopia-content';
+import { battleRules, megaCorpName } from '../../game/utopia-content';
 import type { Attack, UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: a card game against the corporations, one after another. */
@@ -32,23 +32,14 @@ export class LevelThreeComponent {
     const corp = corporation(state.enemy.corpId);
     const strength = stage ? enemyStrength(stage, state.battle) : 1;
     return {
-      stations: campaign.map((entry, index) => {
-        // One pip per battle: beaten ones filled.
-        const pips = Array.from({ length: entry.battles }, (_, battle) =>
-          index < state.stage || state.outcome === 'won' || (index === state.stage && battle < state.battle));
-        return {
-          corp: corporation(entry.corpId),
-          boss: !!entry.boss,
-          current: index === state.stage && state.outcome !== 'won',
-          pips,
-          beaten: pips.filter(done => done).length
-        };
-      }),
       enemy: {
         corp,
         boss: !!stage?.boss,
         battle: state.battle + 1,
         battles: stage?.battles ?? 0,
+        // One pip per battle against this corporation: beaten ones filled.
+        beaten: state.outcome === 'won' ? stage?.battles ?? 0 : state.battle,
+        pips: Array.from({ length: stage?.battles ?? 0 }, (_, battle) => state.outcome === 'won' || battle < state.battle),
         power: Math.round(state.enemy.power),
         maxPower: state.enemy.maxPower,
         percent: state.enemy.power / state.enemy.maxPower * 100,
