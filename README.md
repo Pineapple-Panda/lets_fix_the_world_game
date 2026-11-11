@@ -43,7 +43,7 @@ times.
 - **Their turn:** a moment later the corporation answers with up to three random cards of its own deck.
 - **Credibility** is your life and carries over from battle to battle; a win heals a little. At 0 the battle is lost and
   you try the current corporation again with full credibility.
-- Wins and losses are counted over all attempts; more wins unlock new cards. Beat every corporation to win the level;
+- Wins and losses are counted over all attempts. Every win earns a credit; spend credits on new cards in the card shop. Beat every corporation to win the level;
   the win screen sums up all three levels.
 
 Progress is saved in the browser's `localStorage` (one save, key `sprint-game`). Saves that no longer match the game

@@ -1,6 +1,7 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
+import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, nextUnlock, playerCard, playerTurn, unlockedCards
+  buyBlocker, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, campaign, megaCorpName } from '../../game/utopia-content';
 import type { Attack, UtopiaGame } from '../../models/utopia.model';
@@ -8,12 +9,16 @@ import type { Attack, UtopiaGame } from '../../models/utopia.model';
 /** Level 3: a card game against the corporations, one after another. */
 @Component({
   selector: 'app-level-three',
+  imports: [CardShopComponent],
   templateUrl: './level-three.html'
 })
 export class LevelThreeComponent {
   readonly state = input.required<UtopiaGame>();
   readonly cardToggled = output<string>();
   readonly attacked = output<void>();
+  readonly cardBought = output<string>();
+  /** The card shop dialog is open. */
+  protected readonly shopOpen = signal(false);
 
   protected readonly rules = battleRules;
   protected readonly megaCorpName = megaCorpName;
@@ -23,7 +28,6 @@ export class LevelThreeComponent {
     const stage = currentStage(state);
     const corp = corporation(state.enemy.corpId);
     const strength = stage ? enemyStrength(stage, state.battle) : 1;
-    const unlock = nextUnlock(state);
     return {
       stations: campaign.map((entry, index) => {
         // One pip per battle: beaten ones filled.
@@ -59,12 +63,15 @@ export class LevelThreeComponent {
         card, summary: cardSummary(card), selected: state.selected.includes(card.id)
       })),
       selectedCount: state.selected.length,
-      resting: unlockedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
+      resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
         .map(card => ({ card, turns: state.cooldowns[card.id]! })),
-      deckSize: unlockedCards(state).length,
+      deckSize: ownedCards(state).length,
       wins: state.wins,
       losses: state.losses,
-      unlock: unlock ? { card: unlock, winsLeft: unlock.unlockWins - state.wins } : null,
+      credits: state.credits,
+      shop: shopCards().map(card => ({ card, summary: cardSummary(card), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
+      // Something in the shop you can afford: the shop button shows a dot.
+      affordable: shopCards().some(card => !buyBlocker(state, card.id)),
       log: state.log.map(entry => this.describe(entry))
     };
   });

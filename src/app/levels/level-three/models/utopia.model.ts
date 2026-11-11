@@ -27,9 +27,13 @@ export interface UtopiaGame {
   turn: 'player' | 'enemy';
   /** The latest attacks, newest first. */
   log: Attack[];
-  /** Battles won and lost, over all attempts. New cards unlock with wins. */
+  /** Battles won and lost, over all attempts. */
   wins: number;
   losses: number;
+  /** Earned with wins (one each), spent in the card shop. */
+  credits: number;
+  /** Cards bought in the shop; the starter cards are always yours. */
+  owned: string[];
   /** How level 3 ended: every station beaten (won), or credibility ran out (lost, until you try again). */
   outcome: 'won' | 'lost' | null;
   /** True once the player closed the "utopia achieved" dialog. */
@@ -89,9 +93,9 @@ export interface BattleCard extends Described {
   cooldown: number;
 }
 
-/** One of your cards: available from the start, or unlocked after a number of won battles. */
+/** One of your cards: a starter card (price 0), or one to buy in the card shop for credits. */
 export interface PlayerCard extends BattleCard {
-  unlockWins: number;
+  price: number;
 }
 
 export interface Corporation extends Described {

@@ -16,6 +16,8 @@ export const battleRules = {
   maxCards: 3,
   /** Credibility you get back after a won battle. */
   healAfterWin: 25,
+  /** Credits for the card shop per won battle. */
+  creditsPerWin: 1,
   /** Blocks stack up to this many percent. */
   maxBlock: 80,
   /** Attacks kept in the log. */
@@ -92,26 +94,26 @@ export const corporations: Corporation[] = [
   }
 ];
 
-/** Your cards: the first ones from the start, the others unlock after `unlockWins` won battles. */
+/** Your cards: the ones with price 0 from the start, the others in the card shop for `price` credits (one per win). */
 export const playerCards: PlayerCard[] = [
   { id: 'antitrust', name: 'Antitrust Lawsuit', description: 'Sues them for being a monopoly. Which they are.',
-    effects: [{ kind: 'damage', amount: 12 }], cooldown: 1, unlockWins: 0 },
+    effects: [{ kind: 'damage', amount: 12 }], cooldown: 1, price: 0 },
   { id: 'fact-check', name: 'Fact Check', description: 'Politely points out what is not true.',
-    effects: [{ kind: 'damage', amount: 8 }], cooldown: 0, unlockWins: 0 },
+    effects: [{ kind: 'damage', amount: 8 }], cooldown: 0, price: 0 },
   { id: 'firewall', name: 'Stronger Firewalls', description: 'Hardens your systems and channels.',
-    effects: [{ kind: 'block', percent: 50 }], cooldown: 2, unlockWins: 0 },
+    effects: [{ kind: 'block', percent: 50 }], cooldown: 2, price: 0 },
   { id: 'press-conference', name: 'Press Conference', description: 'Calm, honest answers. People like that.',
-    effects: [{ kind: 'heal', amount: 8 }], cooldown: 2, unlockWins: 0 },
+    effects: [{ kind: 'heal', amount: 8 }], cooldown: 2, price: 0 },
   { id: 'protest-march', name: 'Protest March', description: 'A million people on the streets, with good signs.',
-    effects: [{ kind: 'damage', amount: 6 }, { kind: 'block', percent: 20 }], cooldown: 1, unlockWins: 0 },
+    effects: [{ kind: 'damage', amount: 6 }, { kind: 'block', percent: 20 }], cooldown: 1, price: 0 },
   { id: 'leak', name: 'Leak the Emails', description: 'Publishes how they really talk about their customers.',
-    effects: [{ kind: 'damage', amount: 18 }, { kind: 'heal', amount: 3 }], cooldown: 2, unlockWins: 2 },
+    effects: [{ kind: 'damage', amount: 18 }, { kind: 'heal', amount: 3 }], cooldown: 2, price: 2 },
   { id: 'community-kitchens', name: 'Community Kitchens', description: 'A kitchen on every corner. Nobody eats alone.',
-    effects: [{ kind: 'heal', amount: 15 }], cooldown: 3, unlockWins: 4 },
+    effects: [{ kind: 'heal', amount: 15 }], cooldown: 3, price: 2 },
   { id: 'shut-it-down', name: 'Shut It Down', description: 'Lawyers and fact-checkers stop their next move cold.',
-    effects: [{ kind: 'block', percent: 80 }], cooldown: 3, unlockWins: 6 },
+    effects: [{ kind: 'block', percent: 80 }], cooldown: 3, price: 3 },
   { id: 'investigative-desk', name: 'Investigative Desk', description: 'A year of research, one devastating article.',
-    effects: [{ kind: 'damage', amount: 25 }], cooldown: 3, unlockWins: 8 },
+    effects: [{ kind: 'damage', amount: 25 }], cooldown: 3, price: 4 },
   { id: 'pop-up-homes', name: 'Pop-Up Homes', description: 'Prefab homes in every empty lot. Hard to argue with.',
-    effects: [{ kind: 'heal', amount: 10 }, { kind: 'block', percent: 20 }], cooldown: 2, unlockWins: 10 }
+    effects: [{ kind: 'heal', amount: 10 }, { kind: 'block', percent: 20 }], cooldown: 2, price: 3 }
 ];

@@ -1805,7 +1805,7 @@ test('level 3 is a card game campaign: Bananas Inc. twice, Mississippi Corp four
   assert.equal(state.enemy.power, 100, 'every corporation has 100 power');
   assert.equal(state.turn, 'player');
   assert.equal(state.hand.length, 5, 'a hand of five');
-  assert.deepEqual([...state.hand].sort(), utopia.unlockedCards(state).map(card => card.id).sort(), 'the five starter cards');
+  assert.deepEqual([...state.hand].sort(), utopia.ownedCards(state).map(card => card.id).sort(), 'the five starter cards');
 });
 
 test('level 3: pick up to three cards and attack; played cards rest', () => {
@@ -1867,6 +1867,7 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   const nearly = { ...fresh(), credibility: 60, enemy: { ...fresh().enemy, power: 5 } };
   const won = utopia.attack(picked(nearly, 'antitrust'), () => 0);
   assert.equal(won.wins, 1);
+  assert.equal(won.credits, 1, 'one credit per win');
   assert.equal(won.credibility, 60 + 25, 'heals after a win');
   assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [0, 1, 'bananas', 100], 'second battle, back at full power');
   assert.equal(won.turn, 'player');
@@ -1881,7 +1882,7 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
 });
 
 test('level 3: credibility carries over; at 0 the battle is lost and you try again', () => {
-  const weak = { ...fresh(), stage: 1, battle: 2, credibility: 3, wins: 4, turn: 'enemy' };
+  const weak = { ...fresh(), stage: 1, battle: 2, credibility: 3, wins: 4, credits: 2, owned: ['leak'], turn: 'enemy' };
   const lost = utopia.tickUtopia(weak, () => 0);
   assert.equal(lost.credibility, 0);
   assert.equal(lost.outcome, 'lost');
@@ -1892,15 +1893,27 @@ test('level 3: credibility carries over; at 0 the battle is lost and you try aga
   assert.deepEqual([again.stage, again.battle, again.credibility, again.outcome, again.wins, again.losses], [1, 0, 100, null, 4, 1],
     'the current corporation from its first battle, full credibility, wins and losses kept');
   assert.equal(again.stats.attempts, 2);
+  assert.deepEqual([again.credits, again.owned], [2, ['leak']], 'credits and bought cards stay');
 });
 
-test('level 3: new cards unlock with wins', () => {
-  assert.equal(utopia.unlockedCards(fresh()).length, 5);
-  assert.equal(utopia.nextUnlock(fresh()).id, 'leak');
-  const veteran = { ...fresh(), wins: 4 };
-  assert.deepEqual(utopia.unlockedCards(veteran).slice(5).map(card => card.id), ['leak', 'community-kitchens']);
-  assert.equal(utopia.nextUnlock(veteran).unlockWins, 6);
-  assert.equal(utopia.nextUnlock({ ...fresh(), wins: 99 }), undefined);
+test('level 3: one credit per win buys cards in the card shop', () => {
+  assert.equal(utopia.ownedCards(fresh()).length, 5, 'the starter cards');
+  assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
+    [['leak', 2], ['community-kitchens', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['investigative-desk', 4]]);
+  assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
+  assert.equal(utopia.buyCard(fresh(), 'leak'), null);
+  assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
+  const rich = { ...fresh(), credits: 3 };
+  const bought = utopia.buyCard(rich, 'leak');
+  assert.equal(bought.credits, 1);
+  assert.deepEqual(bought.owned, ['leak']);
+  assert.equal(utopia.ownedCards(bought).length, 6, 'it joins the deck');
+  assert.equal(utopia.buyBlocker(bought, 'leak'), 'Owned');
+  assert.equal(utopia.buyBlocker(bought, 'shut-it-down'), 'Needs 2 more credits');
+  assert.equal(utopia.buyBlocker(bought, 'community-kitchens'), 'Needs 1 more credit');
+  // A bought card can be drawn from the next draw on.
+  const drawn = utopia.attack(picked(bought, 'fact-check'), () => 0.99);
+  assert.ok(drawn.hand.includes('leak'));
   assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'protest-march')), '6 damage · block 20%');
   assert.equal(utopia.cardSummary(utopiaContent.megacorpCards[2], 1.5), '+15 heal');
 });
@@ -1925,6 +1938,9 @@ test('level 3 saves and loads; old level 3 saves start the card game afresh', ()
   const converted = storage.loadUtopia(store);
   assert.equal(converted.stage, 0);
   assert.deepEqual(converted.history, [level1]);
+  const { credits, owned, ...beforeShop } = { ...state, wins: 3 };
+  store.data.set(storage.saveKey, JSON.stringify({ level: 3, game: beforeShop }));
+  assert.deepEqual([storage.loadUtopia(store).credits, storage.loadUtopia(store).owned], [3, []], 'saves from before the shop: a credit per win');
   store.data.set(storage.saveKey, JSON.stringify({ level: 3, game: { ...state, credibility: -1 } }));
   assert.equal(storage.loadUtopia(store), null);
   store.data.set(storage.saveKey, JSON.stringify({ level: 3, game: { ...state, stage: 9 } }));

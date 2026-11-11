@@ -13,7 +13,7 @@
             @if (finalSummary(); as summary) {
                 <app-utopia-won [summary]="summary" (dismissed)="dismissUtopiaWon()" />
             }
-            <app-level-three [state]="utopiaDisplay() ?? world" (cardToggled)="toggleCard($event)" (attacked)="attack()" />
+            <app-level-three [state]="utopiaDisplay() ?? world" (cardToggled)="toggleCard($event)" (attacked)="attack()" (cardBought)="buyCard($event)" />
             <footer><span>LET’S FIX THE <span class="cheat-word" (click)="armCheat()">WORLD</span> GAME / LEVEL 3</span>
                 <span class="footer-actions">
                     <app-github-link />

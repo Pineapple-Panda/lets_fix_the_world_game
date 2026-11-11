@@ -1978,6 +1978,101 @@ footer {
     cursor: not-allowed;
 }
 
+/* The card shop: a button in the campaign bar and a dialog with cards for credits. */
+.shop-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--purple);
+}
+
+.shop-button:hover {
+    background: color-mix(in srgb, var(--purple) 85%, #fff);
+}
+
+.shop-button-credits {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, .25);
+    font: 600 12px var(--mono);
+}
+
+/* Something in the shop you can afford. */
+.shop-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--yellow);
+}
+
+.shop-dialog {
+    width: min(820px, 94vw);
+}
+
+.shop-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.shop-credits {
+    color: var(--yellow);
+    font: 700 16px var(--mono);
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    max-height: 60vh;
+    margin-bottom: 14px;
+    overflow-y: auto;
+}
+
+.shop-card {
+    max-width: none;
+    cursor: default;
+}
+
+.shop-card:hover {
+    transform: none;
+}
+
+.shop-card.owned {
+    border-color: var(--green);
+}
+
+.shop-buy {
+    margin-top: 4px;
+    padding: 6px 10px;
+}
+
+.shop-buy:disabled {
+    background: var(--surface-2);
+    color: var(--faint);
+    cursor: not-allowed;
+}
+
+.shop-owned {
+    color: var(--green);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.shop-blocker {
+    flex: none !important;
+    color: var(--faint) !important;
+}
+
+.shop-close {
+    width: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .play-card {
         transition: none;

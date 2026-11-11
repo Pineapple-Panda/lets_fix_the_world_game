@@ -26,14 +26,30 @@ export function currentStage(state: UtopiaGame): Stage | undefined {
   return campaign[state.stage];
 }
 
-/** Your cards so far: the starters plus everything your wins unlocked. */
-export function unlockedCards(state: UtopiaGame): PlayerCard[] {
-  return playerCards.filter(card => card.unlockWins <= state.wins);
+/** Your deck: the starter cards plus everything you bought in the shop. */
+export function ownedCards(state: UtopiaGame): PlayerCard[] {
+  return playerCards.filter(card => card.price === 0 || state.owned.includes(card.id));
 }
 
-/** The next card to unlock, or undefined when all are unlocked. */
-export function nextUnlock(state: UtopiaGame): PlayerCard | undefined {
-  return playerCards.filter(card => card.unlockWins > state.wins).sort((a, b) => a.unlockWins - b.unlockWins)[0];
+/** The cards of the shop, cheapest first. */
+export function shopCards(): PlayerCard[] {
+  return playerCards.filter(card => card.price > 0).sort((a, b) => a.price - b.price);
+}
+
+/** Why a card cannot be bought right now, or null when it can. */
+export function buyBlocker(state: UtopiaGame, id: string): string | null {
+  const card = playerCard(id);
+  if (!card || card.price === 0) return 'Not for sale';
+  if (state.owned.includes(id)) return 'Owned';
+  if (state.credits < card.price) return `Needs ${card.price - state.credits} more ${card.price - state.credits === 1 ? 'credit' : 'credits'}`;
+  return null;
+}
+
+/** Buys a card in the shop: it joins your deck and can be drawn from the next draw on. */
+export function buyCard(state: UtopiaGame, id: string): UtopiaGame | null {
+  const card = playerCard(id);
+  if (!card || buyBlocker(state, id)) return null;
+  return { ...state, credits: state.credits - card.price, owned: [...state.owned, id] };
 }
 
 /** Multiplier for a corporation's damage and healing in the given battle of a station. */
@@ -63,7 +79,7 @@ function newOpponent(stageIndex: number, battle: number): Opponent {
 /** Fills the hand with random cards you own that are neither in the hand nor resting. */
 function drawHand(state: UtopiaGame, random: () => number): string[] {
   const hand = [...state.hand];
-  const pool = unlockedCards(state).map(card => card.id).filter(id => !hand.includes(id) && !((state.cooldowns[id] ?? 0) > 0));
+  const pool = ownedCards(state).map(card => card.id).filter(id => !hand.includes(id) && !((state.cooldowns[id] ?? 0) > 0));
   while (hand.length < battleRules.handSize && pool.length) {
     hand.push(pool.splice(Math.min(pool.length - 1, Math.floor(random() * pool.length)), 1)[0]!);
   }
@@ -94,6 +110,8 @@ export function newUtopia(history: LevelSummary[] = [], random: () => number = M
     log: [],
     wins: 0,
     losses: 0,
+    credits: 0,
+    owned: [],
     outcome: null,
     outcomeSeen: false,
     history,
@@ -169,6 +187,7 @@ function winBattle(state: UtopiaGame, random: () => number): UtopiaGame {
   const won: UtopiaGame = {
     ...state,
     wins: state.wins + 1,
+    credits: state.credits + battleRules.creditsPerWin,
     credibility: Math.min(battleRules.maxCredibility, state.credibility + battleRules.healAfterWin)
   };
   const stage = campaign[state.stage]!;
@@ -215,7 +234,7 @@ export function tickUtopia(state: UtopiaGame, random: () => number = Math.random
 
 // ---------- The end ----------
 
-/** Credibility ran out: try again with full credibility, from the current station (or from the start). */
+/** Credibility ran out: try again with full credibility, from the current station (or from the start). Credits and cards stay. */
 export function retry(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
   if (state.outcome !== 'lost') return null;
   const stage = battleRules.retryFrom === 'campaign' ? 0 : state.stage;
