@@ -86,6 +86,9 @@ export type CardEffect =
   | { kind: 'block'; percent: number }
   | { kind: 'heal'; amount: number };
 
+/** The colour scheme of a card: what it does, or 'combo' for cards with more than one kind of effect. */
+export type CardCategory = CardEffect['kind'] | 'combo';
+
 /** A card in your deck or a corporation's deck. */
 export interface BattleCard extends Described {
   effects: CardEffect[];

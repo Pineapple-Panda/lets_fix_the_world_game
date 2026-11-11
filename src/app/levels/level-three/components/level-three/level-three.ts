@@ -1,7 +1,8 @@
 import { Component, computed, input, output, signal } from '@angular/core';
+import { CardArtComponent } from '../card-art/card-art';
 import { CardShopComponent } from '../card-shop/card-shop';
 import {
-  buyBlocker, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardSummary, corporation, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
 } from '../../game/utopia';
 import { battleRules, campaign, megaCorpName } from '../../game/utopia-content';
 import type { Attack, UtopiaGame } from '../../models/utopia.model';
@@ -9,7 +10,7 @@ import type { Attack, UtopiaGame } from '../../models/utopia.model';
 /** Level 3: a card game against the corporations, one after another. */
 @Component({
   selector: 'app-level-three',
-  imports: [CardShopComponent],
+  imports: [CardArtComponent, CardShopComponent],
   templateUrl: './level-three.html'
 })
 export class LevelThreeComponent {
@@ -21,6 +22,8 @@ export class LevelThreeComponent {
   protected readonly shopOpen = signal(false);
 
   protected readonly rules = battleRules;
+  /** Label of each colour scheme. */
+  protected readonly categoryLabel: Record<string, string> = { damage: 'Damage', block: 'Block', heal: 'Heal', combo: 'Combo' };
   protected readonly megaCorpName = megaCorpName;
 
   protected readonly view = computed(() => {
@@ -52,7 +55,7 @@ export class LevelThreeComponent {
         block: state.enemy.block,
         // Its cards, with the turns they still rest.
         deck: enemyDeck(state.enemy.corpId).map(card => ({
-          card, summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0
+          card, category: cardCategory(card), summary: cardSummary(card, strength), resting: state.enemy.cooldowns[card.id] ?? 0
         }))
       },
       credibility: Math.round(state.credibility),
@@ -60,7 +63,7 @@ export class LevelThreeComponent {
       block: state.block,
       yourTurn: playerTurn(state),
       hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
-        card, summary: cardSummary(card), selected: state.selected.includes(card.id)
+        card, category: cardCategory(card), summary: cardSummary(card), selected: state.selected.includes(card.id)
       })),
       selectedCount: state.selected.length,
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
@@ -69,7 +72,7 @@ export class LevelThreeComponent {
       wins: state.wins,
       losses: state.losses,
       credits: state.credits,
-      shop: shopCards().map(card => ({ card, summary: cardSummary(card), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
+      shop: shopCards().map(card => ({ card, category: cardCategory(card), summary: cardSummary(card), blocker: buyBlocker(state, card.id), owned: state.owned.includes(card.id) })),
       // Something in the shop you can afford: the shop button shows a dot.
       affordable: shopCards().some(card => !buyBlocker(state, card.id)),
       log: state.log.map(entry => this.describe(entry))

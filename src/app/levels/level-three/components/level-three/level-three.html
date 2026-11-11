@@ -42,7 +42,8 @@
             </div>
             <ul class="enemy-deck" aria-label="Their cards">
                 @for (entry of v.enemy.deck; track entry.card.id) {
-                    <li class="mini-card" [class.resting]="entry.resting > 0" [attr.title]="entry.card.description">
+                    <li class="mini-card" [class.resting]="entry.resting > 0" [attr.data-category]="entry.category" [attr.title]="entry.card.description">
+                        <app-card-art [id]="entry.card.id" [category]="entry.category" />
                         <strong>{{ entry.card.name }}</strong>
                         <small>{{ entry.summary }}</small>
                         @if (entry.resting > 0) { <small class="rest">rests {{ entry.resting }}</small> }
@@ -95,9 +96,11 @@
     <section class="ops-card hand-area" aria-label="Your hand">
         <div class="hand">
             @for (entry of v.hand; track entry.card.id) {
-                <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected"
+                <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
                         [disabled]="!v.yourTurn || (!entry.selected && v.selectedCount >= rules.maxCards)"
                         (click)="cardToggled.emit(entry.card.id)">
+                    <span class="card-chip">{{ categoryLabel[entry.category] }}</span>
+                    <app-card-art [id]="entry.card.id" [category]="entry.category" />
                     <strong>{{ entry.card.name }}</strong>
                     <small>{{ entry.card.description }}</small>
                     <span class="play-card-effect">{{ entry.summary }}</span>

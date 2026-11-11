@@ -1920,6 +1920,9 @@ test('level 3: one credit per win buys cards in the card shop', () => {
   assert.deepEqual(refreshed.selected, []);
   assert.equal(utopia.cardSummary(utopiaContent.playerCards.find(card => card.id === 'protest-march')), '6 damage · block 20%');
   assert.equal(utopia.cardSummary(utopiaContent.megacorpCards[2], 1.5), '+15 heal');
+  const category = id => utopia.cardCategory(utopia.playerCard(id));
+  assert.deepEqual(['antitrust', 'firewall', 'press-conference', 'protest-march', 'leak'].map(category), ['damage', 'block', 'heal', 'combo', 'combo'],
+    'one colour scheme per kind of effect, combo for cards with more than one');
 });
 
 test('winning level 3 shows a summary of all three levels', () => {

@@ -1,6 +1,6 @@
 import { type Smoothing } from '../../../shared/game/smoothing.ts';
 import type { LevelSummary } from '../../../shared/models/shared.model.ts';
-import type { Attack, BattleCard, CardEffect, Corporation, Opponent, PlayerCard, Stage, UtopiaGame } from '../models/utopia.model.ts';
+import type { Attack, BattleCard, CardCategory, CardEffect, Corporation, Opponent, PlayerCard, Stage, UtopiaGame } from '../models/utopia.model.ts';
 import { battleRules, campaign, corporations, megacorpCards, playerCards } from './utopia-content.ts';
 
 // ---------- Lookups ----------
@@ -59,6 +59,12 @@ export function buyCard(state: UtopiaGame, id: string, random: () => number = Ma
 /** Multiplier for a corporation's damage and healing in the given battle of a station. */
 export function enemyStrength(stage: Stage, battle: number): number {
   return stage.damage + stage.damageStep * battle;
+}
+
+/** A card's colour scheme: damage, block or heal, or combo when it does more than one of them. */
+export function cardCategory(card: BattleCard): CardCategory {
+  const kinds = [...new Set(card.effects.map(effect => effect.kind))];
+  return kinds.length === 1 ? kinds[0]! : 'combo';
 }
 
 /** What a card does in a few words, e.g. "12 damage · block 50%". `factor` scales damage and healing (corporations). */
