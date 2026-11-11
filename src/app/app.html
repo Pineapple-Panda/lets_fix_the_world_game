@@ -62,7 +62,7 @@
         </main>
     } @else {
     @if (view().canLaunch) {
-        <app-launch [nextLevelEnabled]="config.levelTwoEnabled" (launched)="launchApplication()" />
+        <app-launch [facts]="launchFacts()" [nextLevelEnabled]="config.levelTwoEnabled" (launched)="launchApplication()" />
     }
     <main>
         @let state = view();

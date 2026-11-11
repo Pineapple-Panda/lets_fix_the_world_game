@@ -29,7 +29,7 @@ import {
   upgradeAutoCoverage, upgradeManualCoverage, work, headStartGame, gameSmoothing
 } from './levels/level-one/game/game';
 import {
-  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
+  activateLaunchedPerk, activateProduct, buyTegridy, canLaunch, dismissVictory, victorySummary, worldFixed, pitch, replayLevelTwo, level1Summary, level2Summary, averageActionsPerSecond, averageBudgetPerSecond, answerEvent, canAcceptEvent, specialEvent, fightLawsuit, settleLawsuit, resolveProtest, startProgram, stopProgram,
   upgradeProduct, endRental, rentSlot, setFocus, launch, skippedLevelTwo, startEpic, tickLaunched, launchedSmoothing } from './levels/level-two/game/launched';
 import { newsFeed } from './levels/level-two/game/news';
 import { loadGame, loadLaunched, loadUtopia, saveGame, saveKey, saveLaunched, saveUtopia } from './shared/game/storage';
@@ -102,6 +102,8 @@ export class AppComponent {
   });
   private readonly levelOne = new Smoother<Game>(gameSmoothing, this.clock, this.restoreGame());
   readonly game = this.levelOne.state;
+  /** Level 1 in a few numbers, for the launch dialog. */
+  readonly launchFacts = computed(() => level1Summary(this.game()).facts);
   /** True while the level 1 tick runs: its update glides instead of showing at once. */
   private ticking = false;
 

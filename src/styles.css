@@ -1489,6 +1489,34 @@ footer {
     text-align: right;
 }
 
+.launch-dialog {
+    text-align: center;
+}
+
+.launch-dialog h1 {
+    margin-bottom: 18px;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+}
+
+.launch-dialog .facts-list {
+    margin: 0 0 22px;
+    text-align: left;
+}
+
+.launch-button {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+}
+
+.intro-dialog .launch-next {
+    margin: 6px 0 0;
+    color: var(--faint);
+    font-size: 12px;
+}
+
 .victory-verdict {
     font-style: italic;
 }
