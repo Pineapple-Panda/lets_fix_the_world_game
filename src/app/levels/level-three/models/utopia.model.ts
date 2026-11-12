@@ -114,6 +114,8 @@ export interface UtopiaStats {
   damageDealt: number;
   damageTaken: number;
   attempts: number;
+  /** Battles won over all attempts (`wins` starts again after a game over). Missing in older saves. */
+  battlesWon?: number;
 }
 
 /**

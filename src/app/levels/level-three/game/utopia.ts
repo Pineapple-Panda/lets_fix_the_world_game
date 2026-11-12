@@ -401,6 +401,7 @@ function winBattle(state: UtopiaGame): UtopiaGame {
   const won: UtopiaGame = {
     ...state,
     wins: state.wins + 1,
+    stats: { ...state.stats, battlesWon: (state.stats.battlesWon ?? state.wins) + 1 },
     credits: state.credits + reward.credits,
     lastReward: reward,
     credibility: Math.min(battleRules.maxCredibility, state.credibility + battleRules.healAfterWin)
@@ -529,13 +530,16 @@ export function dismissOutcome(state: UtopiaGame): UtopiaGame | null {
 /** Level 3 in a few numbers. */
 export function level3Summary(state: UtopiaGame): LevelSummary {
   const minutes = Math.round(state.seconds / 60);
+  const won = state.stats.battlesWon ?? state.wins;
+  const gameOvers = state.stats.attempts - 1 + (state.outcome === 'lost' ? 1 : 0);
   return {
     level: 3,
     title: 'Level 3 · Building utopia',
     facts: [
       { label: 'Time', value: minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min` },
-      { label: 'Battles', value: `${state.wins + state.losses} (${state.wins} won, ${state.losses} lost)` },
-      { label: 'Attempts', value: state.stats.attempts.toLocaleString('en-US') },
+      // Over all attempts: every lost battle was a game over.
+      { label: 'Battles', value: `${won + gameOvers} (${won} won, ${gameOvers} lost)` },
+      { label: 'Game overs', value: gameOvers.toLocaleString('en-US') },
       { label: 'Cards played', value: state.stats.cardsPlayed.toLocaleString('en-US') },
       { label: 'Damage dealt', value: state.stats.damageDealt.toLocaleString('en-US') },
       { label: 'Damage taken', value: state.stats.damageTaken.toLocaleString('en-US') },
