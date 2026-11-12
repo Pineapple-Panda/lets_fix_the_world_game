@@ -1941,9 +1941,10 @@ test('level 3: credibility carries over; at 0 the battle is lost and level 3 sta
 test('level 3: one credit per win buys cards in the card shop', () => {
   assert.equal(utopia.ownedCards(fresh()).length, 5, 'the starter cards');
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
-    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['whistleblower', 2], ['open-source', 2],
-      ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['viral-petition', 3], ['general-strike', 3],
-      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['investigative-desk', 4]]);
+    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['not-your-buddy', 2], ['polite-apes', 2],
+      ['whistleblower', 2], ['open-source', 2], ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['handkerchief', 3], ['viral-petition', 3], ['general-strike', 3],
+      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['investigative-desk', 4],
+      ['supreme-court', 7], ['global-solidarity', 7]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -2136,6 +2137,32 @@ test('level 3: a special card shows your whole deck in your next turn', () => {
   state = utopia.attack(picked(state, 'leak', 'open-source'), () => 0);
   assert.equal(state.openDeck, false);
   assert.equal(state.hand.length, 5, 'a normal hand again');
+});
+
+test('level 3: the expensive cards hit for 50 and heal 40', () => {
+  assert.deepEqual(['supreme-court', 'global-solidarity'].map(id => {
+    const card = utopia.playerCard(id);
+    return [utopia.cardCategory(card), utopia.cardSummary(card), card.price];
+  }), [['damage', '50 damage', 7], ['heal', '+40 heal', 7]]);
+  const armed = { ...fresh(), credibility: 50, owned: ['supreme-court', 'global-solidarity'], hand: ['supreme-court', 'global-solidarity'] };
+  const played = utopia.attack(picked(armed, 'supreme-court', 'global-solidarity'), () => 0);
+  assert.deepEqual([played.enemy.power, played.credibility], [50, 90]);
+});
+
+test('level 3: quote instants are answered by one corporation each', () => {
+  const pairs = [['not-your-buddy', 'not-your-guy', 'numbaz', 12], ['polite-apes', 'family-reunion', 'bananas', 10], ['handkerchief', 'janitor-job', 'mississippi', 16]];
+  for (const [quote, comeback, corpId, amount] of pairs) {
+    const card = utopia.playerCard(quote);
+    assert.equal(utopia.cardCategory(card), 'instant');
+    assert.equal(utopia.cardSummary(card), amount + ' instant damage');
+    assert.ok(utopia.enemyDeck(corpId).some(entry => entry.id === comeback), comeback + ' is in the deck of ' + corpId);
+    assert.ok(!utopia.enemyDeck('edison').some(entry => entry.id === comeback), 'counters are not inherited');
+    const armed = { ...fresh(), stage: utopiaContent.campaign.findIndex(stage => stage.corpId === corpId), owned: [quote], hand: [quote, 'antitrust'] };
+    const hit = utopia.attack(picked({ ...armed, enemy: { ...armed.enemy, corpId } }, quote), () => 0);
+    assert.equal(hit.enemy.power, 100 - amount, quote + ' hits');
+    const answered = utopia.attack(picked({ ...armed, enemy: { ...armed.enemy, corpId, counters: [comeback] } }, quote), () => 0);
+    assert.deepEqual([answered.enemy.power, answered.log[0].counteredBy], [100, comeback], comeback + ' answers it');
+  }
 });
 
 test('winning level 3 shows a summary of all three levels', () => {

@@ -82,6 +82,52 @@ import type { CardCategory } from '../../models/utopia.model';
           <path d="M8 8 L14 10 L10 14 Z M56 8 L50 10 L54 14 Z" stroke-width="2" />
           <path d="M24 56 Q32 62 40 56" stroke-width="2.5" />
         }
+        @case ('not-your-buddy') {
+          <!-- two speech bubbles shouting at each other -->
+          <path class="art-fill" d="M6 10 H32 V30 H18 L12 36 V30 H6 Z" />
+          <path class="art-fill" d="M58 28 H32 V48 H46 L52 54 V48 H58 Z" />
+          <path d="M14 20 H24 M40 38 H50" stroke-width="2.5" />
+          <path d="M20 44 L26 50 M26 44 L20 50" stroke-width="2" />
+        }
+        @case ('not-your-guy') {
+          <!-- the same two bubbles, the other way round: it never ends -->
+          <path class="art-fill" d="M58 10 H32 V30 H46 L52 36 V30 H58 Z" />
+          <path class="art-fill" d="M6 28 H32 V48 H18 L12 54 V48 H6 Z" />
+          <path d="M40 20 H50 M14 38 H24" stroke-width="2.5" />
+          <path d="M38 44 A6 6 0 1 0 50 44" stroke-width="2" />
+        }
+        @case ('polite-apes') {
+          <!-- an ape with a monocle -->
+          <circle class="art-fill" cx="32" cy="32" r="20" />
+          <circle cx="13" cy="30" r="5" stroke-width="2.5" />
+          <circle cx="51" cy="30" r="5" stroke-width="2.5" />
+          <circle cx="25" cy="27" r="2.5" stroke-width="2" />
+          <circle cx="39" cy="27" r="5" stroke-width="2" />
+          <path d="M44 31 L48 46" stroke-width="1.5" />
+          <path d="M24 40 Q32 45 40 40" stroke-width="2.5" />
+          <path d="M22 8 H42 L40 13 H24 Z" stroke-width="2" />
+        }
+        @case ('family-reunion') {
+          <!-- a family photo of apes -->
+          <rect class="art-fill" x="6" y="12" width="52" height="40" rx="3" />
+          <circle cx="20" cy="28" r="6" stroke-width="2.5" />
+          <circle cx="44" cy="28" r="6" stroke-width="2.5" />
+          <circle cx="32" cy="36" r="4" stroke-width="2.5" />
+          <path d="M12 48 Q20 40 28 48 M36 48 Q44 40 52 48" stroke-width="2" />
+        }
+        @case ('handkerchief') {
+          <!-- a waving handkerchief and a sword -->
+          <path class="art-fill" d="M10 12 Q22 6 30 14 Q38 22 48 14 L44 36 Q34 44 26 36 Q18 28 8 34 Z" />
+          <path d="M10 12 L6 56" stroke-width="3" />
+          <path d="M40 58 L58 40 M54 36 L62 44" stroke-width="3" />
+        }
+        @case ('janitor-job') {
+          <!-- a mop and a bucket -->
+          <path d="M40 6 L26 40" stroke-width="3" />
+          <path class="art-fill" d="M18 38 H36 L40 46 H14 Z" />
+          <path d="M16 46 L14 54 M22 46 L21 55 M28 46 L28 55 M34 46 L35 55 M40 46 L42 54" stroke-width="2" />
+          <path class="art-fill" d="M44 34 H60 L57 58 H47 Z" />
+        }
         @case ('like-a-cow') {
           <!-- a speech bubble with horns: the comeback -->
           <path class="art-fill" d="M10 18 H54 V44 H30 L20 54 V44 H10 Z" />
@@ -270,6 +316,21 @@ import type { CardCategory } from '../../models/utopia.model';
           <!-- a speech bubble that says no -->
           <path class="art-fill" d="M8 12 H56 V42 H26 L14 54 V42 H8 Z" />
           <path d="M18 34 V20 L28 34 V20 M36 27 A6 7 0 1 0 48 27 A6 7 0 1 0 36 27" stroke-width="2.5" />
+        }
+        @case ('supreme-court') {
+          <!-- a courthouse with a falling gavel -->
+          <path class="art-fill" d="M8 24 L32 10 L56 24 Z" />
+          <path d="M12 28 V50 M22 28 V50 M42 28 V50 M52 28 V50" stroke-width="3" />
+          <path d="M6 54 H58" stroke-width="3" />
+          <path class="art-fill" d="M26 34 L36 30 L39 37 L29 41 Z" />
+          <path d="M33 39 L38 50" stroke-width="2.5" />
+        }
+        @case ('global-solidarity') {
+          <!-- a globe held by hands, with a heart -->
+          <circle class="art-fill" cx="32" cy="26" r="16" />
+          <path d="M16 26 H48 M32 10 C24 18 24 34 32 42 C40 34 40 18 32 10" stroke-width="2" />
+          <path d="M6 46 Q14 44 20 50 L28 54 M58 46 Q50 44 44 50 L36 54" stroke-width="2.5" />
+          <path d="M32 58 L28 54 A2.5 2.5 0 0 1 32 51 A2.5 2.5 0 0 1 36 54 Z" stroke-width="2" />
         }
         @case ('all-hands-on-deck') {
           <!-- a fan of cards -->

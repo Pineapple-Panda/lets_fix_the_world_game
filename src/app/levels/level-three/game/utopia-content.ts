@@ -88,7 +88,9 @@ export const corporations: Corporation[] = [
       { id: 'ad-auction', name: 'Ad Auction', description: 'Your attention, sold to the highest bidder.',
         effects: [{ kind: 'damage', amount: 8 }], cooldown: 2 },
       { id: 'give-us-your-data', name: 'Did you mean: give us your data?', description: 'Autocomplete knows what you want.',
-        effects: [{ kind: 'instant', amount: 6, counter: 'did-you-mean-no' }], cooldown: 2 }
+        effects: [{ kind: 'instant', amount: 6, counter: 'did-you-mean-no' }], cooldown: 2 },
+      { id: 'not-your-guy', name: 'I’m not your guy, friend!', description: 'And so it goes on. Forever.',
+        effects: [{ kind: 'counter', of: 'not-your-buddy' }], cooldown: 2 }
     ]
   },
   {
@@ -104,7 +106,9 @@ export const corporations: Corporation[] = [
       { id: 'banana-republic', name: 'Banana Republic', description: 'Buys a government. The receipt is in bananas.',
         effects: [{ kind: 'heal', amount: 20 }], cooldown: 4 },
       { id: 'plan-is-bananas', name: 'Your plan is bananas', description: 'And we would know. We own all of them.',
-        effects: [{ kind: 'instant', amount: 8, counter: 'not-monoculture' }], cooldown: 2 }
+        effects: [{ kind: 'instant', amount: 8, counter: 'not-monoculture' }], cooldown: 2 },
+      { id: 'family-reunion', name: 'Glad you made it to your family reunion.', description: 'The apes send their regards.',
+        effects: [{ kind: 'counter', of: 'polite-apes' }], cooldown: 2 }
     ]
   },
   {
@@ -122,7 +126,9 @@ export const corporations: Corporation[] = [
       { id: 'prime-lockdown', name: 'Prime Lockdown', description: 'One of your plans is stuck in a warehouse. Delivery: tomorrow, maybe.',
         effects: [{ kind: 'lock', count: 1 }], cooldown: 3 },
       { id: 'also-bought-robots', name: 'Customers who liked you also bought our robots', description: 'A recommendation you cannot refuse.',
-        effects: [{ kind: 'instant', amount: 10, counter: 'return-robot' }], cooldown: 2 }
+        effects: [{ kind: 'instant', amount: 10, counter: 'return-robot' }], cooldown: 2 },
+      { id: 'janitor-job', name: 'So you got that janitor job after all.', description: 'Mississippi Corp is always hiring. Robots.',
+        effects: [{ kind: 'counter', of: 'handkerchief' }], cooldown: 2 }
     ]
   },
   {
@@ -174,6 +180,12 @@ export const playerCards: PlayerCard[] = [
     effects: [{ kind: 'instant', amount: 10, counter: 'like-a-cow' }], cooldown: 1, price: 2 },
   { id: 'leather-jackets', name: 'I sell those fine leather jackets', description: 'A sales pitch so smooth it hurts. Unless they hate snakes.',
     effects: [{ kind: 'instant', amount: 10, counter: 'i-hate-snakes' }], cooldown: 1, price: 2 },
+  { id: 'not-your-buddy', name: 'I’m not your buddy, guy!', description: 'Starts an argument nobody can finish. Unless Numbaz knows the line.',
+    effects: [{ kind: 'instant', amount: 12, counter: 'not-your-guy' }], cooldown: 2, price: 2 },
+  { id: 'polite-apes', name: 'I’ve spoken with apes more polite than you.', description: 'Hurts. Unless Bananas Inc. has the comeback ready.',
+    effects: [{ kind: 'instant', amount: 10, counter: 'family-reunion' }], cooldown: 1, price: 2 },
+  { id: 'handkerchief', name: 'My handkerchief will wipe up your blood!', description: 'Big words, big damage. Unless Mississippi Corp answers.',
+    effects: [{ kind: 'instant', amount: 16, counter: 'janitor-job' }], cooldown: 2, price: 3 },
   { id: 'whistleblower', name: 'Whistleblower Hotline', description: 'Somebody inside talks. Their defences crumble.',
     effects: [{ kind: 'strip' }, { kind: 'damage', amount: 6 }], cooldown: 2, price: 2 },
   { id: 'open-source', name: 'Open Source Release', description: 'You give the code away. Everybody wins, except them.',
@@ -193,6 +205,11 @@ export const playerCards: PlayerCard[] = [
     effects: [{ kind: 'extraCards', count: 2 }], cooldown: 3, price: 3 },
   { id: 'all-hands-on-deck', name: 'All Hands on Deck', description: 'Everyone shows up. Next turn you pick from all your cards.',
     effects: [{ kind: 'openDeck' }], cooldown: 4, price: 3 },
+  // The expensive ones: one huge hit, one huge heal.
+  { id: 'supreme-court', name: 'Supreme Court Ruling', description: 'Broken up for good. No appeal, no lobbyist, no loophole.',
+    effects: [{ kind: 'damage', amount: 50 }], cooldown: 4, price: 7 },
+  { id: 'global-solidarity', name: 'Global Solidarity', description: 'The whole world stands behind you. For once.',
+    effects: [{ kind: 'heal', amount: 40 }], cooldown: 4, price: 7 },
   // Learned: the answers to the corporations' instant cards.
   { id: 'not-monoculture', name: 'At least it’s not a monoculture', description: 'Learned the hard way from Bananas Inc.',
     effects: [{ kind: 'counter', of: 'plan-is-bananas' }], cooldown: 2, price: 0, learned: true },
