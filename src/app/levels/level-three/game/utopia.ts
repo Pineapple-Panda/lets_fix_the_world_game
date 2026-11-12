@@ -84,7 +84,7 @@ export function enemyStrength(stage: Stage, battle: number): number {
 const effectCategory: Record<CardEffect['kind'], CardCategory | null> = {
   damage: 'damage', strip: 'damage', lock: 'damage', shuffle: 'damage',
   block: 'block', delay: 'block', heal: 'heal', regen: 'heal', instant: 'instant', counter: 'counter', selfDamage: null,
-  extraCards: 'special', openDeck: 'special'
+  extraCards: 'special', openDeck: 'special', refresh: 'special'
 };
 
 /** A card's colour scheme: damage, block, heal, instant battle or counter, or combo when it does more than one of them. */
@@ -110,6 +110,7 @@ export function cardSummary(card: BattleCard, factor = 1, wins = 0): string {
       case 'shuffle': return 'shuffles your hand';
       case 'extraCards': return `+${effect.count} cards next turn`;
       case 'openDeck': return 'next turn: your whole deck';
+      case 'refresh': return 'all your cards stop resting';
       case 'heal': return `+${Math.round(effect.amount * factor)} heal`;
       case 'instant': return `${Math.round(effect.amount * factor)} instant damage`;
       case 'counter': return `counters “${playerCard(effect.of)?.name ?? enemyCardById(effect.of)?.name ?? effect.of}”`;
@@ -172,11 +173,11 @@ function drawHand(state: UtopiaGame, random: () => number, size = battleRules.ha
   return hand;
 }
 
-/** A battle against the corporation of the given station: fresh opponent, fresh hand, no blocks or cooldowns. */
+/** A battle against the corporation of the given station: fresh opponent, fresh hand, no blocks or cooldowns, an empty battle card. */
 function startBattle(state: UtopiaGame, stage: number, battle: number, random: () => number): UtopiaGame {
   const next: UtopiaGame = {
     ...state, stage, battle, enemy: newOpponent(stage, battle), hand: [], selected: [], cooldowns: {}, block: 0, blockAttacks: 0, openDeck: false,
-    counters: [], regen: [], locked: [], turn: 'player'
+    extraCards: 0, counters: [], regen: [], locked: [], turn: 'player', enemyWait: 0, resolving: null, victory: false, log: []
   };
   return { ...next, hand: drawHand(next, random) };
 }
@@ -215,7 +216,7 @@ export function newUtopia(history: LevelSummary[] = [], random: () => number = M
 
 /** True while you can pick cards and attack. */
 export function playerTurn(state: UtopiaGame): boolean {
-  return state.outcome === null && state.turn === 'player' && !state.resolving;
+  return state.outcome === null && state.turn === 'player' && !state.resolving && !state.victory;
 }
 
 /** The battle is over: won or lost. It is applied a few ticks later, once the last cards have been shown. */
@@ -308,6 +309,9 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
   const notes: string[] = [];
   if (result.strip && state.enemy.block) notes.push('removed their block');
   if (result.selfDamage) notes.push(`cost you ${result.selfDamage}`);
+  // Refresh: your other cards stop resting (the cards of this attack rest as usual).
+  const refresh = effects.some(effect => effect.kind === 'refresh');
+  if (refresh && Object.keys(state.cooldowns).length) notes.push('your cards are rested');
   // Delay: its strongest card rests longer.
   let enemyCooldowns = state.enemy.cooldowns;
   for (const effect of effects) {
@@ -338,7 +342,7 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     extraCards: effects.reduce((total, effect) => total + (effect.kind === 'extraCards' ? effect.count : 0), 0),
     // Another one opens your whole deck next turn.
     openDeck: effects.some(effect => effect.kind === 'openDeck'),
-    cooldowns: restCards(state.cooldowns, played),
+    cooldowns: restCards(refresh ? {} : state.cooldowns, played),
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],
     turn: 'enemy',
@@ -354,8 +358,10 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
       damageDealt: state.stats.damageDealt + damage, damageTaken: state.stats.damageTaken + instant.recoil + result.selfDamage
     }
   };
-  // After a turn with the whole deck, a normal hand of five is drawn again; the open deck shows every card that is not resting.
-  next.hand = drawHand(state.openDeck ? { ...next, hand: [] } : next, random, next.openDeck ? Infinity : battleRules.handSize);
+  // Extra cards come with a bigger hand; the open deck shows every card that is not resting. After such a turn a fresh
+  // hand of normal size is drawn.
+  const bigHand = state.openDeck || (state.extraCards ?? 0) > 0;
+  next.hand = drawHand(bigHand ? { ...next, hand: [] } : next, random, next.openDeck ? Infinity : battleRules.handSize + (next.extraCards ?? 0));
   if (power <= 0) return resolveBattle(next, 'win');
   return credibility <= 0 ? resolveBattle(next, 'loss') : next;
 }
@@ -380,11 +386,18 @@ export function battleReward(credibility: number, corporationBeaten: boolean): R
   return reward;
 }
 
-/** The corporation is beaten: count the win, heal a little and move on to the next battle (or win the level). */
-function winBattle(state: UtopiaGame, random: () => number): UtopiaGame {
-  const stage = campaign[state.stage]!;
-  const nextBattle = state.battle + 1 < stage.battles ? { stage: state.stage, battle: state.battle + 1 } : { stage: state.stage + 1, battle: 0 };
-  const reward = battleReward(state.credibility, nextBattle.stage !== state.stage);
+/** The battle after the current one: the next one against the same corporation, or the first against the next one (or null at the end). */
+export function upcomingBattle(state: UtopiaGame): { stage: number; battle: number } | null {
+  const stage = campaign[state.stage];
+  if (!stage) return null;
+  const next = state.battle + 1 < stage.battles ? { stage: state.stage, battle: state.battle + 1 } : { stage: state.stage + 1, battle: 0 };
+  return next.stage < campaign.length ? next : null;
+}
+
+/** The corporation is beaten: count the win and heal a little. The next battle waits for you (or the level is won). */
+function winBattle(state: UtopiaGame): UtopiaGame {
+  const nextBattle = upcomingBattle(state);
+  const reward = battleReward(state.credibility, nextBattle?.stage !== state.stage);
   const won: UtopiaGame = {
     ...state,
     wins: state.wins + 1,
@@ -392,8 +405,15 @@ function winBattle(state: UtopiaGame, random: () => number): UtopiaGame {
     lastReward: reward,
     credibility: Math.min(battleRules.maxCredibility, state.credibility + battleRules.healAfterWin)
   };
-  if (nextBattle.stage >= campaign.length) return { ...won, outcome: 'won', turn: 'player', selected: [] };
-  return startBattle(won, nextBattle.stage, nextBattle.battle, random);
+  if (!nextBattle) return { ...won, outcome: 'won', turn: 'player', selected: [] };
+  return { ...won, turn: 'player', selected: [], victory: true };
+}
+
+/** "Next battle" in the "You won" dialog: the next battle starts with a fresh hand and an empty battle card. */
+export function nextBattle(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
+  const upcoming = upcomingBattle(state);
+  if (!state.victory || !upcoming) return null;
+  return startBattle(state, upcoming.stage, upcoming.battle, random);
 }
 
 // ---------- The corporation's turn ----------
@@ -472,11 +492,13 @@ export function enemyAttack(state: UtopiaGame, random: () => number = Math.rando
 export function tickUtopia(state: UtopiaGame, random: () => number = Math.random): UtopiaGame {
   if (state.outcome !== null) return state;
   const next = { ...state, seconds: state.seconds + 1 };
+  // A won battle waits for "Next battle".
+  if (next.victory) return next;
   // A battle that just ended waits for its last cards, then the next battle starts (or the game is over).
   if (next.resolving) {
     if (next.resolving.wait > 1) return { ...next, resolving: { ...next.resolving, wait: next.resolving.wait - 1 } };
     const settled = { ...next, resolving: null };
-    return next.resolving.result === 'win' ? winBattle(settled, random) : lose(settled);
+    return next.resolving.result === 'win' ? winBattle(settled) : lose(settled);
   }
   if (next.turn !== 'enemy') return next;
   const wait = (next.enemyWait ?? 0) - 1;

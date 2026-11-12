@@ -115,6 +115,7 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !isCount(game.blockAttacks) || !isCount(enemy.blockAttacks) || !isIdList(game.locked) ||
     !(game.extraCards === undefined || isCount(game.extraCards)) ||
     !(game.openDeck === undefined || typeof game.openDeck === 'boolean') ||
+    !(game.victory === undefined || typeof game.victory === 'boolean') ||
     !(game.resolving === undefined || game.resolving === null ||
       (isObject(game.resolving) && (game.resolving.result === 'win' || game.resolving.result === 'loss') && isCount(game.resolving.wait))) ||
     !Array.isArray(game.regen) || !game.regen.every(entry => isObject(entry) && isCount(entry.amount) && isCount(entry.turns)) ||

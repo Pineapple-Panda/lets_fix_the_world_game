@@ -16,7 +16,7 @@ import { LevelThreeComponent } from './levels/level-three/components/level-three
 import { GameOverComponent } from './levels/level-three/components/game-over/game-over';
 import { UtopiaWonComponent } from './levels/level-three/components/utopia-won/utopia-won';
 import {
-  attack, buyCard, dismissOutcome, gameSummary, newUtopia, retry, tickUtopia, toggleCard, utopiaSmoothing
+  attack, buyCard, dismissOutcome, nextBattle, gameSummary, newUtopia, retry, tickUtopia, toggleCard, utopiaSmoothing
 } from './levels/level-three/game/utopia';
 import type { UtopiaGame } from './levels/level-three/models/utopia.model';
 import {
@@ -419,6 +419,11 @@ export class AppComponent {
 
   buyCard(id: string): void {
     this.updateUtopia(state => buyCard(state, id));
+  }
+
+  /** "Next battle" in the "You won" dialog of level 3. */
+  nextBattle(): void {
+    this.updateUtopia(state => nextBattle(state));
   }
 
   dismissVictory(): void {

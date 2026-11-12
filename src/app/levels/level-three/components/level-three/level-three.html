@@ -1,5 +1,8 @@
 @let v = view();
 <div class="cardgame">
+    @if (v.victory; as facts) {
+        <app-battle-won [facts]="facts" (nextBattle)="nextBattle.emit()" />
+    }
     @if (shopOpen()) {
         <app-card-shop [entries]="v.shop" [credits]="v.credits" [earnRules]="earnRules" [learnable]="v.learnable"
                        (bought)="cardBought.emit($event)" (closed)="shopOpen.set(false)" />
@@ -146,7 +149,7 @@
                 </button>
             </div>
         </div>
-        <div class="hand" [class.open-deck]="v.openDeck">
+        <div class="hand" [class.open-deck]="v.bigHand">
             @for (entry of v.hand; track entry.card.id) {
                 <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
                         [disabled]="!v.yourTurn || entry.locked || (!entry.selected && v.selectedCount >= v.maxCards)" [class.locked]="entry.locked"

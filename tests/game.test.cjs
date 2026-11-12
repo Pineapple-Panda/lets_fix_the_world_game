@@ -1892,7 +1892,14 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   assert.deepEqual([ending.resolving, ending.wins, ending.enemy.power], [{ result: 'win', wait: 3 }, 0, 0], 'the win is applied after the last cards are shown');
   assert.equal(utopia.toggleCard(ending, ending.hand[0]), null, 'nobody plays meanwhile');
   assert.equal(utopia.tickUtopia(ending).resolving.wait, 2);
-  const won = settle(ending);
+  const paused = settle(ending);
+  assert.equal(paused.victory, true, 'the "You won" dialog shows');
+  assert.deepEqual([paused.battle, paused.enemy.power], [0, 0], 'the next battle waits for you');
+  assert.equal(utopia.toggleCard(paused, paused.hand[0]), null, 'no cards meanwhile');
+  assert.equal(utopia.tickUtopia(paused).battle, 0, 'time does not start it either');
+  const won = utopia.nextBattle(paused, () => 0);
+  assert.equal(utopia.nextBattle(won), null, 'only after a win');
+  assert.deepEqual([won.victory, won.log, won.resolving], [false, [], null], 'an empty battle card');
   assert.equal(won.wins, 1);
   assert.equal(won.credits, 2, 'one credit per win, one more for winning with more than 50 credibility');
   assert.deepEqual(won.lastReward.reasons, ['win', 'credibility above 50']);
@@ -1900,13 +1907,14 @@ test('level 3: a beaten corporation counts as a win; the campaign moves on', () 
   assert.deepEqual([won.stage, won.battle, won.enemy.corpId, won.enemy.power], [2, 1, 'bananas', 100], 'second battle, back at full power');
   assert.equal(won.turn, 'player');
   assert.deepEqual(won.cooldowns, {});
-  const next = settle(utopia.attack(picked({ ...won, battle: 2, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0));
+  const next = utopia.nextBattle(settle(utopia.attack(picked({ ...won, battle: 2, credibility: 40, enemy: { ...won.enemy, power: 1 } }, won.hand[0]), () => 0)), () => 0);
   assert.deepEqual([next.stage, next.battle, next.enemy.corpId, next.enemy.power], [3, 0, 'mississippi', 100]);
   assert.equal(next.credits, won.credits + 1 + 2, 'a win (no bonus at 40 credibility) and the corporation beaten for good');
   assert.deepEqual(next.lastReward.reasons, ['win', 'corporation beaten']);
   const last = { ...fresh(), stage: 4, battle: 4, enemy: { corpId: 'edison', power: 1, maxPower: 195, block: 0, counters: [], cooldowns: {} } };
   const victory = settle(utopia.attack(picked(last, last.hand[0]), () => 0));
   assert.equal(victory.outcome, 'won');
+  assert.ok(!victory.victory, 'the last win ends the level instead');
   assert.equal(utopia.tickUtopia(victory), victory, 'the game stands still');
   assert.equal(utopia.dismissOutcome(victory).outcomeSeen, true);
 });
@@ -1933,9 +1941,10 @@ test('level 3: credibility carries over; at 0 the battle is lost and level 3 sta
 test('level 3: one credit per win buys cards in the card shop', () => {
   assert.equal(utopia.ownedCards(fresh()).length, 5, 'the starter cards');
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
-    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['whistleblower', 2], ['open-source', 2],
-      ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['viral-petition', 3], ['general-strike', 3],
-      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['investigative-desk', 4]]);
+    [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['not-your-buddy', 2], ['polite-apes', 2],
+      ['whistleblower', 2], ['open-source', 2], ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['handkerchief', 3], ['viral-petition', 3], ['general-strike', 3],
+      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['turntables', 3], ['investigative-desk', 4], ['toshiba-handybook', 5],
+      ['supreme-court', 7], ['global-solidarity', 7]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
   assert.equal(utopia.buyBlocker(fresh(), 'antitrust'), 'Not for sale');
@@ -2128,6 +2137,55 @@ test('level 3: a special card shows your whole deck in your next turn', () => {
   state = utopia.attack(picked(state, 'leak', 'open-source'), () => 0);
   assert.equal(state.openDeck, false);
   assert.equal(state.hand.length, 5, 'a normal hand again');
+});
+
+test('level 3: the Toshiba Handybook gives four more cards next turn, in a bigger hand', () => {
+  const card = utopia.playerCard('toshiba-handybook');
+  assert.deepEqual([utopia.cardCategory(card), utopia.cardSummary(card), card.price], ['special', '+4 cards next turn', 5]);
+  const owned = ['toshiba-handybook', 'leak', 'open-source', 'whistleblower', 'tax-audit', 'general-strike'];
+  let state = { ...fresh(), owned, hand: ['toshiba-handybook', 'antitrust', 'fact-check', 'firewall', 'press-conference'] };
+  state = utopia.attack(picked(state, 'toshiba-handybook'), () => 0);
+  assert.deepEqual([utopia.cardLimit(state), state.hand.length], [7, 9], 'seven cards to play from a hand of nine');
+  state = answer(state, () => 0);
+  state = utopia.attack(picked(state, ...state.hand.slice(0, 7)), () => 0);
+  const free = utopia.ownedCards(state).filter(entry => !state.cooldowns[entry.id]).length;
+  assert.deepEqual([utopia.cardLimit(state), state.hand.length], [3, Math.min(5, free)], 'back to a normal hand');
+});
+
+test('level 3: How the turntables… ends the rest of all your other cards', () => {
+  const card = utopia.playerCard('turntables');
+  assert.deepEqual([utopia.cardCategory(card), utopia.cardSummary(card), card.price], ['special', 'all your cards stop resting', 3]);
+  const state = { ...fresh(), owned: ['turntables'], hand: ['turntables', 'antitrust'], cooldowns: { 'fact-check': 2, firewall: 3, 'press-conference': 1 } };
+  const played = utopia.attack(picked(state, 'turntables', 'antitrust'), () => 0);
+  assert.deepEqual(played.cooldowns, { turntables: 4, antitrust: 1 }, 'only the cards just played rest');
+  assert.ok(played.log[0].notes.includes('your cards are rested'));
+  assert.deepEqual([...played.hand].sort(), ['fact-check', 'firewall', 'press-conference', 'protest-march'].sort(), 'the rested cards are drawn again');
+});
+
+test('level 3: the expensive cards hit for 50 and heal 40', () => {
+  assert.deepEqual(['supreme-court', 'global-solidarity'].map(id => {
+    const card = utopia.playerCard(id);
+    return [utopia.cardCategory(card), utopia.cardSummary(card), card.price];
+  }), [['damage', '50 damage', 7], ['heal', '+40 heal', 7]]);
+  const armed = { ...fresh(), credibility: 50, owned: ['supreme-court', 'global-solidarity'], hand: ['supreme-court', 'global-solidarity'] };
+  const played = utopia.attack(picked(armed, 'supreme-court', 'global-solidarity'), () => 0);
+  assert.deepEqual([played.enemy.power, played.credibility], [50, 90]);
+});
+
+test('level 3: quote instants are answered by one corporation each', () => {
+  const pairs = [['not-your-buddy', 'not-your-guy', 'numbaz', 12], ['polite-apes', 'family-reunion', 'bananas', 10], ['handkerchief', 'janitor-job', 'mississippi', 16]];
+  for (const [quote, comeback, corpId, amount] of pairs) {
+    const card = utopia.playerCard(quote);
+    assert.equal(utopia.cardCategory(card), 'instant');
+    assert.equal(utopia.cardSummary(card), amount + ' instant damage');
+    assert.ok(utopia.enemyDeck(corpId).some(entry => entry.id === comeback), comeback + ' is in the deck of ' + corpId);
+    assert.ok(!utopia.enemyDeck('edison').some(entry => entry.id === comeback), 'counters are not inherited');
+    const armed = { ...fresh(), stage: utopiaContent.campaign.findIndex(stage => stage.corpId === corpId), owned: [quote], hand: [quote, 'antitrust'] };
+    const hit = utopia.attack(picked({ ...armed, enemy: { ...armed.enemy, corpId } }, quote), () => 0);
+    assert.equal(hit.enemy.power, 100 - amount, quote + ' hits');
+    const answered = utopia.attack(picked({ ...armed, enemy: { ...armed.enemy, corpId, counters: [comeback] } }, quote), () => 0);
+    assert.deepEqual([answered.enemy.power, answered.log[0].counteredBy], [100, comeback], comeback + ' answers it');
+  }
 });
 
 test('winning level 3 shows a summary of all three levels', () => {

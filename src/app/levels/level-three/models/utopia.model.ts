@@ -39,6 +39,8 @@ export interface UtopiaGame {
   enemyWait?: number;
   /** A battle that just ended: won or lost, applied after `wait` more ticks (time for the last cards to be shown). */
   resolving?: { result: 'win' | 'loss'; wait: number } | null;
+  /** A battle was won: the "You won" dialog shows until you start the next battle. */
+  victory?: boolean;
   /** The latest attacks, newest first. */
   log: Attack[];
   /** Battles won and lost, over all attempts. */
@@ -142,6 +144,8 @@ export type CardEffect =
   | { kind: 'extraCards'; count: number }
   /** Special: in your next turn you pick from your whole deck instead of a hand of five (your cards). */
   | { kind: 'openDeck' }
+  /** Special: every other card of yours stops resting at once (your cards). */
+  | { kind: 'refresh' }
   | { kind: 'instant'; amount: number; counter: string }
   | { kind: 'counter'; of: string };
 
