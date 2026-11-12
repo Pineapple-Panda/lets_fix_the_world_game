@@ -295,9 +295,14 @@ function logAttack(state: UtopiaGame, attack: Omit<Attack, 'id'>): Attack[] {
   return [{ id, ...attack }, ...state.log].slice(0, battleRules.logLength);
 }
 
-/** Plays the picked cards. The corporation answers on the next tick, unless it is beaten. */
+/** Your turn, but every card in your hand is locked (or your hand is empty): attacking without cards passes the turn. */
+export function mustPass(state: UtopiaGame): boolean {
+  return playerTurn(state) && state.hand.every(id => state.locked.includes(id));
+}
+
+/** Plays the picked cards (none when you must pass). The corporation answers on the next tick, unless it is beaten. */
 export function attack(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
-  if (!playerTurn(state) || !state.selected.length) return null;
+  if (!playerTurn(state) || (!state.selected.length && !mustPass(state))) return null;
   const played = state.selected.map(playerCard).filter((card): card is PlayerCard => !!card);
   const effects = played.flatMap(card => card.effects);
   const result = resolve(effects, 1, state.enemy.block, state.wins);
@@ -307,6 +312,7 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
   const power = Math.max(0, state.enemy.power - damage);
   const credibility = Math.max(0, Math.min(battleRules.maxCredibility, state.credibility + result.healed) - instant.recoil - result.selfDamage);
   const notes: string[] = [];
+  if (!played.length) notes.push('no card to play: turn passed');
   if (result.strip && state.enemy.block) notes.push('removed their block');
   if (result.selfDamage) notes.push(`cost you ${result.selfDamage}`);
   // Refresh: your other cards stop resting (the cards of this attack rest as usual).

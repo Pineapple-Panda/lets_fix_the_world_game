@@ -130,9 +130,10 @@
             </div>
         </div>
         <div class="hand-actions">
-            <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || !v.selectedCount" (click)="attacked.emit()">
+            <button class="intro-button attack-button" type="button" [disabled]="!v.yourTurn || (!v.selectedCount && !v.mustPass)" (click)="attacked.emit()">
                 Attack
             </button>
+            @if (v.mustPass) { <small class="extra-cards">No card to play: attack to pass the turn</small> }
             @if (v.maxCards > rules.maxCards) { <small class="extra-cards">Up to {{ v.maxCards }} cards this turn</small> }
             @if (v.openDeck) { <small class="extra-cards">Your whole deck this turn</small> }
             <small class="upgrade-hint">Deck: {{ v.deckSize }} cards</small>

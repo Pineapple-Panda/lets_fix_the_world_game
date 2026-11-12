@@ -2162,6 +2162,18 @@ test('level 3: How the turntables… ends the rest of all your other cards', () 
   assert.deepEqual([...played.hand].sort(), ['fact-check', 'firewall', 'press-conference', 'protest-march'].sort(), 'the rested cards are drawn again');
 });
 
+test('level 3: with every card locked, attacking passes the turn', () => {
+  const stuck = { ...fresh(), hand: ['fact-check'], locked: ['fact-check'], cooldowns: { antitrust: 1, firewall: 1, 'press-conference': 1, 'protest-march': 1 } };
+  assert.equal(utopia.mustPass(stuck), true);
+  assert.equal(utopia.mustPass({ ...stuck, hand: ['fact-check', 'antitrust'] }), false, 'not while a card can be played');
+  assert.equal(utopia.attack({ ...fresh(), selected: [] }), null, 'no empty attacks otherwise');
+  const passed = utopia.attack(stuck, () => 0);
+  assert.deepEqual([passed.turn, passed.log[0].cards, passed.log[0].damage, passed.locked], ['enemy', [], 0, []]);
+  assert.ok(passed.log[0].notes.includes('no card to play: turn passed'));
+  assert.deepEqual(passed.cooldowns, {}, 'the resting cards count down');
+  assert.equal(passed.hand.length, 5);
+});
+
 test('level 3: the expensive cards hit for 50 and heal 40', () => {
   assert.deepEqual(['supreme-court', 'global-solidarity'].map(id => {
     const card = utopia.playerCard(id);
