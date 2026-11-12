@@ -144,6 +144,8 @@ export type CardEffect =
   | { kind: 'extraCards'; count: number }
   /** Special: in your next turn you pick from your whole deck instead of a hand of five (your cards). */
   | { kind: 'openDeck' }
+  /** Special: every other card of yours stops resting at once (your cards). */
+  | { kind: 'refresh' }
   | { kind: 'instant'; amount: number; counter: string }
   | { kind: 'counter'; of: string };
 

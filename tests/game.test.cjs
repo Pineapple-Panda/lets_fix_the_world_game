@@ -1943,7 +1943,7 @@ test('level 3: one credit per win buys cards in the card shop', () => {
   assert.deepEqual(utopia.shopCards().map(card => [card.id, card.price]),
     [['leak', 2], ['community-kitchens', 2], ['dairy-farmer', 2], ['leather-jackets', 2], ['not-your-buddy', 2], ['polite-apes', 2],
       ['whistleblower', 2], ['open-source', 2], ['fact-check-marathon', 2], ['tax-audit', 2], ['shut-it-down', 3], ['pop-up-homes', 3], ['handkerchief', 3], ['viral-petition', 3], ['general-strike', 3],
-      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['investigative-desk', 4],
+      ['union-contract', 3], ['respect-my-authority', 3], ['all-hands-on-deck', 3], ['turntables', 3], ['investigative-desk', 4], ['toshiba-handybook', 5],
       ['supreme-court', 7], ['global-solidarity', 7]]);
   assert.equal(utopia.buyBlocker(fresh(), 'leak'), 'Needs 2 more credits');
   assert.equal(utopia.buyCard(fresh(), 'leak'), null);
@@ -2137,6 +2137,29 @@ test('level 3: a special card shows your whole deck in your next turn', () => {
   state = utopia.attack(picked(state, 'leak', 'open-source'), () => 0);
   assert.equal(state.openDeck, false);
   assert.equal(state.hand.length, 5, 'a normal hand again');
+});
+
+test('level 3: the Toshiba Handybook gives four more cards next turn, in a bigger hand', () => {
+  const card = utopia.playerCard('toshiba-handybook');
+  assert.deepEqual([utopia.cardCategory(card), utopia.cardSummary(card), card.price], ['special', '+4 cards next turn', 5]);
+  const owned = ['toshiba-handybook', 'leak', 'open-source', 'whistleblower', 'tax-audit', 'general-strike'];
+  let state = { ...fresh(), owned, hand: ['toshiba-handybook', 'antitrust', 'fact-check', 'firewall', 'press-conference'] };
+  state = utopia.attack(picked(state, 'toshiba-handybook'), () => 0);
+  assert.deepEqual([utopia.cardLimit(state), state.hand.length], [7, 9], 'seven cards to play from a hand of nine');
+  state = answer(state, () => 0);
+  state = utopia.attack(picked(state, ...state.hand.slice(0, 7)), () => 0);
+  const free = utopia.ownedCards(state).filter(entry => !state.cooldowns[entry.id]).length;
+  assert.deepEqual([utopia.cardLimit(state), state.hand.length], [3, Math.min(5, free)], 'back to a normal hand');
+});
+
+test('level 3: How the turntables… ends the rest of all your other cards', () => {
+  const card = utopia.playerCard('turntables');
+  assert.deepEqual([utopia.cardCategory(card), utopia.cardSummary(card), card.price], ['special', 'all your cards stop resting', 3]);
+  const state = { ...fresh(), owned: ['turntables'], hand: ['turntables', 'antitrust'], cooldowns: { 'fact-check': 2, firewall: 3, 'press-conference': 1 } };
+  const played = utopia.attack(picked(state, 'turntables', 'antitrust'), () => 0);
+  assert.deepEqual(played.cooldowns, { turntables: 4, antitrust: 1 }, 'only the cards just played rest');
+  assert.ok(played.log[0].notes.includes('your cards are rested'));
+  assert.deepEqual([...played.hand].sort(), ['fact-check', 'firewall', 'press-conference', 'protest-march'].sort(), 'the rested cards are drawn again');
 });
 
 test('level 3: the expensive cards hit for 50 and heal 40', () => {

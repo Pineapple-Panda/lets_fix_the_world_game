@@ -117,6 +117,8 @@ export class LevelThreeComponent {
       // Cards you may play this turn (more after a special card).
       maxCards: cardLimit(state),
       openDeck: !!state.openDeck,
+      // A hand bigger than usual (extra cards or the whole deck) stays in one row that scrolls.
+      bigHand: state.hand.length > battleRules.handSize,
       resting: ownedCards(state).filter(card => (state.cooldowns[card.id] ?? 0) > 0)
         .map(card => ({ card, turns: state.cooldowns[card.id]! })),
       deckSize: ownedCards(state).length,

@@ -205,6 +205,10 @@ export const playerCards: PlayerCard[] = [
     effects: [{ kind: 'extraCards', count: 2 }], cooldown: 3, price: 3 },
   { id: 'all-hands-on-deck', name: 'All Hands on Deck', description: 'Everyone shows up. Next turn you pick from all your cards.',
     effects: [{ kind: 'openDeck' }], cooldown: 4, price: 3 },
+  { id: 'toshiba-handybook', name: 'Toshiba Handybook', description: 'Plenty of room for notes. Next turn you draw and play four more cards.',
+    effects: [{ kind: 'extraCards', count: 4 }], cooldown: 4, price: 5 },
+  { id: 'turntables', name: 'How the turntables…', description: 'Every card of yours that was resting is back in play.',
+    effects: [{ kind: 'refresh' }], cooldown: 4, price: 3 },
   // The expensive ones: one huge hit, one huge heal.
   { id: 'supreme-court', name: 'Supreme Court Ruling', description: 'Broken up for good. No appeal, no lobbyist, no loophole.',
     effects: [{ kind: 'damage', amount: 50 }], cooldown: 4, price: 7 },

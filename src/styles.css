@@ -2440,7 +2440,7 @@ footer {
 }
 
 .shop-dialog {
-    width: min(820px, 94vw);
+    width: min(1180px, 94vw);
     max-height: 90vh;
     overflow-y: auto;
 }

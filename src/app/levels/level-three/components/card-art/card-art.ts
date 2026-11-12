@@ -332,6 +332,21 @@ import type { CardCategory } from '../../models/utopia.model';
           <path d="M6 46 Q14 44 20 50 L28 54 M58 46 Q50 44 44 50 L36 54" stroke-width="2.5" />
           <path d="M32 58 L28 54 A2.5 2.5 0 0 1 32 51 A2.5 2.5 0 0 1 36 54 Z" stroke-width="2" />
         }
+        @case ('toshiba-handybook') {
+          <!-- an open notebook computer, full of notes -->
+          <path class="art-fill" d="M12 12 H52 V40 H12 Z" />
+          <path d="M6 46 H58 L54 52 H10 Z" stroke-width="2.5" />
+          <path d="M18 20 H40 M18 26 H46 M18 32 H34" stroke-width="2" />
+          <path d="M50 4 V12 M46 8 H54" stroke-width="2" />
+        }
+        @case ('turntables') {
+          <!-- a turntable with arrows going round -->
+          <circle class="art-fill" cx="30" cy="34" r="20" />
+          <circle cx="30" cy="34" r="4" stroke-width="2.5" />
+          <path d="M54 10 L48 30" stroke-width="2.5" />
+          <path d="M14 18 A22 22 0 0 1 40 12 M40 12 L36 8 M40 12 L35 15" stroke-width="2" />
+          <path d="M46 50 A22 22 0 0 1 20 56 M20 56 L24 60 M20 56 L25 53" stroke-width="2" />
+        }
         @case ('all-hands-on-deck') {
           <!-- a fan of cards -->
           <rect class="art-fill" x="10" y="16" width="20" height="30" rx="3" transform="rotate(-18 20 46)" />

@@ -149,7 +149,7 @@
                 </button>
             </div>
         </div>
-        <div class="hand" [class.open-deck]="v.openDeck">
+        <div class="hand" [class.open-deck]="v.bigHand">
             @for (entry of v.hand; track entry.card.id) {
                 <button class="play-card" type="button" [class.selected]="entry.selected" [attr.aria-pressed]="entry.selected" [attr.data-category]="entry.category"
                         [disabled]="!v.yourTurn || entry.locked || (!entry.selected && v.selectedCount >= v.maxCards)" [class.locked]="entry.locked"

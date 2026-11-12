@@ -84,7 +84,7 @@ export function enemyStrength(stage: Stage, battle: number): number {
 const effectCategory: Record<CardEffect['kind'], CardCategory | null> = {
   damage: 'damage', strip: 'damage', lock: 'damage', shuffle: 'damage',
   block: 'block', delay: 'block', heal: 'heal', regen: 'heal', instant: 'instant', counter: 'counter', selfDamage: null,
-  extraCards: 'special', openDeck: 'special'
+  extraCards: 'special', openDeck: 'special', refresh: 'special'
 };
 
 /** A card's colour scheme: damage, block, heal, instant battle or counter, or combo when it does more than one of them. */
@@ -110,6 +110,7 @@ export function cardSummary(card: BattleCard, factor = 1, wins = 0): string {
       case 'shuffle': return 'shuffles your hand';
       case 'extraCards': return `+${effect.count} cards next turn`;
       case 'openDeck': return 'next turn: your whole deck';
+      case 'refresh': return 'all your cards stop resting';
       case 'heal': return `+${Math.round(effect.amount * factor)} heal`;
       case 'instant': return `${Math.round(effect.amount * factor)} instant damage`;
       case 'counter': return `counters “${playerCard(effect.of)?.name ?? enemyCardById(effect.of)?.name ?? effect.of}”`;
@@ -308,6 +309,9 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
   const notes: string[] = [];
   if (result.strip && state.enemy.block) notes.push('removed their block');
   if (result.selfDamage) notes.push(`cost you ${result.selfDamage}`);
+  // Refresh: your other cards stop resting (the cards of this attack rest as usual).
+  const refresh = effects.some(effect => effect.kind === 'refresh');
+  if (refresh && Object.keys(state.cooldowns).length) notes.push('your cards are rested');
   // Delay: its strongest card rests longer.
   let enemyCooldowns = state.enemy.cooldowns;
   for (const effect of effects) {
@@ -338,7 +342,7 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
     extraCards: effects.reduce((total, effect) => total + (effect.kind === 'extraCards' ? effect.count : 0), 0),
     // Another one opens your whole deck next turn.
     openDeck: effects.some(effect => effect.kind === 'openDeck'),
-    cooldowns: restCards(state.cooldowns, played),
+    cooldowns: restCards(refresh ? {} : state.cooldowns, played),
     hand: state.hand.filter(id => !state.selected.includes(id)),
     selected: [],
     turn: 'enemy',
@@ -354,8 +358,10 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
       damageDealt: state.stats.damageDealt + damage, damageTaken: state.stats.damageTaken + instant.recoil + result.selfDamage
     }
   };
-  // After a turn with the whole deck, a normal hand of five is drawn again; the open deck shows every card that is not resting.
-  next.hand = drawHand(state.openDeck ? { ...next, hand: [] } : next, random, next.openDeck ? Infinity : battleRules.handSize);
+  // Extra cards come with a bigger hand; the open deck shows every card that is not resting. After such a turn a fresh
+  // hand of normal size is drawn.
+  const bigHand = state.openDeck || (state.extraCards ?? 0) > 0;
+  next.hand = drawHand(bigHand ? { ...next, hand: [] } : next, random, next.openDeck ? Infinity : battleRules.handSize + (next.extraCards ?? 0));
   if (power <= 0) return resolveBattle(next, 'win');
   return credibility <= 0 ? resolveBattle(next, 'loss') : next;
 }
