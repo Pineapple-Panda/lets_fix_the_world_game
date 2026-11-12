@@ -1,5 +1,8 @@
 @let v = view();
 <div class="cardgame">
+    @if (v.victory; as facts) {
+        <app-battle-won [facts]="facts" (nextBattle)="nextBattle.emit()" />
+    }
     @if (shopOpen()) {
         <app-card-shop [entries]="v.shop" [credits]="v.credits" [earnRules]="earnRules" [learnable]="v.learnable"
                        (bought)="cardBought.emit($event)" (closed)="shopOpen.set(false)" />

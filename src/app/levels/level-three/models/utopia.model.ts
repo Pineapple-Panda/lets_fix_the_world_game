@@ -39,6 +39,8 @@ export interface UtopiaGame {
   enemyWait?: number;
   /** A battle that just ended: won or lost, applied after `wait` more ticks (time for the last cards to be shown). */
   resolving?: { result: 'win' | 'loss'; wait: number } | null;
+  /** A battle was won: the "You won" dialog shows until you start the next battle. */
+  victory?: boolean;
   /** The latest attacks, newest first. */
   log: Attack[];
   /** Battles won and lost, over all attempts. */

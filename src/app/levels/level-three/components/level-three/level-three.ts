@@ -1,17 +1,18 @@
 import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import { CardArtComponent } from '../card-art/card-art';
+import { BattleWonComponent } from '../battle-won/battle-won';
 import { CardShopComponent } from '../card-shop/card-shop';
 import { CartIconComponent, CoinIconComponent } from '../icons/icons';
 import {
-  buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards
+  buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards, upcomingBattle
 } from '../../game/utopia';
-import { battleRules, corporations, megaCorpName } from '../../game/utopia-content';
+import { battleRules, campaign, corporations, megaCorpName } from '../../game/utopia-content';
 import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/utopia.model';
 
 /** Level 3: a card game against the corporations, one after another. */
 @Component({
   selector: 'app-level-three',
-  imports: [CardArtComponent, CardShopComponent, CartIconComponent, CoinIconComponent],
+  imports: [BattleWonComponent, CardArtComponent, CardShopComponent, CartIconComponent, CoinIconComponent],
   templateUrl: './level-three.html'
 })
 export class LevelThreeComponent {
@@ -19,6 +20,7 @@ export class LevelThreeComponent {
   readonly cardToggled = output<string>();
   readonly attacked = output<void>();
   readonly cardBought = output<string>();
+  readonly nextBattle = output<void>();
   /** The card shop dialog is open. */
   protected readonly shopOpen = signal(false);
 
@@ -105,6 +107,8 @@ export class LevelThreeComponent {
       yourTurn: playerTurn(state),
       // A battle that just ended, shown until the next one starts.
       resolving: state.resolving?.result ?? null,
+      // A won battle: the "You won" dialog.
+      victory: state.victory ? this.victoryFacts(state) : null,
       hand: state.hand.map(id => playerCard(id)).filter(card => !!card).map(card => ({
         card, category: cardCategory(card), summary: cardSummary(card, 1, state.wins), selected: state.selected.includes(card.id),
         locked: state.locked.includes(card.id)
@@ -136,6 +140,20 @@ export class LevelThreeComponent {
       newest: state.log[0]?.id ?? 0
     };
   });
+
+  /** What the "You won" dialog lists: who was beaten, what it paid, your credibility and who comes next. */
+  private victoryFacts(state: UtopiaGame) {
+    const battles = currentStage(state)?.battles ?? 0;
+    const upcoming = upcomingBattle(state);
+    const next = upcoming && campaign[upcoming.stage];
+    const reward = state.lastReward;
+    return [
+      { label: 'Beaten', value: `${corporation(state.enemy.corpId)?.name ?? state.enemy.corpId} · battle ${state.battle + 1} of ${battles}` },
+      ...(reward ? [{ label: 'Credits', value: `+${reward.credits} · ${reward.reasons.join(', ')}` }] : []),
+      { label: 'Credibility', value: `${Math.round(state.credibility)} / ${battleRules.maxCredibility}` },
+      ...(next ? [{ label: 'Next', value: `${corporation(next.corpId)?.name ?? next.corpId} · battle ${upcoming.battle + 1} of ${next.battles}` }] : [])
+    ];
+  }
 
   /** Order in which played cards are applied on the battle card. */
   private static readonly applyOrder: Record<CardCategory, number> = { block: 0, counter: 0, combo: 1, damage: 2, instant: 3, heal: 4, special: 5 };
