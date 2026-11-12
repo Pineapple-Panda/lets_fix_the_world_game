@@ -124,7 +124,8 @@ export function loadUtopia(storage: Pick<Storage, 'getItem'>): UtopiaGame | null
     !game.log.every(entry => isObject(entry) && isCount(entry.id) && (entry.by === 'player' || entry.by === 'enemy') && typeof entry.corpId === 'string' && isIdList(entry.cards)) ||
     !isCount(game.wins) || !isCount(game.losses) || !isCount(game.credits) || !isIdList(game.owned) ||
     ![null, 'won', 'lost'].includes(game.outcome as string | null) || typeof game.outcomeSeen !== 'boolean' || !isHistory(game.history) ||
-    !isObject(game.stats) || !['cardsPlayed', 'damageDealt', 'damageTaken', 'attempts'].every(key => isCount((game.stats as Snapshot)[key]))
+    !isObject(game.stats) || !['cardsPlayed', 'damageDealt', 'damageTaken', 'attempts'].every(key => isCount((game.stats as Snapshot)[key])) ||
+    !((game.stats as Snapshot)['battlesWon'] === undefined || isCount((game.stats as Snapshot)['battlesWon']))
   ) return null;
   // The campaign may have been shortened since: start it again rather than point at a station that is gone.
   if (game.stage >= campaign.length && game.outcome !== 'won') return newUtopia(game.history as UtopiaGame['history']);

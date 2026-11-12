@@ -2162,6 +2162,18 @@ test('level 3: How the turntables… ends the rest of all your other cards', () 
   assert.deepEqual([...played.hand].sort(), ['fact-check', 'firewall', 'press-conference', 'protest-march'].sort(), 'the rested cards are drawn again');
 });
 
+test('level 3: with every card locked, attacking passes the turn', () => {
+  const stuck = { ...fresh(), hand: ['fact-check'], locked: ['fact-check'], cooldowns: { antitrust: 1, firewall: 1, 'press-conference': 1, 'protest-march': 1 } };
+  assert.equal(utopia.mustPass(stuck), true);
+  assert.equal(utopia.mustPass({ ...stuck, hand: ['fact-check', 'antitrust'] }), false, 'not while a card can be played');
+  assert.equal(utopia.attack({ ...fresh(), selected: [] }), null, 'no empty attacks otherwise');
+  const passed = utopia.attack(stuck, () => 0);
+  assert.deepEqual([passed.turn, passed.log[0].cards, passed.log[0].damage, passed.locked], ['enemy', [], 0, []]);
+  assert.ok(passed.log[0].notes.includes('no card to play: turn passed'));
+  assert.deepEqual(passed.cooldowns, {}, 'the resting cards count down');
+  assert.equal(passed.hand.length, 5);
+});
+
 test('level 3: the expensive cards hit for 50 and heal 40', () => {
   assert.deepEqual(['supreme-court', 'global-solidarity'].map(id => {
     const card = utopia.playerCard(id);
@@ -2191,10 +2203,20 @@ test('level 3: quote instants are answered by one corporation each', () => {
 test('winning level 3 shows a summary of all three levels', () => {
   const level1 = { level: 1, title: 'Level 1 · Building the platform', facts: [{ label: 'Time', value: '12 min' }] };
   const level2 = { level: 2, title: 'Level 2 · Fixing the world', facts: [{ label: 'Lawsuits', value: '3' }] };
-  const state = { ...utopia.newUtopia([level1, level2], () => 0), wins: 12, losses: 2, seconds: 1800 };
+  const start = utopia.newUtopia([level1, level2], () => 0);
+  const state = { ...start, wins: 12, seconds: 1800, stats: { ...start.stats, attempts: 3, battlesWon: 20 } };
   const summary = utopia.gameSummary(state);
   assert.deepEqual(summary.map(entry => entry.level), [1, 2, 3]);
-  assert.deepEqual(summary[2].facts.slice(0, 2), [{ label: 'Time', value: '30 min' }, { label: 'Battles', value: '14 (12 won, 2 lost)' }]);
+  assert.deepEqual(summary[2].facts.slice(0, 3), [{ label: 'Time', value: '30 min' }, { label: 'Battles', value: '22 (20 won, 2 lost)' },
+    { label: 'Game overs', value: '2' }], 'all attempts count, not only the last one');
+  // Wins over all attempts survive a game over.
+  const nearly = { ...fresh(), enemy: { ...fresh().enemy, power: 1 } };
+  const won = utopia.nextBattle(settle(utopia.attack(picked(nearly, 'antitrust'), () => 0)), () => 0);
+  const lost = settle(answer(utopia.attack(picked({ ...won, credibility: 1 }, won.hand[0]), () => 0), () => 0));
+  assert.equal(lost.outcome, 'lost');
+  assert.equal(utopia.level3Summary(lost).facts[2].value, '1', 'the game over that just happened counts too');
+  const again = utopia.retry(lost, () => 0);
+  assert.deepEqual([again.wins, again.stats.battlesWon], [0, 1]);
   assert.equal(utopia.gameSummary(fresh())[0].facts[0].label, 'Skipped');
 });
 

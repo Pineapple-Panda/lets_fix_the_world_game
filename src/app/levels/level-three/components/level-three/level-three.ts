@@ -4,7 +4,7 @@ import { BattleWonComponent } from '../battle-won/battle-won';
 import { CardShopComponent } from '../card-shop/card-shop';
 import { CartIconComponent, CoinIconComponent } from '../icons/icons';
 import {
-  buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, ownedCards, playerCard, playerTurn, shopCards, upcomingBattle
+  buyBlocker, cardCategory, cardLimit, cardSummary, inheritedCards, corporation, learnableCards, currentStage, enemyCard, enemyDeck, enemyStrength, mustPass, ownedCards, playerCard, playerTurn, shopCards, upcomingBattle
 } from '../../game/utopia';
 import { battleRules, campaign, corporations, megaCorpName } from '../../game/utopia-content';
 import type { Attack, BattleCard, CardCategory, UtopiaGame } from '../../models/utopia.model';
@@ -114,6 +114,8 @@ export class LevelThreeComponent {
         locked: state.locked.includes(card.id)
       })),
       selectedCount: state.selected.length,
+      // No card you could play: Attack passes the turn.
+      mustPass: mustPass(state),
       // Cards you may play this turn (more after a special card).
       maxCards: cardLimit(state),
       openDeck: !!state.openDeck,

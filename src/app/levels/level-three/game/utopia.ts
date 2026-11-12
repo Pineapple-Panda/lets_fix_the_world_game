@@ -295,9 +295,14 @@ function logAttack(state: UtopiaGame, attack: Omit<Attack, 'id'>): Attack[] {
   return [{ id, ...attack }, ...state.log].slice(0, battleRules.logLength);
 }
 
-/** Plays the picked cards. The corporation answers on the next tick, unless it is beaten. */
+/** Your turn, but every card in your hand is locked (or your hand is empty): attacking without cards passes the turn. */
+export function mustPass(state: UtopiaGame): boolean {
+  return playerTurn(state) && state.hand.every(id => state.locked.includes(id));
+}
+
+/** Plays the picked cards (none when you must pass). The corporation answers on the next tick, unless it is beaten. */
 export function attack(state: UtopiaGame, random: () => number = Math.random): UtopiaGame | null {
-  if (!playerTurn(state) || !state.selected.length) return null;
+  if (!playerTurn(state) || (!state.selected.length && !mustPass(state))) return null;
   const played = state.selected.map(playerCard).filter((card): card is PlayerCard => !!card);
   const effects = played.flatMap(card => card.effects);
   const result = resolve(effects, 1, state.enemy.block, state.wins);
@@ -307,6 +312,7 @@ export function attack(state: UtopiaGame, random: () => number = Math.random): U
   const power = Math.max(0, state.enemy.power - damage);
   const credibility = Math.max(0, Math.min(battleRules.maxCredibility, state.credibility + result.healed) - instant.recoil - result.selfDamage);
   const notes: string[] = [];
+  if (!played.length) notes.push('no card to play: turn passed');
   if (result.strip && state.enemy.block) notes.push('removed their block');
   if (result.selfDamage) notes.push(`cost you ${result.selfDamage}`);
   // Refresh: your other cards stop resting (the cards of this attack rest as usual).
@@ -401,6 +407,7 @@ function winBattle(state: UtopiaGame): UtopiaGame {
   const won: UtopiaGame = {
     ...state,
     wins: state.wins + 1,
+    stats: { ...state.stats, battlesWon: (state.stats.battlesWon ?? state.wins) + 1 },
     credits: state.credits + reward.credits,
     lastReward: reward,
     credibility: Math.min(battleRules.maxCredibility, state.credibility + battleRules.healAfterWin)
@@ -529,13 +536,16 @@ export function dismissOutcome(state: UtopiaGame): UtopiaGame | null {
 /** Level 3 in a few numbers. */
 export function level3Summary(state: UtopiaGame): LevelSummary {
   const minutes = Math.round(state.seconds / 60);
+  const won = state.stats.battlesWon ?? state.wins;
+  const gameOvers = state.stats.attempts - 1 + (state.outcome === 'lost' ? 1 : 0);
   return {
     level: 3,
     title: 'Level 3 · Building utopia',
     facts: [
       { label: 'Time', value: minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min` },
-      { label: 'Battles', value: `${state.wins + state.losses} (${state.wins} won, ${state.losses} lost)` },
-      { label: 'Attempts', value: state.stats.attempts.toLocaleString('en-US') },
+      // Over all attempts: every lost battle was a game over.
+      { label: 'Battles', value: `${won + gameOvers} (${won} won, ${gameOvers} lost)` },
+      { label: 'Game overs', value: gameOvers.toLocaleString('en-US') },
       { label: 'Cards played', value: state.stats.cardsPlayed.toLocaleString('en-US') },
       { label: 'Damage dealt', value: state.stats.damageDealt.toLocaleString('en-US') },
       { label: 'Damage taken', value: state.stats.damageTaken.toLocaleString('en-US') },
